@@ -1,0 +1,24 @@
+# Copyright (c) 2025 The ZMK Contributors
+# SPDX-License-Identifier: MIT
+
+description: |
+  Complete specification of ESB split connection
+
+compatible: "zmk,esb-split"
+
+properties:
+
+  # These are arbitrary default addresses. In end user products
+  # different addresses should be used for each set of devices.
+  base-addr-0:
+    type: array
+    required: true
+    description: "base address 0"
+  base-addr-1:
+    type: array
+    required: true
+    description: "base address 1"
+  addr-prefix:
+    type: array
+    required: true
+    description: "base address 0"

@@ -1,0 +1,40 @@
+# Copyright (c) 2025 The ZMK Contributors
+# SPDX-License-Identifier: MIT
+
+if ZMK_SPLIT && ZMK_SPLIT_ESB
+
+menu "ESB Transport"
+
+config ZMK_SPLIT_ESB_ROLE_CENTRAL
+    bool
+
+endmenu
+
+config ZMK_SPLIT_ESB_PERIPHERAL_ID
+    int "Default peripheral id for TX"
+    default 0
+
+config ZMK_SPLIT_ESB_PROTO_TX_ACK
+    bool "Await ACK signal per sending packet for TX/RX"
+    default y
+    help
+        Use on keyboard peripheral to reduce packet loss.
+        Enable this on pointing input sheidl will be increase latency.
+
+config ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS
+    int "Number of message queue size to buffer ESB payload for TX in between multi-protocol service timeslots (CONFIG_MPSL_TIMESLOT_SESSION_COUNT)"
+    default 16
+
+config ZMK_SPLIT_ESB_EVENT_BUFFER_ITEMS
+    int "Number of peripheral events to buffer for TX/RX"
+    default 16
+
+config ZMK_SPLIT_ESB_CMD_BUFFER_ITEMS
+    int "Number of central commands to buffer for TX/RX"
+    default 4
+
+module = ZMK_SPLIT_ESB
+module-str = ZMK_SPLIT_ESB
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
+
+endif #ZMK_SPLIT && ZMK_SPLIT_ESB

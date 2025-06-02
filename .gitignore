@@ -1,0 +1,14 @@
+/.west
+/nrf
+/nrfxlib
+
+# macOS
+*.DS_Store
+
+# Python
+__pycache__
+.python-version
+.venv
+
+# clangd
+src/.cache/

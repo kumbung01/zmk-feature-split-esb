@@ -1,0 +1,25 @@
+# Copyright (c) 2025 The ZMK Contributors
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+
+if ZMK_SPLIT
+
+config ZMK_SPLIT_ESB
+    bool "Enable ZMK Split ESB"
+    select ESB
+    select ESB_DYNAMIC_INTERRUPTS
+    select DYNAMIC_INTERRUPTS
+    select DYNAMIC_DIRECT_INTERRUPTS
+    select MPSL
+    select RING_BUFFER
+    help
+        Enables Enhanced ShockBurst protocol for ZMK split keyboards.
+        If you enable this, you *must* also ensure that
+        CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE >= 2048
+        CONFIG_MPSL_TIMESLOT_SESSION_COUNT >= 2
+        CONFIG_ESB_MAX_PAYLOAD_LENGTH >= 64
+        in your prj.conf.
+
+
+endif # ZMK_SPLIT
+
+rsource "esb/Kconfig"
