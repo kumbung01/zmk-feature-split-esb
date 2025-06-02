@@ -81,40 +81,50 @@ static void event_handler(struct esb_evt const *event) {
             m_event.data_length = tmp_payload.length;
             m_callback(&m_event);
 
-            // // Check if there are more messages in the queue
-            // if(pull_packet_from_tx_msgq() == 0){
-            //     LOG_DBG("PCK loaded in ESB TX callback");
-            // }
+            // Check if there are more messages in the queue
+            if(pull_packet_from_tx_msgq() == 0){
+                LOG_DBG("PCK loaded in ESB TX callback");
+            }
             break;
 
         case ESB_EVENT_TX_FAILED:
-            LOG_DBG("TX FAILED EVENT, tx_attempts: %d", event->tx_attempts);
+            LOG_WRN("TX FAILED EVENT, tx_attempts: %d", event->tx_attempts);
 
-            // Remove the oldest item in the TX queue
-            k_msgq_get(&m_msgq_tx_payloads, &tmp_payload, K_NO_WAIT);
+            // Ignore this event for now, since the payload is retained in the queue 
+            // and will be retransmitted at a later point
 
-            // Forward an event to the application 
-            m_event.evt_type = APP_ESB_EVT_TX_FAIL;
-            m_event.data_length = tmp_payload.length;
-            m_callback(&m_event);
+            // // Remove the oldest item in the TX queue
+            // k_msgq_get(&m_msgq_tx_payloads, &tmp_payload, K_NO_WAIT);
+
+            // // Forward an event to the application
+            // m_event.evt_type = APP_ESB_EVT_TX_FAIL;
+            // m_event.data_length = tmp_payload.length;
+            // m_callback(&m_event);
 
             esb_flush_tx();
 
-            // // Check if there are more messages in the queue
-            // if(pull_packet_from_tx_msgq() == 0){
-            //     LOG_DBG("PCK loaded in ESB fail callback");
-            // }
+            // Check if there are more messages in the queue
+            if(pull_packet_from_tx_msgq() == 0){
+                LOG_DBG("PCK loaded in ESB fail callback");
+            }
             break;
 
         case ESB_EVENT_RX_RECEIVED:
-            while (esb_read_rx_payload(&rx_payload) == 0) {
-                LOG_DBG("Packet received, len %d : ", rx_payload.length);
+            LOG_DBG("RX SUCCESS EVENT");
 
-                m_event.evt_type = APP_ESB_EVT_RX;
-                m_event.buf = rx_payload.data;
-                m_event.data_length = rx_payload.length;
-                m_callback(&m_event);
+            uint8_t buf[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
+            size_t len = 0;
+            while (esb_read_rx_payload(&rx_payload) == 0) {
+                LOG_DBG("Chunk %d, len: %d", rx_payload.pid, rx_payload.length);
+                memcpy(&buf[len], rx_payload.data, rx_payload.length);
+                len += rx_payload.length;
             }
+
+            LOG_DBG("Packet len: %d", len);
+            m_event.evt_type = APP_ESB_EVT_RX;
+            m_event.buf = buf;
+            m_event.data_length = len;
+            m_callback(&m_event);
             break;
     }
 }
@@ -200,7 +210,7 @@ static int pull_packet_from_tx_msgq(void) {
     if (k_msgq_peek(&m_msgq_tx_payloads, &tx_payload) == 0) {
         ret = esb_write_payload(&tx_payload);
         if (ret < 0) return ret;
-        esb_start_tx();		
+        esb_start_tx();
 
         return 0;
     }

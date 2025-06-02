@@ -55,7 +55,7 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
 
             break;
         case APP_ESB_EVT_TX_FAIL:
-            LOG_DBG("ESB TX failed %d", event->data_length);
+            LOG_WRN("ESB TX failed %d", event->data_length);
             ring_buf_get_finish(state->tx_buf, event->data_length);
             // probably, RX is not available, drop this frame
 
@@ -74,7 +74,7 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
                 break;
             }
 
-            // LOG_DBG("RX %d and now buffer is %d", received, ring_buf_size_get(state->rx_buf));
+            LOG_DBG("RX %d and now buffer is %d", received, ring_buf_size_get(state->rx_buf));
             if (state->process_tx_callback) {
                 state->process_tx_callback();
             } else if (state->process_tx_work) {
@@ -89,8 +89,9 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
 }
 
 int zmk_split_esb_get_item(struct ring_buf *rx_buf, uint8_t *env, size_t env_size) {
-    // while (ring_buf_size_get(rx_buf) > sizeof(struct esb_msg_prefix) + sizeof(struct esb_msg_postfix)) {
-    while (ring_buf_size_get(rx_buf) > sizeof(struct esb_msg_prefix)) {
+    size_t buf_len = ring_buf_size_get(rx_buf);
+    // while (buf_len > sizeof(struct esb_msg_prefix) + sizeof(struct esb_msg_postfix)) {
+    while (buf_len > sizeof(struct esb_msg_prefix)) {
         struct esb_msg_prefix prefix;
 
         __ASSERT_EVAL(
@@ -116,9 +117,11 @@ int zmk_split_esb_get_item(struct ring_buf *rx_buf, uint8_t *env, size_t env_siz
             return -EINVAL;
         }
 
-        // if (ring_buf_size_get(rx_buf) < payload_to_read + sizeof(struct esb_msg_postfix)) {
-        //     return -EAGAIN;
-        // }
+        // if (buf_len < payload_to_read + sizeof(struct esb_msg_postfix)) {
+        if (buf_len < payload_to_read) {
+            LOG_WRN("Payload chunk shorter than expected %d < %d ", buf_len, payload_to_read);
+            return -EAGAIN;
+        }
 
         // Now that prefix matches, read it out so we can read the rest of the payload.
         __ASSERT_EVAL((void)ring_buf_get(rx_buf, env, payload_to_read),
