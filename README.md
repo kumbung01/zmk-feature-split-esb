@@ -64,6 +64,10 @@ CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID=1
 # disable this iif you are pursuing extreme low latency, not much different in real-life experiment.
 CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK=y
 
+# extra requeue after ESB retransmition attempts fail (default 3)
+# use this wisely on keyboard peripheral for packet delivery ordering in noisy environnment.
+CONFIG_ZMK_SPLIT_ESB_EXTRA_RETRY_AFTER_RETRAN=3
+
 # enable Multi-Protocol Service Layer (MPSL)
 # set 2, if CONFIG_ZMK_BLE is enabled on central, which uses BLE and ESB simultaneously
 # set 1, if CONFIG_ZMK_BLE is disabled on both central and peripherals. (dongle-only mode)

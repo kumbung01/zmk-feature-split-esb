@@ -62,6 +62,7 @@ static struct esb_payload rx_payload;
 
 static app_esb_mode_t m_mode;
 static bool m_active = false;
+static size_t m_extra_tx_retry = 0;
 
 static int pull_packet_from_tx_msgq(void);
 
@@ -103,9 +104,19 @@ static void event_handler(struct esb_evt const *event) {
 
             esb_flush_tx();
 
-            // Check if there are more messages in the queue
-            if(pull_packet_from_tx_msgq() == 0){
-                LOG_DBG("PCK loaded in ESB fail callback");
+            LOG_DBG("m_extra_tx_retry %d", m_extra_tx_retry);
+            if (m_extra_tx_retry > 0) {
+                m_extra_tx_retry--;
+                // Check if there are more messages in the queue
+                if(pull_packet_from_tx_msgq() == 0){
+                    LOG_DBG("PCK loaded in ESB fail callback");
+                }
+            } else if (
+                !m_extra_tx_retry  // zero m_extra_tx_retry means RX gone
+            || !event->tx_attempts // zero tx_attempts means msg q is full
+            ) {
+                k_msgq_purge(&m_msgq_tx_payloads);
+                LOG_DBG("purge esb payload msg q");
             }
             break;
 
@@ -244,11 +255,19 @@ int app_esb_send(app_esb_data_t *tx_packet) {
     tx_payload.length = tx_packet->len;
     ret = k_msgq_put(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
     if (ret == 0) {
+        m_extra_tx_retry = CONFIG_ZMK_SPLIT_ESB_EXTRA_RETRY_AFTER_RETRAN;
+        // LOG_DBG("recharge m_extra_tx_retry");
         if (m_active) {
             pull_packet_from_tx_msgq();
         }
     }
     else {
+        // message queue is full, raise failed
+        struct esb_evt const ev = {
+            .evt_id = ESB_EVENT_TX_FAILED,
+            .tx_attempts = 0,
+        };
+        event_handler(&ev);
         return ret;//-ENOMEM;
     }
     return 0;
@@ -273,6 +292,12 @@ int app_esb_send_noack(app_esb_data_t *tx_packet) {
         }
     }
     else {
+        // message queue is full, raise success
+        struct esb_evt const ev = { 
+            .evt_id = ESB_EVENT_TX_SUCCESS, // no_ack = always success
+            .tx_attempts = 0,
+        };
+        event_handler(&ev);
         return ret;//-ENOMEM;
     }
     return 0;

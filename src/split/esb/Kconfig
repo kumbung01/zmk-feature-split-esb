@@ -17,9 +17,11 @@ config ZMK_SPLIT_ESB_PERIPHERAL_ID
 config ZMK_SPLIT_ESB_PROTO_TX_ACK
     bool "Await ACK signal per sending packet for TX/RX"
     default y
-    help
-        Use on keyboard peripheral to reduce packet loss.
-        Enable this on pointing input sheidl will be increase latency.
+
+config ZMK_SPLIT_ESB_EXTRA_RETRY_AFTER_RETRAN
+    int "Number of extra requeue after ESB retransmition fail"
+    default 3
+    range 0 1024
 
 config ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS
     int "Number of message queue size to buffer ESB payload for TX in between multi-protocol service timeslots (CONFIG_MPSL_TIMESLOT_SESSION_COUNT)"

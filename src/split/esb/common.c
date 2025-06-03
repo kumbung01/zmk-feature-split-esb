@@ -14,10 +14,16 @@
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
+    size_t tx_buf_len = ring_buf_size_get(state->tx_buf);
+    if (!tx_buf_len) {
+        return;
+    }
+    // LOG_DBG("tx_buf_len %d", tx_buf_len);
 
     uint8_t *buf;
-    uint32_t claim_len = ring_buf_get_claim(state->tx_buf, &buf, ring_buf_size_get(state->tx_buf));
-    // LOG_DBG("claim_len: %d", claim_len);
+    uint32_t claim_len = ring_buf_get_claim(state->tx_buf, &buf, tx_buf_len);
+    // LOG_DBG("tx_buf_len: %d, claim_len: %d", tx_buf_len, claim_len);
+
     if (claim_len <= 0) {
         return;
     }
@@ -34,35 +40,25 @@ void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
     ret = app_esb_send_noack(&my_data);
 #endif
 
-    if (ret != 0) {
-        LOG_ERR("ESB TX failed (err %i)", ret);
-
-        LOG_WRN("ESB TX Buf finish %d", claim_len);
-        ring_buf_get_finish(state->tx_buf, claim_len);
-    }
-
+    LOG_DBG("ESB TX Buf finish %d", claim_len);
+    ring_buf_get_finish(state->tx_buf, claim_len);
 }
 
 void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state) {
     switch(event->evt_type) {
         case APP_ESB_EVT_TX_SUCCESS:
             LOG_DBG("ESB TX Done %d", event->data_length);
-            ring_buf_get_finish(state->tx_buf, event->data_length);
-
+            // ring_buf_get_finish(state->tx_buf, event->data_length);
             if (!ring_buf_is_empty(state->tx_buf)) {
                 zmk_split_esb_async_tx(state);
             }
-
             break;
         case APP_ESB_EVT_TX_FAIL:
             LOG_WRN("ESB TX failed %d", event->data_length);
-            ring_buf_get_finish(state->tx_buf, event->data_length);
-            // probably, RX is not available, drop this frame
-
+            // ring_buf_get_finish(state->tx_buf, event->data_length);
             if (!ring_buf_is_empty(state->tx_buf)) {
                 zmk_split_esb_async_tx(state);
             }
-
             break;
         case APP_ESB_EVT_RX:
             LOG_DBG("ESB RX received: %d", event->data_length);
@@ -70,7 +66,7 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
 
             size_t received = ring_buf_put(state->rx_buf, event->buf, event->data_length);
             if (received < event->data_length) {
-                LOG_ERR("RX overrun!");
+                LOG_ERR("RX overrun! %d < %d", received, event->data_length);
                 break;
             }
 
