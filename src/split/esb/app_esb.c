@@ -52,7 +52,7 @@ uint8_t esb_addr_prefix[4] = DT_INST_PROP(0, addr_prefix);
 
 static app_esb_callback_t m_callback;
 
-static app_esb_event_t 	  m_event;
+static app_esb_event_t m_event;
 
 // Define a buffer of payloads to store TX payloads in between timeslots
 K_MSGQ_DEFINE(m_msgq_tx_payloads, sizeof(struct esb_payload), 
@@ -72,66 +72,62 @@ static void event_handler(struct esb_evt const *event) {
     static struct esb_payload tmp_payload;
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
-            LOG_DBG("TX SUCCESS EVENT, tx_attempts: %d", event->tx_attempts);
+            // LOG_DBG("TX SUCCESS EVENT, tx_attempts: %d", event->tx_attempts);
+            // LOG_DBG("TX sent: %d, tx_attempts: %d", tmp_payload.length, event->tx_attempts);
 
             // Remove the oldest item in the TX queue
             k_msgq_get(&m_msgq_tx_payloads, &tmp_payload, K_NO_WAIT);
-            
-            // Forward an event to the application 
-            m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
-            m_event.data_length = tmp_payload.length;
-            m_callback(&m_event);
 
-            // Check if there are more messages in the queue
-            if(pull_packet_from_tx_msgq() == 0){
-                LOG_DBG("PCK loaded in ESB TX callback");
-            }
+            // Forward an event to the application
+            m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
+            m_callback(&m_event);
             break;
 
         case ESB_EVENT_TX_FAILED:
-            LOG_WRN("TX FAILED EVENT, tx_attempts: %d", event->tx_attempts);
-
-            // Ignore this event for now, since the payload is retained in the queue 
-            // and will be retransmitted at a later point
-
-            // // Remove the oldest item in the TX queue
-            // k_msgq_get(&m_msgq_tx_payloads, &tmp_payload, K_NO_WAIT);
-
-            // // Forward an event to the application
-            // m_event.evt_type = APP_ESB_EVT_TX_FAIL;
-            // m_event.data_length = tmp_payload.length;
-            // m_callback(&m_event);
+            // since the payload is retained in the queue and will be retransmitted 
+            // at a later, only chances to fail:
+            //  (a) m_extra_tx_retry drop to 0, where retry quota is all consumed.
+            //  (b) event->tx_attempts == 0, where m_msgq_tx_payloads queue is full.
 
             esb_flush_tx();
 
-            LOG_DBG("m_extra_tx_retry %d", m_extra_tx_retry);
+            LOG_DBG("m_extra_tx_retry left %d / %d", m_extra_tx_retry, CONFIG_ZMK_SPLIT_ESB_EXTRA_RETRY_AFTER_RETRAN);
+
             if (m_extra_tx_retry > 0) {
+                LOG_DBG("TX FAILED EVENT, tx_attempts: %d", event->tx_attempts);
                 m_extra_tx_retry--;
-                // Check if there are more messages in the queue
-                if(pull_packet_from_tx_msgq() == 0){
-                    LOG_DBG("PCK loaded in ESB fail callback");
-                }
+
+                // resend same payload message in the queue
+                pull_packet_from_tx_msgq();
+
             } else if (
                 !m_extra_tx_retry  // zero m_extra_tx_retry means RX gone
             || !event->tx_attempts // zero tx_attempts means msg q is full
             ) {
-                k_msgq_purge(&m_msgq_tx_payloads);
-                LOG_DBG("purge esb payload msg q");
+                LOG_WRN("TX FAILED EVENT, tx_attempts: %d", event->tx_attempts);
+
+                // Remove the oldest item in the TX queue
+                k_msgq_get(&m_msgq_tx_payloads, &tmp_payload, K_NO_WAIT);
+
+                // Forward an event to the application
+                m_event.evt_type = APP_ESB_EVT_TX_FAIL;
+                m_event.data_length = tmp_payload.length;
+                m_callback(&m_event);
             }
             break;
 
         case ESB_EVENT_RX_RECEIVED:
-            LOG_DBG("RX SUCCESS EVENT");
+            // LOG_DBG("RX SUCCESS EVENT");
 
             uint8_t buf[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
             size_t len = 0;
             while (esb_read_rx_payload(&rx_payload) == 0) {
-                LOG_DBG("Chunk %d, len: %d", rx_payload.pid, rx_payload.length);
+                // LOG_DBG("Chunk %d, len: %d", rx_payload.pid, rx_payload.length);
                 memcpy(&buf[len], rx_payload.data, rx_payload.length);
                 len += rx_payload.length;
             }
 
-            LOG_DBG("Packet len: %d", len);
+            // LOG_DBG("Packet len: %d", len);
             m_event.evt_type = APP_ESB_EVT_RX;
             m_event.buf = buf;
             m_event.data_length = len;
@@ -250,7 +246,11 @@ int app_esb_send(app_esb_data_t *tx_packet) {
     int ret = 0;
     static struct esb_payload tx_payload;
     tx_payload.pipe = 0;
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK)
     tx_payload.noack = false;
+#else
+    tx_payload.noack = true;
+#endif
     memcpy(tx_payload.data, tx_packet->data, tx_packet->len);
     tx_payload.length = tx_packet->len;
     ret = k_msgq_put(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
@@ -264,37 +264,11 @@ int app_esb_send(app_esb_data_t *tx_packet) {
     else {
         // message queue is full, raise failed
         struct esb_evt const ev = {
-            .evt_id = ESB_EVENT_TX_FAILED,
-            .tx_attempts = 0,
-        };
-        event_handler(&ev);
-        return ret;//-ENOMEM;
-    }
-    return 0;
-}
-
-int app_esb_send_noack(app_esb_data_t *tx_packet) {
-    int ret = 0;
-    static struct esb_payload tx_payload;
-    tx_payload.pipe = 0;
-    tx_payload.noack = true;
-    memcpy(tx_payload.data, tx_packet->data, tx_packet->len);
-    tx_payload.length = tx_packet->len;
-
-    // hence, noack won't have event_handler callback,
-    // purging to keep the qeueu non-full.
-    k_msgq_purge(&m_msgq_tx_payloads);
-
-    ret = k_msgq_put(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
-    if (ret == 0) {
-        if (m_active) {
-            pull_packet_from_tx_msgq();
-        }
-    }
-    else {
-        // message queue is full, raise success
-        struct esb_evt const ev = { 
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK)
+            .evt_id = ESB_EVENT_TX_FAILED,  // ack = could fail
+#else
             .evt_id = ESB_EVENT_TX_SUCCESS, // no_ack = always success
+#endif
             .tx_attempts = 0,
         };
         event_handler(&ev);

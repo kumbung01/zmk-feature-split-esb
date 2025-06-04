@@ -32,37 +32,28 @@ void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
     static app_esb_data_t my_data;
     my_data.data = buf;
     my_data.len = claim_len;
+    app_esb_send(&my_data); // callback > zmk_split_esb_cb()
 
-    int ret = 0;
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK)
-    ret = app_esb_send(&my_data);
-#else
-    ret = app_esb_send_noack(&my_data);
-#endif
-
-    LOG_DBG("ESB TX Buf finish %d", claim_len);
+    // LOG_DBG("ESB TX Buf finish %d", claim_len);
     ring_buf_get_finish(state->tx_buf, claim_len);
 }
 
 void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state) {
     switch(event->evt_type) {
         case APP_ESB_EVT_TX_SUCCESS:
-            LOG_DBG("ESB TX Done %d", event->data_length);
-            // ring_buf_get_finish(state->tx_buf, event->data_length);
+            // LOG_DBG("ESB TX sent");
             if (!ring_buf_is_empty(state->tx_buf)) {
                 zmk_split_esb_async_tx(state);
             }
             break;
         case APP_ESB_EVT_TX_FAIL:
-            LOG_WRN("ESB TX failed %d", event->data_length);
-            // ring_buf_get_finish(state->tx_buf, event->data_length);
+            LOG_WRN("ESB TX failed");
             if (!ring_buf_is_empty(state->tx_buf)) {
                 zmk_split_esb_async_tx(state);
             }
             break;
         case APP_ESB_EVT_RX:
-            LOG_DBG("ESB RX received: %d", event->data_length);
-            // LOG_HEXDUMP_DBG(event->buf, event->data_length, "received");
+            // LOG_DBG("ESB RX received: %d", event->data_length);
 
             size_t received = ring_buf_put(state->rx_buf, event->buf, event->data_length);
             if (received < event->data_length) {
@@ -70,7 +61,7 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
                 break;
             }
 
-            LOG_DBG("RX %d and now buffer is %d", received, ring_buf_size_get(state->rx_buf));
+            LOG_DBG("RX + %3d and now buffer is %3d", received, ring_buf_size_get(state->rx_buf));
             if (state->process_tx_callback) {
                 state->process_tx_callback();
             } else if (state->process_tx_work) {
@@ -99,9 +90,7 @@ int zmk_split_esb_get_item(struct ring_buf *rx_buf, uint8_t *env, size_t env_siz
                    sizeof(prefix.magic_prefix)) != 0) {
             uint8_t discarded_byte;
             ring_buf_get(rx_buf, &discarded_byte, 1);
-
-            LOG_WRN("Prefix mismatch, discarding byte %0x", discarded_byte);
-
+            // LOG_WRN("Prefix mismatch, discarding byte %0x", discarded_byte);
             continue;
         }
 
@@ -115,7 +104,7 @@ int zmk_split_esb_get_item(struct ring_buf *rx_buf, uint8_t *env, size_t env_siz
 
         // if (buf_len < payload_to_read + sizeof(struct esb_msg_postfix)) {
         if (buf_len < payload_to_read) {
-            LOG_WRN("Payload chunk shorter than expected %d < %d ", buf_len, payload_to_read);
+            // often happened ESB behavior
             return -EAGAIN;
         }
 

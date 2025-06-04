@@ -123,7 +123,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     // struct esb_msg_postfix postfix = {.crc = crc32_ieee((void *)&env, sizeof(env.prefix) + payload_size)};
 
     size_t pfx_len = sizeof(env.prefix) + payload_size;
-    LOG_HEXDUMP_DBG(&env, pfx_len, "Payload");
+    // LOG_HEXDUMP_DBG(&env, pfx_len, "Payload");
 
     size_t put = ring_buf_put(&chosen_tx_buf, (uint8_t *)&env, pfx_len);
     if (put != pfx_len) {
