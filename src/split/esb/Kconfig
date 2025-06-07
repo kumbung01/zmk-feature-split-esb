@@ -18,14 +18,17 @@ config ZMK_SPLIT_ESB_PROTO_TX_ACK
     bool "Await ACK signal per sending packet for TX/RX"
     default y
 
-config ZMK_SPLIT_ESB_EXTRA_RETRY_AFTER_RETRAN
-    int "Number of extra requeue after ESB retransmition fail"
-    default 3
-    range 0 1024
+config ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY
+    int "The delay between each retransmission of unacknowledged packets"
+    default 600
+
+config ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT
+    int "The number of retransmission attempts before transmission fail"
+    default 32
 
 config ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS
     int "Number of message queue size to buffer ESB payload for TX in between multi-protocol service timeslots (CONFIG_MPSL_TIMESLOT_SESSION_COUNT)"
-    default 16
+    default 32
 
 config ZMK_SPLIT_ESB_EVENT_BUFFER_ITEMS
     int "Number of peripheral events to buffer for TX/RX"

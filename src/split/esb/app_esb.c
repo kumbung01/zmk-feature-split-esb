@@ -45,24 +45,18 @@ uint8_t esb_addr_prefix[4] = DT_INST_PROP(0, addr_prefix);
 #error "Need to create a node with compatible of 'zmk,esb-split` with `all `address` property set."
 #endif
 
-// uint8_t esb_base_addr_0[4] = {0xE7, 0xE7, 0xE7, 0xE7};
-// uint8_t esb_base_addr_1[4] = {0xC2, 0xC2, 0xC2, 0xC2};
-// uint8_t esb_addr_prefix[8] = {0xE7, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8};
-
-
 static app_esb_callback_t m_callback;
 
 static app_esb_event_t m_event;
 
 // Define a buffer of payloads to store TX payloads in between timeslots
 K_MSGQ_DEFINE(m_msgq_tx_payloads, sizeof(struct esb_payload), 
-                          CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
+              CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
 
 static struct esb_payload rx_payload;
 
 static app_esb_mode_t m_mode;
 static bool m_active = false;
-static size_t m_extra_tx_retry = 0;
 
 static int pull_packet_from_tx_msgq(void);
 
@@ -72,53 +66,20 @@ static void event_handler(struct esb_evt const *event) {
     static struct esb_payload tmp_payload;
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
-            // LOG_DBG("TX SUCCESS EVENT, tx_attempts: %d", event->tx_attempts);
-            // LOG_DBG("TX sent: %d, tx_attempts: %d", tmp_payload.length, event->tx_attempts);
-
-            // Remove the oldest item in the TX queue
-            k_msgq_get(&m_msgq_tx_payloads, &tmp_payload, K_NO_WAIT);
-
+            // LOG_DBG("TX SUCCESS, tx_attempts: %d", event->tx_attempts);
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
             m_callback(&m_event);
             break;
-
         case ESB_EVENT_TX_FAILED:
-            // since the payload is retained in the queue and will be retransmitted 
-            // at a later, only chances to fail:
-            //  (a) m_extra_tx_retry drop to 0, where retry quota is all consumed.
-            //  (b) event->tx_attempts == 0, where m_msgq_tx_payloads queue is full.
-
-            esb_flush_tx();
-
-            LOG_DBG("m_extra_tx_retry left %d / %d", m_extra_tx_retry, CONFIG_ZMK_SPLIT_ESB_EXTRA_RETRY_AFTER_RETRAN);
-
-            if (m_extra_tx_retry > 0) {
-                LOG_DBG("TX FAILED EVENT, tx_attempts: %d", event->tx_attempts);
-                m_extra_tx_retry--;
-
-                // resend same payload message in the queue
-                pull_packet_from_tx_msgq();
-
-            } else if (
-                !m_extra_tx_retry  // zero m_extra_tx_retry means RX gone
-            || !event->tx_attempts // zero tx_attempts means msg q is full
-            ) {
-                LOG_WRN("TX FAILED EVENT, tx_attempts: %d", event->tx_attempts);
-
-                // Remove the oldest item in the TX queue
-                k_msgq_get(&m_msgq_tx_payloads, &tmp_payload, K_NO_WAIT);
-
-                // Forward an event to the application
-                m_event.evt_type = APP_ESB_EVT_TX_FAIL;
-                m_event.data_length = tmp_payload.length;
-                m_callback(&m_event);
-            }
+            LOG_WRN("TX FAILED, tx_attempts: %d", event->tx_attempts);
+            // Forward an event to the application
+            m_event.evt_type = APP_ESB_EVT_TX_FAIL;
+            m_event.data_length = tmp_payload.length;
+            m_callback(&m_event);
             break;
-
         case ESB_EVENT_RX_RECEIVED:
-            // LOG_DBG("RX SUCCESS EVENT");
-
+            LOG_DBG("RX SUCCESS");
             uint8_t buf[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
             size_t len = 0;
             while (esb_read_rx_payload(&rx_payload) == 0) {
@@ -126,7 +87,6 @@ static void event_handler(struct esb_evt const *event) {
                 memcpy(&buf[len], rx_payload.data, rx_payload.length);
                 len += rx_payload.length;
             }
-
             // LOG_DBG("Packet len: %d", len);
             m_event.evt_type = APP_ESB_EVT_RX;
             m_event.buf = buf;
@@ -173,8 +133,8 @@ static int esb_initialize(app_esb_mode_t mode) {
     struct esb_config config = ESB_DEFAULT_CONFIG;
 
     config.protocol = ESB_PROTOCOL_ESB_DPL;
-    config.retransmit_delay = 600;
-    config.retransmit_count = 1;
+    config.retransmit_delay = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY;
+    config.retransmit_count = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT;
     config.bitrate = ESB_BITRATE_2MBPS;
     config.event_handler = event_handler;
     config.mode = (mode == APP_ESB_MODE_PTX) ? ESB_MODE_PTX : ESB_MODE_PRX;
@@ -214,31 +174,43 @@ static int esb_initialize(app_esb_mode_t mode) {
 static int pull_packet_from_tx_msgq(void) {
     int ret;
     static struct esb_payload tx_payload;
-    if (k_msgq_peek(&m_msgq_tx_payloads, &tx_payload) == 0) {
-        ret = esb_write_payload(&tx_payload);
-        if (ret < 0) return ret;
-        esb_start_tx();
 
-        return 0;
+    if (esb_tx_full()) {
+        // return -EAGAIN;
+        esb_pop_tx();
     }
-    
-    return -ENOMEM;
+
+    while (k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT) == 0) {
+        ret = esb_write_payload(&tx_payload);
+        if (ret == -ENOMEM) {
+            LOG_WRN("tx_fifo queue full, popping first message and queueing again");
+            esb_pop_tx();
+            ret = esb_write_payload(&tx_payload);
+        }
+        else if (ret == -EMSGSIZE) {
+            LOG_WRN("tx_payload size too large (%d) > CONFIG_ESB_MAX_PAYLOAD_LENGTH (%d)",
+                    tx_payload.length, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
+        }
+        if (ret < 0) {
+            LOG_WRN("esb_write_payload failed (%d) %d", ret, CONFIG_ESB_TX_FIFO_SIZE);
+            continue;
+        }
+    }
+
+    esb_start_tx();
+    return 0;
 }
 
 int app_esb_init(app_esb_mode_t mode, app_esb_callback_t callback) {
     int ret;
-
     m_callback = callback;
     m_mode = mode;
-    
     ret = clocks_start();
     if (ret < 0) {
         return ret;
     }
-    
     LOG_INF("Timeslothandler init");
     timeslot_handler_init(on_timeslot_start_stop);
-
     return 0;
 }
 
@@ -253,25 +225,24 @@ int app_esb_send(app_esb_data_t *tx_packet) {
 #endif
     memcpy(tx_payload.data, tx_packet->data, tx_packet->len);
     tx_payload.length = tx_packet->len;
+    if (!tx_payload.length) {
+        LOG_WRN("bypass queuing null payload");
+        return 0;
+    }
     ret = k_msgq_put(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
+    if (ret == -EAGAIN || ret == -ENOMSG) {
+        LOG_WRN("esb tx_payload_q full, popping first message and queueing again");
+        static struct esb_payload dicarded_payload;
+        k_msgq_get(&m_msgq_tx_payloads, &dicarded_payload, K_NO_WAIT);
+        ret = k_msgq_put(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
+    }
     if (ret == 0) {
-        m_extra_tx_retry = CONFIG_ZMK_SPLIT_ESB_EXTRA_RETRY_AFTER_RETRAN;
-        // LOG_DBG("recharge m_extra_tx_retry");
         if (m_active) {
             pull_packet_from_tx_msgq();
         }
     }
     else {
-        // message queue is full, raise failed
-        struct esb_evt const ev = {
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK)
-            .evt_id = ESB_EVENT_TX_FAILED,  // ack = could fail
-#else
-            .evt_id = ESB_EVENT_TX_SUCCESS, // no_ack = always success
-#endif
-            .tx_attempts = 0,
-        };
-        event_handler(&ev);
+        LOG_WRN("Failed to queue esb tx_payload_q (%d)", ret);
         return ret;//-ENOMEM;
     }
     return 0;

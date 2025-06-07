@@ -20,13 +20,21 @@ void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
     }
     // LOG_DBG("tx_buf_len %d", tx_buf_len);
 
-    uint8_t *buf;
-    uint32_t claim_len = ring_buf_get_claim(state->tx_buf, &buf, tx_buf_len);
-    // LOG_DBG("tx_buf_len: %d, claim_len: %d", tx_buf_len, claim_len);
-
+    uint8_t buf[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
+    size_t claim_len = 0;
+    while (claim_len < tx_buf_len) {
+        uint8_t *b;
+        uint32_t buf_len = ring_buf_get_claim(state->tx_buf, &b, tx_buf_len - claim_len);
+        if (buf_len <= 0) {
+            break;
+        }
+        memcpy(&buf[claim_len], b, buf_len);
+        claim_len += buf_len;
+    }
     if (claim_len <= 0) {
         return;
     }
+    // LOG_DBG("tx_buf_len: %d, claim_len: %d", tx_buf_len, claim_len);
     // LOG_HEXDUMP_DBG(buf, claim_len, "buf");
 
     static app_esb_data_t my_data;
@@ -47,14 +55,13 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
             }
             break;
         case APP_ESB_EVT_TX_FAIL:
-            LOG_WRN("ESB TX failed");
+            // LOG_WRN("ESB TX failed");
             if (!ring_buf_is_empty(state->tx_buf)) {
                 zmk_split_esb_async_tx(state);
             }
             break;
         case APP_ESB_EVT_RX:
             // LOG_DBG("ESB RX received: %d", event->data_length);
-
             size_t received = ring_buf_put(state->rx_buf, event->buf, event->data_length);
             if (received < event->data_length) {
                 LOG_ERR("RX overrun! %d < %d", received, event->data_length);

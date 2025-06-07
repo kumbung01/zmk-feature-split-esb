@@ -64,9 +64,11 @@ CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID=1
 # disable this iif you are pursuing extreme low latency, not much different in real-life experiment.
 CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK=y
 
-# extra requeue after ESB retransmition attempts fail (default 3)
-# use this wisely on keyboard peripheral for packet delivery ordering in noisy environnment.
-CONFIG_ZMK_SPLIT_ESB_EXTRA_RETRY_AFTER_RETRAN=3
+# The delay between each retransmission of unacknowledged packets
+CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY=600
+
+# The number of retransmission attempts before transmission fail
+CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT=32
 
 # enable Multi-Protocol Service Layer (MPSL)
 # set 2, if CONFIG_ZMK_BLE is enabled on central, which uses BLE and ESB simultaneously
@@ -75,7 +77,7 @@ CONFIG_MPSL_TIMESLOT_SESSION_COUNT=2
 
 # Number of message queue size to buffer ESB payload for TX in between multi-protocol service 
 # timeslots (CONFIG_MPSL_TIMESLOT_SESSION_COUNT)
-CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS=16
+CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS=32
 
 # qeuue size for both peripheral (EVENT) and central (CMD)
 CONFIG_ZMK_SPLIT_ESB_EVENT_BUFFER_ITEMS=16
@@ -84,7 +86,8 @@ CONFIG_ZMK_SPLIT_ESB_CMD_BUFFER_ITEMS=4
 # another config for ESB
 CONFIG_CLOCK_CONTROL_NRF_K32SRC_RC=y
 CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE=2048
-CONFIG_ESB_MAX_PAYLOAD_LENGTH=64
+CONFIG_ESB_MAX_PAYLOAD_LENGTH=32
+CONFIG_ESB_TX_FIFO_SIZE=32
 # CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL_DBG=y
 ```
 
