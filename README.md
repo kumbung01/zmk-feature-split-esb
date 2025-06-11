@@ -1,6 +1,6 @@
 # ZMK ESB Split Transport
 
-This is an experimental [ZMK](https://zmk.dev) *Split Transport* module adding support for [Enhanced ShockBurst (ESB)](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/protocols/esb/index.html) protocol on Nordic nRF5 Series device.
+This is ~~an experimental~~ a [ZMK](https://zmk.dev) *Split Transport* module adding support for [Enhanced ShockBurst (ESB)](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/protocols/esb/index.html) protocol on Nordic nRF5 Series device.
 
 This work is based on [zmk,wired-split](https://github.com/zmkfirmware/zmk/tree/main/app/src/split/wired), [nRF Connect SDK > ESB Examples](https://docs.nordicsemi.com/bundle/ncs-2.6.4/page/nrf/samples/esb.html) and [ncs-esb-ble-mpsl-demo](https://github.com/too1/ncs-esb-ble-mpsl-demo/).
 
@@ -11,7 +11,18 @@ This module uses [nRF Connect SDK (NCS)](https://docs.nordicsemi.com/bundle/ncs-
 
 This module also uses [Multi-Protocol Service Layer (MPSL)](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/protocols/multiprotocol/index.html) library which provides services for multiprotocol applications that allows the nRF5 radio driver to negotiate for transmission timeslots. As result, ZMK central allows to pair BLE host as conventional HID input device (keyboard & mouse) and act as an ESB transceiver simultaneously. And all ZMK peripherals talk to ZMK central over ESB only with reduced packet overhead.
 
-However, the MCU embedded radio controller in nRF52840 (which i used to develop on) doesn't have enough resource to establish ESB connection and perform BLE advertisting & scanning between central and peripheral at the same time. In short, central doesn't have timeslots to scan peripherals, and peripheral doesn't have timeslots to advertisting itself to central. But, central has configed as ESB Primarily Receiver (PRX) and it has free timeslots to advertise itself to HID host.
+However, the MCU embedded radio controller in nRF52840 (which i used to develop on) doesn't have enough resource to establish ESB connection and perform BLE advertisting & scanning between central and peripheral at the same time.
+
+In short, central doesn't have timeslots to scan peripherals, and peripheral doesn't have timeslots to advertisting itself to central. But, central has configed as ESB Primarily Receiver (PRX) and it has free timeslots to advertise itself to HID host.
+
+### TL;DR;
+This module has two topologies.
+- Dongle with ONLY ESB enabling. 
+   - Dongle connects to HID host via USB. 
+   - Peripherals connects to Dongle via ESB.
+- Split Central with BOTH BLE and ESB enabling.
+   - Split Central pairs to HID host via BLE.
+   - Split Peripherals connects to Split Central via ESB.
 
 
 ## Installation
