@@ -77,7 +77,7 @@ CONFIG_MPSL_TIMESLOT_SESSION_COUNT=2
 
 # Number of message queue size to buffer ESB payload for TX in between multi-protocol service 
 # timeslots (CONFIG_MPSL_TIMESLOT_SESSION_COUNT)
-CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS=32
+CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS=16
 
 # qeuue size for both peripheral (EVENT) and central (CMD)
 CONFIG_ZMK_SPLIT_ESB_EVENT_BUFFER_ITEMS=16

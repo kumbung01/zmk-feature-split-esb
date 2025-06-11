@@ -28,7 +28,7 @@ config ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT
 
 config ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS
     int "Number of message queue size to buffer ESB payload for TX in between multi-protocol service timeslots (CONFIG_MPSL_TIMESLOT_SESSION_COUNT)"
-    default 32
+    default 16
 
 config ZMK_SPLIT_ESB_EVENT_BUFFER_ITEMS
     int "Number of peripheral events to buffer for TX/RX"

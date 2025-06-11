@@ -30,13 +30,13 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #include "app_esb.h"
 #include "common.h"
 
-// #define RX_BUFFER_SIZE ((sizeof(struct esb_event_envelope) + sizeof(struct esb_msg_postfix)) * CONFIG_ZMK_SPLIT_ESB_EVENT_BUFFER_ITEMS)
-// #define TX_BUFFER_SIZE ((sizeof(struct esb_command_envelope) + sizeof(struct esb_msg_postfix)) * CONFIG_ZMK_SPLIT_ESB_CMD_BUFFER_ITEMS)
 #define RX_BUFFER_SIZE (sizeof(struct esb_event_envelope) * CONFIG_ZMK_SPLIT_ESB_EVENT_BUFFER_ITEMS)
 #define TX_BUFFER_SIZE (sizeof(struct esb_command_envelope) * CONFIG_ZMK_SPLIT_ESB_CMD_BUFFER_ITEMS)
 
 RING_BUF_DECLARE(rx_buf, RX_BUFFER_SIZE);
 RING_BUF_DECLARE(tx_buf, TX_BUFFER_SIZE);
+
+static K_SEM_DEFINE(esb_send_cmd_sem, 1, 1);
 
 static void publish_events_work(struct k_work *work);
 
@@ -84,12 +84,20 @@ static int split_central_esb_send_command(uint8_t source,
         return data_size;
     }
 
+    // lock it for a safe result from ring_buf_space_get()
+    int ret = k_sem_take(&esb_send_cmd_sem, K_FOREVER);
+    if (ret) {
+        LOG_WRN("Shouldn't be called FOREVER");
+        return 0;
+    }
+
     // Data + type + source
     size_t payload_size =
         data_size + sizeof(source) + sizeof(enum zmk_split_transport_central_command_type);
 
     if (ring_buf_space_get(&tx_buf) < ESB_MSG_EXTRA_SIZE + payload_size) {
         LOG_WRN("No room to send command to the peripheral %d", source);
+        k_sem_give(&esb_send_cmd_sem);
         return -ENOSPC;
     }
 
@@ -102,13 +110,17 @@ static int split_central_esb_send_command(uint8_t source,
                                             .cmd = cmd,
                                         }};
 
-    // struct esb_msg_postfix postfix = {.crc = crc32_ieee((void *)&env, sizeof(env.prefix) + payload_size)};
+    size_t pfx_len = sizeof(env.prefix) + payload_size;
+    // LOG_HEXDUMP_DBG(&env, pfx_len, "Payload");
 
-    ring_buf_put(&tx_buf, (uint8_t *)&env, sizeof(env.prefix) + payload_size);
-    // ring_buf_put(&tx_buf, (uint8_t *)&postfix, sizeof(postfix));
+    size_t put = ring_buf_put(&tx_buf, (uint8_t *)&env, pfx_len);
+    if (put != pfx_len) {
+        LOG_WRN("Failed to put the whole message (%d vs %d)", put, pfx_len);
+    }
 
     begin_tx();
 
+    k_sem_give(&esb_send_cmd_sem);
     return 0;
 }
 

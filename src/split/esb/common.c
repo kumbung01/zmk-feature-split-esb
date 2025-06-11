@@ -15,7 +15,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
     size_t tx_buf_len = ring_buf_size_get(state->tx_buf);
-    if (!tx_buf_len) {
+    if (!tx_buf_len || tx_buf_len > CONFIG_ESB_MAX_PAYLOAD_LENGTH) {
         return;
     }
     // LOG_DBG("tx_buf_len %d", tx_buf_len);
@@ -83,9 +83,7 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
 }
 
 int zmk_split_esb_get_item(struct ring_buf *rx_buf, uint8_t *env, size_t env_size) {
-    size_t buf_len = ring_buf_size_get(rx_buf);
-    // while (buf_len > sizeof(struct esb_msg_prefix) + sizeof(struct esb_msg_postfix)) {
-    while (buf_len > sizeof(struct esb_msg_prefix)) {
+    while (ring_buf_size_get(rx_buf) > sizeof(struct esb_msg_prefix)) {
         struct esb_msg_prefix prefix;
 
         __ASSERT_EVAL(
@@ -109,9 +107,7 @@ int zmk_split_esb_get_item(struct ring_buf *rx_buf, uint8_t *env, size_t env_siz
             return -EINVAL;
         }
 
-        // if (buf_len < payload_to_read + sizeof(struct esb_msg_postfix)) {
-        if (buf_len < payload_to_read) {
-            // often happened ESB behavior
+        if (ring_buf_size_get(rx_buf) < payload_to_read) {
             return -EAGAIN;
         }
 
@@ -120,19 +116,6 @@ int zmk_split_esb_get_item(struct ring_buf *rx_buf, uint8_t *env, size_t env_siz
                       uint32_t read = ring_buf_get(rx_buf, env, payload_to_read),
                       read == payload_to_read,
                       "Somehow read less than we expect from the RX buffer");
-
-        // struct esb_msg_postfix postfix;
-        // __ASSERT_EVAL((void)ring_buf_get(rx_buf, (uint8_t *)&postfix, sizeof(postfix)),
-        //               uint32_t read = ring_buf_get(rx_buf, (uint8_t *)&postfix, sizeof(postfix)),
-        //               read == sizeof(postfix),
-        //               "Somehow read less of the postfix than we expect from the RX buffer");
-
-        // uint32_t crc = crc32_ieee(env, payload_to_read);
-        // if (crc != postfix.crc) {
-        //     LOG_WRN("Data corruption in received peripheral event, ignoring %d vs %d", crc,
-        //             postfix.crc);
-        //     return -EINVAL;
-        // }
 
         return 0;
     }

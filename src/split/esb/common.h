@@ -39,11 +39,6 @@ struct esb_event_envelope {
     struct esb_event_payload payload;
 } __packed;
 
-// struct esb_msg_postfix {
-//     uint32_t crc;
-// } __packed;
-
-// #define ESB_MSG_EXTRA_SIZE (sizeof(struct esb_msg_prefix) + sizeof(struct esb_msg_postfix))
 #define ESB_MSG_EXTRA_SIZE (sizeof(struct esb_msg_prefix))
 
 typedef void (*zmk_split_esb_process_tx_callback_t)(void);

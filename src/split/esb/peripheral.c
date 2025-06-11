@@ -30,13 +30,13 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #include "app_esb.h"
 #include "common.h"
 
-// #define TX_BUFFER_SIZE ((sizeof(struct esb_event_envelope) + sizeof(struct esb_msg_postfix)) * CONFIG_ZMK_SPLIT_ESB_EVENT_BUFFER_ITEMS)
-// #define RX_BUFFER_SIZE  ((sizeof(struct esb_command_envelope) + sizeof(struct esb_msg_postfix)) * CONFIG_ZMK_SPLIT_ESB_CMD_BUFFER_ITEMS)
 #define TX_BUFFER_SIZE (sizeof(struct esb_event_envelope) * CONFIG_ZMK_SPLIT_ESB_EVENT_BUFFER_ITEMS)
 #define RX_BUFFER_SIZE  (sizeof(struct esb_command_envelope) * CONFIG_ZMK_SPLIT_ESB_CMD_BUFFER_ITEMS)
 
 RING_BUF_DECLARE(chosen_rx_buf, RX_BUFFER_SIZE);
 RING_BUF_DECLARE(chosen_tx_buf, TX_BUFFER_SIZE);
+
+static K_SEM_DEFINE(esb_send_evt_sem, 1, 1);
 
 static const uint8_t peripheral_id = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID;
 
@@ -101,6 +101,13 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
         return data_size;
     }
 
+    // lock it for a safe result from ring_buf_space_get()
+    int ret = k_sem_take(&esb_send_evt_sem, K_FOREVER);
+    if (ret) {
+        LOG_WRN("Shouldn't be called FOREVER");
+        return 0;
+    }
+
     // Data + type + source
     size_t payload_size =
         data_size + sizeof(peripheral_id) + sizeof(enum zmk_split_transport_peripheral_event_type);
@@ -108,6 +115,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     if (ring_buf_space_get(&chosen_tx_buf) < ESB_MSG_EXTRA_SIZE + payload_size) {
         LOG_WRN("No room to send peripheral to the central (have %d but only space for %d)",
                 ESB_MSG_EXTRA_SIZE + payload_size, ring_buf_space_get(&chosen_tx_buf));
+        k_sem_give(&esb_send_evt_sem);
         return -ENOSPC;
     }
 
@@ -120,8 +128,6 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
                                         .event = *event,
                                     }};
 
-    // struct esb_msg_postfix postfix = {.crc = crc32_ieee((void *)&env, sizeof(env.prefix) + payload_size)};
-
     size_t pfx_len = sizeof(env.prefix) + payload_size;
     // LOG_HEXDUMP_DBG(&env, pfx_len, "Payload");
 
@@ -129,13 +135,10 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     if (put != pfx_len) {
         LOG_WRN("Failed to put the whole message (%d vs %d)", put, pfx_len);
     }
-    // put = ring_buf_put(&chosen_tx_buf, (uint8_t *)&postfix, sizeof(postfix));
-    // if (put != sizeof(postfix)) {
-    //     LOG_WRN("Failed to put the whole message (%d vs %d)", put, sizeof(postfix));
-    // }
 
     begin_tx();
 
+    k_sem_give(&esb_send_evt_sem);
     return 0;
 }
 

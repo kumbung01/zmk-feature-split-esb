@@ -53,6 +53,8 @@ static app_esb_event_t m_event;
 K_MSGQ_DEFINE(m_msgq_tx_payloads, sizeof(struct esb_payload), 
               CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
 
+static K_SEM_DEFINE(esb_tx_sem, 1, 1);
+
 static struct esb_payload rx_payload;
 
 static app_esb_mode_t m_mode;
@@ -67,12 +69,15 @@ static void event_handler(struct esb_evt const *event) {
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
             // LOG_DBG("TX SUCCESS, tx_attempts: %d", event->tx_attempts);
+            k_sem_give(&esb_tx_sem);
+            // LOG_DBG("give d1");
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
             m_callback(&m_event);
             break;
         case ESB_EVENT_TX_FAILED:
             LOG_WRN("TX FAILED, tx_attempts: %d", event->tx_attempts);
+            k_sem_give(&esb_tx_sem);
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
             m_event.data_length = tmp_payload.length;
@@ -175,29 +180,64 @@ static int pull_packet_from_tx_msgq(void) {
     int ret;
     static struct esb_payload tx_payload;
 
-    if (esb_tx_full()) {
-        // return -EAGAIN;
-        esb_pop_tx();
-    }
+    if (k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT) == 0) {
+        // safeguarding
+        if (esb_tx_full()) {
+            ret = esb_pop_tx();
+            if (ret) {
+                LOG_WRN("popping first message and queueing failed (%d)", ret);
+            }
+        }
 
-    while (k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT) == 0) {
         ret = esb_write_payload(&tx_payload);
-        if (ret == -ENOMEM) {
-            LOG_WRN("tx_fifo queue full, popping first message and queueing again");
-            esb_pop_tx();
-            ret = esb_write_payload(&tx_payload);
+        switch(ret) {
+            case -ENOMEM:
+                // fail-safing
+                LOG_DBG("tx_fifo queue full, popping first message and queueing again");
+                ret = esb_pop_tx();
+                if (ret) {
+                    LOG_ERR("popping first message and queueing failed (%d)", ret);
+                    break;
+                }
+                ret = esb_write_payload(&tx_payload);
+                if (ret) {
+                    LOG_ERR("esb_write_payload failed (%d)", ret);
+                    break;
+                }
+                break;
+            case -EMSGSIZE:
+                LOG_WRN("tx_payload size too large (%d) > CONFIG_ESB_MAX_PAYLOAD_LENGTH (%d)",
+                        tx_payload.length, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
+                break;
+            default:
+                LOG_WRN("esb_write_payload failed (%d) %d", ret, CONFIG_ESB_TX_FIFO_SIZE);
+                break;
         }
-        else if (ret == -EMSGSIZE) {
-            LOG_WRN("tx_payload size too large (%d) > CONFIG_ESB_MAX_PAYLOAD_LENGTH (%d)",
-                    tx_payload.length, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
-        }
-        if (ret < 0) {
-            LOG_WRN("esb_write_payload failed (%d) %d", ret, CONFIG_ESB_TX_FIFO_SIZE);
-            continue;
+        if (ret) {
+            return ret;
         }
     }
 
-    esb_start_tx();
+    ret = k_sem_take(&esb_tx_sem, K_NO_WAIT);
+    if (ret) {
+        // no handling is needed with tx_mode = ESB_TXMODE_MANUAL_START
+        // semaphore will be k_sem_give() in event_handler()
+        return 0;
+    }
+
+    if (!esb_is_idle()) {
+        // suppress -EBUSY return from esb_start_tx()
+        k_sem_give(&esb_tx_sem);
+        return 0;
+    }
+
+    ret = esb_start_tx();
+    if (ret) {
+        LOG_WRN("esb_start_tx failed (%d)", ret);
+        k_sem_give(&esb_tx_sem);
+        return ret;
+    }
+
     return 0;
 }
 
