@@ -20,10 +20,11 @@ This module has two topologies.
 - Dongle with ONLY ESB is enabling.
    - Dongle connects to HID host via USB. 
    - Peripherals connects to Dongle via ESB.
+   - Sample zmk-config could be find at [here](https://github.com/badjeff/zmk-config/tree/8b4b2bfbc32e647235dce8cbe648e639d283f3b6/config/boards/shields/donki36)
 - Split Central with BOTH BLE and ESB is enabling.
    - Split Central pairs to HID host via BLE.
    - Split Peripherals connects to Split Central via ESB.
-   - Battery power consumption is about 7.5mA @ 4.0v
+   - Battery power consumption is about 7.5mA @ 4.0v, v.s. 0.7mA for BLE-only mode.
 
 
 ## Installation
