@@ -15,7 +15,7 @@ config ZMK_SPLIT_ESB
         If you enable this, you *must* also ensure that
         CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE >= 2048
         CONFIG_MPSL_TIMESLOT_SESSION_COUNT >= 2
-        CONFIG_ESB_MAX_PAYLOAD_LENGTH >= 32
+        CONFIG_ESB_MAX_PAYLOAD_LENGTH >= 48
         in your prj.conf.
 
 

@@ -210,10 +210,10 @@ static int pull_packet_from_tx_msgq(void) {
                         tx_payload.length, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
                 break;
             default:
-                LOG_WRN("esb_write_payload failed (%d) %d", ret, CONFIG_ESB_TX_FIFO_SIZE);
                 break;
         }
         if (ret) {
+            LOG_WRN("esb_write_payload failed (%d)", ret);
             return ret;
         }
     }

@@ -73,10 +73,7 @@ static ssize_t get_payload_data_size(const struct zmk_split_transport_central_co
 }
 
 static int split_central_esb_send_command(uint8_t source,
-                                            struct zmk_split_transport_central_command cmd) {
-    if (source != 0) {
-        return -EINVAL;
-    }
+                                          struct zmk_split_transport_central_command cmd) {
 
     ssize_t data_size = get_payload_data_size(&cmd);
     if (data_size < 0) {
