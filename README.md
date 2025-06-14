@@ -46,8 +46,8 @@ Include this project on your ZMK's west manifest in `config/west.yml`:
 +    - name: nrfxlib
 +      remote: nrfconnect
 +      revision: v2.6.4
-+     repo-path: sdk-nrfxlib
-+     path: nrfxlib
++      repo-path: sdk-nrfxlib
++      path: nrfxlib
   [...]
 ```
 
