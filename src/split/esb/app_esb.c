@@ -233,7 +233,7 @@ static int pull_packet_from_tx_msgq(void) {
 
     ret = esb_start_tx();
     if (ret) {
-        LOG_WRN("esb_start_tx failed (%d)", ret);
+        // LOG_WRN("esb_start_tx failed (%d)", ret);
         k_sem_give(&esb_tx_sem);
         return ret;
     }
