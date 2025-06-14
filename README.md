@@ -1,13 +1,13 @@
 # ZMK ESB Split Transport
 
-This is ~~an experimental~~ a [ZMK](https://zmk.dev) *Split Transport* module adding support for [Enhanced ShockBurst (ESB)](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/protocols/esb/index.html) protocol on Nordic nRF5 Series device.
+This is a [ZMK](https://zmk.dev) *Split Transport* module adding support for [Enhanced ShockBurst (ESB)](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/protocols/esb/index.html) protocol on Nordic nRF5 Series device.
 
 This work is based on [zmk,wired-split](https://github.com/zmkfirmware/zmk/tree/main/app/src/split/wired), [nRF Connect SDK > ESB Examples](https://docs.nordicsemi.com/bundle/ncs-2.6.4/page/nrf/samples/esb.html) and [ncs-esb-ble-mpsl-demo](https://github.com/too1/ncs-esb-ble-mpsl-demo/).
 
 
 ## What it does
 
-This module uses [nRF Connect SDK (NCS)](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/index.html) ESB implementation as communication protocol between ZMK central and peripherals, instead of Zephyr BLE stack. The protocol implementation is supporting ~~two-way data packet communication (should work, not tested yet),~~ packet buffering, packet acknowledgment, and automatic retransmission, etc. All devices could be communicated with predefined semantic address. 
+This module uses [nRF Connect SDK (NCS)](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/index.html) ESB implementation as communication protocol between ZMK central and peripherals, instead of Zephyr BLE stack. The protocol implementation is supporting two-way data packet communication, packet buffering, packet acknowledgment, and automatic retransmission, etc. All devices could be communicated with predefined semantic address. 
 
 This module also uses [Multi-Protocol Service Layer (MPSL)](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/protocols/multiprotocol/index.html) library which provides services for multiprotocol applications that allows the nRF5 radio driver to negotiate for transmission timeslots. As result, ZMK central allows to pair BLE host as conventional HID input device (keyboard & mouse) and act as an ESB transceiver simultaneously. And all ZMK peripherals talk to ZMK central over ESB only with reduced packet overhead.
 
@@ -17,12 +17,13 @@ In short, central doesn't have timeslots to scan peripherals, and peripheral doe
 
 ### TL;DR;
 This module has two topologies.
-- Dongle with ONLY ESB enabling. 
+- Dongle with ONLY ESB is enabling.
    - Dongle connects to HID host via USB. 
    - Peripherals connects to Dongle via ESB.
-- Split Central with BOTH BLE and ESB enabling.
+- Split Central with BOTH BLE and ESB is enabling.
    - Split Central pairs to HID host via BLE.
    - Split Peripherals connects to Split Central via ESB.
+   - Battery power consumption is about 7.5mA @ 4.0v
 
 
 ## Installation
