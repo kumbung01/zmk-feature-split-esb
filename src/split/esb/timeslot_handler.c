@@ -13,9 +13,12 @@
 #include <mpsl_timeslot.h>
 #include <mpsl.h>
 
+#include <zmk/events/activity_state_changed.h>
+
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(timeslot, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(timeslot_handler, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
+
 
 #define TIMESLOT_REQUEST_TIMEOUT_US  1000000
 #define TIMESLOT_LENGTH_US           10000
@@ -28,6 +31,7 @@ LOG_MODULE_REGISTER(timeslot, LOG_LEVEL_INF);
 #define STACKSIZE                    CONFIG_MAIN_STACK_SIZE
 
 static timeslot_callback_t m_callback;
+static volatile bool m_sess_opened = false;
 static volatile bool m_in_timeslot = false;
 
 // Declare the RADIO IRQ handler to supress warning
@@ -110,6 +114,13 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
             break;
 
         case MPSL_TIMESLOT_SIGNAL_TIMER0:
+            // LOG_DBG("Signal TIMER0");
+            if (!m_sess_opened) {
+                signal_callback_return_param.callback_action = MPSL_TIMESLOT_SIGNAL_ACTION_NONE;
+                p_ret_val = &signal_callback_return_param;
+                break;
+            }
+
             if(nrf_timer_event_check(NRF_TIMER0, NRF_TIMER_EVENT_COMPARE0)) {
                 nrf_timer_int_disable(NRF_TIMER0, NRF_TIMER_INT_COMPARE0_MASK);
                 nrf_timer_event_clear(NRF_TIMER0, NRF_TIMER_EVENT_COMPARE0);
@@ -132,7 +143,13 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
             break;
 
         case MPSL_TIMESLOT_SIGNAL_EXTEND_SUCCEEDED:
-            LOG_DBG("Extend Succeeded");
+            // LOG_DBG("Extend Succeeded");
+            if (!m_sess_opened) {
+                signal_callback_return_param.callback_action = MPSL_TIMESLOT_SIGNAL_ACTION_NONE;
+                p_ret_val = &signal_callback_return_param;
+                break;
+            }
+
             signal_callback_return_param.callback_action = MPSL_TIMESLOT_SIGNAL_ACTION_NONE;
 
             // Set next trigger time to be the current + Timer expiry early
@@ -189,7 +206,7 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
             break;
 
         case MPSL_TIMESLOT_SIGNAL_BLOCKED:
-            LOG_INF("something blocked!");
+            LOG_DBG("something blocked!");
             signal_callback_return_param.callback_action = MPSL_TIMESLOT_SIGNAL_ACTION_NONE;
             p_ret_val = &signal_callback_return_param;
             set_timeslot_active_status(false);
@@ -206,7 +223,7 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
             break;
 
         case MPSL_TIMESLOT_SIGNAL_SESSION_IDLE:
-            LOG_INF("idle");
+            LOG_DBG("idle");
 
             // Request a new timeslot in this case
             schedule_request(REQ_MAKE_REQUEST);
@@ -217,7 +234,7 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
             break;
 
         case MPSL_TIMESLOT_SIGNAL_SESSION_CLOSED:
-            LOG_INF("Session closed");
+            LOG_DBG("Session closed");
 
             signal_callback_return_param.callback_action = MPSL_TIMESLOT_SIGNAL_ACTION_NONE;
             p_ret_val = &signal_callback_return_param;
@@ -249,6 +266,7 @@ static void mpsl_nonpreemptible_thread(void) {
             switch (api_call) {
                 case REQ_OPEN_SESSION:
                     LOG_DBG("req open");
+                    m_sess_opened = true;
                     err = mpsl_timeslot_session_open(mpsl_timeslot_callback, &session_id);
                     if (err) {
                         LOG_ERR("Timeslot session open error: %d", err);
@@ -266,6 +284,7 @@ static void mpsl_nonpreemptible_thread(void) {
                 case REQ_CLOSE_SESSION:
                     LOG_DBG("req close");
                     err = mpsl_timeslot_session_close(session_id);
+                    m_sess_opened = false;
                     if (err) {
                         LOG_ERR("Timeslot session close error: %d", err);
                         k_oops();
@@ -284,6 +303,7 @@ static void mpsl_nonpreemptible_thread(void) {
 void timeslot_handler_init(timeslot_callback_t callback) {
     m_callback = callback;
 
+    m_sess_opened = true;
     schedule_request(REQ_OPEN_SESSION);
 
     schedule_request(REQ_MAKE_REQUEST);
@@ -292,3 +312,35 @@ void timeslot_handler_init(timeslot_callback_t callback) {
 K_THREAD_DEFINE(mpsl_nonpreemptible_thread_id, STACKSIZE,
         mpsl_nonpreemptible_thread, NULL, NULL, NULL,
         K_PRIO_COOP(MPSL_THREAD_PRIO), 0, 0);
+
+static int on_activity_state(const zmk_event_t *eh) {
+    struct zmk_activity_state_changed *state_ev = as_zmk_activity_state_changed(eh);
+    if (!state_ev) {
+        return 0;
+    }
+
+    static bool slept = false;
+    if (state_ev->state != ZMK_ACTIVITY_ACTIVE && !slept) {
+        LOG_DBG("suspending mpsl");
+
+        m_sess_opened = false;
+        schedule_request(REQ_CLOSE_SESSION);
+
+        slept = true;
+    }
+    else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && slept) {
+        LOG_DBG("resuming mpsl");
+
+        m_sess_opened = true;
+        schedule_request(REQ_OPEN_SESSION);
+
+        schedule_request(REQ_MAKE_REQUEST);
+
+        slept = false;
+    }
+
+    return 0;
+}
+
+ZMK_LISTENER(zmk_esb_timeslot_idle_sleeper, on_activity_state);
+ZMK_SUBSCRIPTION(zmk_esb_timeslot_idle_sleeper, zmk_activity_state_changed);
