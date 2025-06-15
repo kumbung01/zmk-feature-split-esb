@@ -126,9 +126,9 @@ void zmk_split_esb_on_prx_esb_callback(app_esb_event_t *event) {
 }
 
 static int zmk_split_esb_central_init(void) {
-    int ret = app_esb_init(APP_ESB_MODE_PRX, zmk_split_esb_on_prx_esb_callback);
+    int ret = zmk_split_esb_init(APP_ESB_MODE_PRX, zmk_split_esb_on_prx_esb_callback);
     if (ret) {
-        LOG_ERR("app_esb init failed (err %d)", ret);
+        LOG_ERR("zmk_split_esb_init failed (err %d)", ret);
         return ret;
     }
     return 0;

@@ -5,10 +5,12 @@
  */
 
 #include "app_esb.h"
-#include "timeslot_handler.h"
+#include "timeslot.h"
 #include <zephyr/drivers/clock_control.h>
 #include <zephyr/drivers/clock_control/nrf_clock_control.h>
 #include <esb.h>
+
+#include <zmk/events/activity_state_changed.h>
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(app_esb, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
@@ -62,7 +64,7 @@ static bool m_active = false;
 
 static int pull_packet_from_tx_msgq(void);
 
-static void on_timeslot_start_stop(timeslot_callback_type_t type);
+static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
 static void event_handler(struct esb_evt const *event) {
     static struct esb_payload tmp_payload;
@@ -241,7 +243,7 @@ static int pull_packet_from_tx_msgq(void) {
     return 0;
 }
 
-int app_esb_init(app_esb_mode_t mode, app_esb_callback_t callback) {
+int zmk_split_esb_init(app_esb_mode_t mode, app_esb_callback_t callback) {
     int ret;
     m_callback = callback;
     m_mode = mode;
@@ -250,11 +252,11 @@ int app_esb_init(app_esb_mode_t mode, app_esb_callback_t callback) {
         return ret;
     }
     LOG_INF("Timeslothandler init");
-    timeslot_handler_init(on_timeslot_start_stop);
+    zmk_split_esb_timeslot_init(on_timeslot_start_stop);
     return 0;
 }
 
-int app_esb_send(app_esb_data_t *tx_packet) {
+int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     int ret = 0;
     static struct esb_payload tx_payload;
     tx_payload.pipe = 0;
@@ -337,7 +339,7 @@ static int app_esb_resume(void) {
 }
 
 /* Callback function signalling that a timeslot is started or stopped */
-static void on_timeslot_start_stop(timeslot_callback_type_t type) {
+static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) {
     switch (type) {
         case APP_TS_STARTED:
             app_esb_resume();
@@ -347,3 +349,29 @@ static void on_timeslot_start_stop(timeslot_callback_type_t type) {
             break;
     }
 }
+
+static int on_activity_state(const zmk_event_t *eh) {
+    struct zmk_activity_state_changed *state_ev = as_zmk_activity_state_changed(eh);
+    if (!state_ev) {
+        return 0;
+    }
+
+    if (m_mode == APP_ESB_MODE_PTX) {
+        static bool slept = false;
+        if (state_ev->state != ZMK_ACTIVITY_ACTIVE && !slept) {
+            LOG_DBG("suspending mpsl");
+            zmk_split_esb_timeslot_close_session();
+            slept = true;
+        }
+        else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && slept) {
+            LOG_DBG("resuming mpsl");
+            zmk_split_esb_timeslot_open_session();
+            slept = false;
+        }
+    }
+
+    return 0;
+}
+
+ZMK_LISTENER(zmk_split_esb_idle_sleeper, on_activity_state);
+ZMK_SUBSCRIPTION(zmk_split_esb_idle_sleeper, zmk_activity_state_changed);

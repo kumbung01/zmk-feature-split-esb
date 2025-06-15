@@ -5,7 +5,7 @@
  */
 
 #include <zephyr/kernel.h>
-#include "timeslot_handler.h"
+#include "timeslot.h"
 #include <zephyr/irq.h>
 #include <zephyr/sys/ring_buffer.h>
 #include <hal/nrf_timer.h>
@@ -13,11 +13,9 @@
 #include <mpsl_timeslot.h>
 #include <mpsl.h>
 
-#include <zmk/events/activity_state_changed.h>
-
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(timeslot_handler, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
+LOG_MODULE_REGISTER(timeslot, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 
 #define TIMESLOT_REQUEST_TIMEOUT_US  1000000
@@ -30,8 +28,8 @@ LOG_MODULE_REGISTER(timeslot_handler, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #define MPSL_THREAD_PRIO             CONFIG_MPSL_THREAD_COOP_PRIO
 #define STACKSIZE                    CONFIG_MAIN_STACK_SIZE
 
-static timeslot_callback_t m_callback;
-static volatile bool m_sess_opened = false;
+static zmk_split_esb_timeslot_callback_t m_callback;
+static volatile bool m_sess_open = false;
 static volatile bool m_in_timeslot = false;
 
 // Declare the RADIO IRQ handler to supress warning
@@ -60,6 +58,12 @@ K_MSGQ_DEFINE(mpsl_api_msgq, sizeof(enum mpsl_timeslot_call), 10, 4);
 
 static void schedule_request(enum mpsl_timeslot_call call) {
     int err;
+    if (call == REQ_OPEN_SESSION) {
+        m_sess_open = true;
+    }
+    else if (call == REQ_CLOSE_SESSION) {
+        m_sess_open = false;
+    }
     enum mpsl_timeslot_call api_call = call;
     err = k_msgq_put(&mpsl_api_msgq, &api_call, K_NO_WAIT);
     if (err) {
@@ -115,7 +119,7 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
 
         case MPSL_TIMESLOT_SIGNAL_TIMER0:
             // LOG_DBG("Signal TIMER0");
-            if (!m_sess_opened) {
+            if (!m_sess_open) {
                 signal_callback_return_param.callback_action = MPSL_TIMESLOT_SIGNAL_ACTION_NONE;
                 p_ret_val = &signal_callback_return_param;
                 break;
@@ -144,7 +148,7 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
 
         case MPSL_TIMESLOT_SIGNAL_EXTEND_SUCCEEDED:
             // LOG_DBG("Extend Succeeded");
-            if (!m_sess_opened) {
+            if (!m_sess_open) {
                 signal_callback_return_param.callback_action = MPSL_TIMESLOT_SIGNAL_ACTION_NONE;
                 p_ret_val = &signal_callback_return_param;
                 break;
@@ -266,7 +270,6 @@ static void mpsl_nonpreemptible_thread(void) {
             switch (api_call) {
                 case REQ_OPEN_SESSION:
                     LOG_DBG("req open");
-                    m_sess_opened = true;
                     err = mpsl_timeslot_session_open(mpsl_timeslot_callback, &session_id);
                     if (err) {
                         LOG_ERR("Timeslot session open error: %d", err);
@@ -284,7 +287,6 @@ static void mpsl_nonpreemptible_thread(void) {
                 case REQ_CLOSE_SESSION:
                     LOG_DBG("req close");
                     err = mpsl_timeslot_session_close(session_id);
-                    m_sess_opened = false;
                     if (err) {
                         LOG_ERR("Timeslot session close error: %d", err);
                         k_oops();
@@ -300,47 +302,20 @@ static void mpsl_nonpreemptible_thread(void) {
     }
 }
 
-void timeslot_handler_init(timeslot_callback_t callback) {
-    m_callback = callback;
+void zmk_split_esb_timeslot_close_session(void) {
+    schedule_request(REQ_CLOSE_SESSION);
+}
 
-    m_sess_opened = true;
+void zmk_split_esb_timeslot_open_session(void) {
     schedule_request(REQ_OPEN_SESSION);
-
     schedule_request(REQ_MAKE_REQUEST);
+}
+
+void zmk_split_esb_timeslot_init(zmk_split_esb_timeslot_callback_t callback) {
+    m_callback = callback;
+    zmk_split_esb_timeslot_open_session();
 }
 
 K_THREAD_DEFINE(mpsl_nonpreemptible_thread_id, STACKSIZE,
         mpsl_nonpreemptible_thread, NULL, NULL, NULL,
         K_PRIO_COOP(MPSL_THREAD_PRIO), 0, 0);
-
-static int on_activity_state(const zmk_event_t *eh) {
-    struct zmk_activity_state_changed *state_ev = as_zmk_activity_state_changed(eh);
-    if (!state_ev) {
-        return 0;
-    }
-
-    static bool slept = false;
-    if (state_ev->state != ZMK_ACTIVITY_ACTIVE && !slept) {
-        LOG_DBG("suspending mpsl");
-
-        m_sess_opened = false;
-        schedule_request(REQ_CLOSE_SESSION);
-
-        slept = true;
-    }
-    else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && slept) {
-        LOG_DBG("resuming mpsl");
-
-        m_sess_opened = true;
-        schedule_request(REQ_OPEN_SESSION);
-
-        schedule_request(REQ_MAKE_REQUEST);
-
-        slept = false;
-    }
-
-    return 0;
-}
-
-ZMK_LISTENER(zmk_esb_timeslot_idle_sleeper, on_activity_state);
-ZMK_SUBSCRIPTION(zmk_esb_timeslot_idle_sleeper, zmk_activity_state_changed);
