@@ -125,29 +125,65 @@ void zmk_split_esb_on_prx_esb_callback(app_esb_event_t *event) {
     zmk_split_esb_cb(event, &async_state);
 }
 
-static int zmk_split_esb_central_init(void) {
-    int ret = zmk_split_esb_init(APP_ESB_MODE_PRX, zmk_split_esb_on_prx_esb_callback);
-    if (ret) {
-        LOG_ERR("zmk_split_esb_init failed (err %d)", ret);
-        return ret;
-    }
-    return 0;
-}
-
-SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
-
 static int split_central_esb_get_available_source_ids(uint8_t *sources) {
     sources[0] = 0;
 
     return 1;
 }
 
+static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
+static bool is_enabled;
+
+static int split_central_esb_set_enabled(bool enabled) {
+    is_enabled = enabled;
+    return zmk_split_esb_set_enable(enabled);
+}
+
+static int
+split_central_esb_set_status_callback(zmk_split_transport_central_status_changed_cb_t cb) {
+    transport_status_cb = cb;
+    return 0;
+}
+
+static struct zmk_split_transport_status split_central_esb_get_status() {
+    return (struct zmk_split_transport_status){
+        .available = true,
+        .enabled = is_enabled,
+        .connections = ZMK_SPLIT_TRANSPORT_CONNECTIONS_STATUS_ALL_CONNECTED,
+    };
+}
+
 static const struct zmk_split_transport_central_api central_api = {
     .send_command = split_central_esb_send_command,
     .get_available_source_ids = split_central_esb_get_available_source_ids,
+    .set_enabled = split_central_esb_set_enabled,
+    .set_status_callback = split_central_esb_set_status_callback,
+    .get_status = split_central_esb_get_status,
 };
 
-ZMK_SPLIT_TRANSPORT_CENTRAL_REGISTER(esb_central, &central_api);
+ZMK_SPLIT_TRANSPORT_CENTRAL_REGISTER(esb_central, &central_api, CONFIG_ZMK_SPLIT_ESB_PRIORITY);
+
+static void notify_transport_status(void) {
+    if (transport_status_cb) {
+        transport_status_cb(&esb_central, split_central_esb_get_status());
+    }
+}
+
+static void notify_status_work_cb(struct k_work *_work) { notify_transport_status(); }
+
+static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
+
+static int zmk_split_esb_central_init(void) {
+    int ret = zmk_split_esb_init(APP_ESB_MODE_PRX, zmk_split_esb_on_prx_esb_callback);
+    if (ret) {
+        LOG_ERR("zmk_split_esb_init failed (err %d)", ret);
+        return ret;
+    }
+    k_work_submit(&notify_status_work);
+    return 0;
+}
+
+SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 
 static void publish_events_work(struct k_work *work) {
     while (ring_buf_size_get(&rx_buf) > ESB_MSG_EXTRA_SIZE) {

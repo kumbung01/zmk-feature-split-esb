@@ -313,7 +313,6 @@ void zmk_split_esb_timeslot_open_session(void) {
 
 void zmk_split_esb_timeslot_init(zmk_split_esb_timeslot_callback_t callback) {
     m_callback = callback;
-    zmk_split_esb_timeslot_open_session();
 }
 
 K_THREAD_DEFINE(mpsl_nonpreemptible_thread_id, STACKSIZE,

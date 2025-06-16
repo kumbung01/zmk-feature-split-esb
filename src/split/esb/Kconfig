@@ -10,6 +10,12 @@ config ZMK_SPLIT_ESB_ROLE_CENTRAL
 
 endmenu
 
+config ZMK_SPLIT_ESB_PRIORITY
+    int "ESB transport priority"
+    default 2
+    help
+        Lower number priorities transports are favored over higher numbers.
+
 config ZMK_SPLIT_ESB_PERIPHERAL_ID
     int "Default peripheral id for TX"
     default 0

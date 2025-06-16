@@ -59,6 +59,7 @@ static struct esb_payload rx_payload;
 
 static app_esb_mode_t m_mode;
 static bool m_active = false;
+static bool m_enabled = false;
 
 static int pull_packet_from_tx_msgq(void);
 
@@ -241,6 +242,17 @@ int zmk_split_esb_init(app_esb_mode_t mode, app_esb_callback_t callback) {
     return 0;
 }
 
+int zmk_split_esb_set_enable(bool enabled) {
+    m_enabled = enabled;
+    if (enabled) {
+        zmk_split_esb_timeslot_open_session();
+        return 0;
+    } else {
+        zmk_split_esb_timeslot_close_session();
+        return 0;
+    }
+}
+
 int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     int ret = 0;
     static struct esb_payload tx_payload;
@@ -342,16 +354,11 @@ static int on_activity_state(const zmk_event_t *eh) {
     }
 
     if (m_mode == APP_ESB_MODE_PTX) {
-        static bool slept = false;
-        if (state_ev->state != ZMK_ACTIVITY_ACTIVE && !slept) {
-            LOG_DBG("suspending mpsl");
-            zmk_split_esb_timeslot_close_session();
-            slept = true;
+        if (state_ev->state != ZMK_ACTIVITY_ACTIVE && m_enabled) {
+            zmk_split_esb_set_enable(false);
         }
-        else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && slept) {
-            LOG_DBG("resuming mpsl");
-            zmk_split_esb_timeslot_open_session();
-            slept = false;
+        else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !m_enabled) {
+            zmk_split_esb_set_enable(true);
         }
     }
 
