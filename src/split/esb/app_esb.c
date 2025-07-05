@@ -78,6 +78,7 @@ static void event_handler(struct esb_evt const *event) {
             break;
         case ESB_EVENT_TX_FAILED:
             LOG_WRN("TX FAILED, tx_attempts: %d", event->tx_attempts);
+            esb_flush_tx();
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
             m_event.data_length = tmp_payload.length;
