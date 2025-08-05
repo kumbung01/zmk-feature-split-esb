@@ -30,7 +30,7 @@ config ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY
 
 config ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT
     int "The number of retransmission attempts before transmission fail"
-    default 32
+    default 3
 
 config ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS
     int "Number of message queue size to buffer ESB payload for TX in between multi-protocol service timeslots (CONFIG_MPSL_TIMESLOT_SESSION_COUNT)"

@@ -86,7 +86,7 @@ CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY=600
 
 # The number of retransmission attempts before transmission fail
 # NOTE: applying less retransmit count on pointer device will lead to lossy but sharper move
-CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT=32
+CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT=3
 
 # The number of Multi-Protocol Service Layer (MPSL) timeslot sessions
 # set 1, if CONFIG_ZMK_BLE is disabled on central or peripherals
@@ -105,7 +105,10 @@ CONFIG_ZMK_SPLIT_ESB_CMD_BUFFER_ITEMS=4
 CONFIG_CLOCK_CONTROL_NRF_K32SRC_RC=y
 CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE=2048
 CONFIG_ESB_MAX_PAYLOAD_LENGTH=48
-CONFIG_ESB_TX_FIFO_SIZE=32
+
+# currently, set ESB_TX_FIFO to 1, to workaround ACK issues before NCS 3.1.0 release
+# NOTE: should apply to both TX and RX sides
+CONFIG_ESB_TX_FIFO_SIZE=1
 
 # Logging!
 # CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL_DBG=y

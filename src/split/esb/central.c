@@ -93,7 +93,9 @@ static int split_central_esb_send_command(uint8_t source,
         data_size + sizeof(source) + sizeof(enum zmk_split_transport_central_command_type);
 
     if (ring_buf_space_get(&tx_buf) < ESB_MSG_EXTRA_SIZE + payload_size) {
-        LOG_WRN("No room to send command to the peripheral %d", source);
+        LOG_WRN("No room to send command to the peripheral %d (have %d but only space for %d/%d)", 
+                source, ESB_MSG_EXTRA_SIZE + payload_size, ring_buf_space_get(&tx_buf),
+                ring_buf_capacity_get(&tx_buf));
         k_sem_give(&esb_send_cmd_sem);
         return -ENOSPC;
     }
