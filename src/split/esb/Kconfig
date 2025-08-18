@@ -49,3 +49,30 @@ module-str = ZMK_SPLIT_ESB
 source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
 
 endif #ZMK_SPLIT && ZMK_SPLIT_ESB
+
+# **************************************************************************
+# Following config is cloned for battery monitoring, if BLE is not enabled.
+# **************************************************************************
+
+if ZMK_SPLIT && !ZMK_SPLIT_BLE
+if ZMK_SPLIT_ROLE_CENTRAL
+
+config ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS
+    int "Number of peripherals that will connect to the central."
+
+config ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_FETCHING
+    bool "Fetch Peripheral Battery Level Info"
+
+if ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_FETCHING
+
+config ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_QUEUE_SIZE
+    int "Max number of battery level events to queue when received from peripherals"
+    default ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS
+
+config ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_PROXY
+    bool "Proxy Peripheral Battery Level Info"
+
+endif #ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_FETCHING
+
+endif #ZMK_SPLIT_ROLE_CENTRAL
+endif #ZMK_SPLIT && !ZMK_SPLIT_BLE
