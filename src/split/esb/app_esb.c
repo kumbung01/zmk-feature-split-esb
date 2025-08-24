@@ -261,7 +261,7 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     static struct esb_payload tx_payload;
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID)
-    tx_payload.pipe = peripheral_id; // use the peripheral_id as the ESB pipe number
+    tx_payload.pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID; // use the peripheral_id as the ESB pipe number
 #else
     tx_payload.pipe = ((struct esb_command_envelope*)tx_packet->data)->payload.source;
 #endif
