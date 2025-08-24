@@ -44,6 +44,10 @@ config ZMK_SPLIT_ESB_CMD_BUFFER_ITEMS
     int "Number of central commands to buffer for TX/RX"
     default 4
 
+config ZMK_SPLIT_ESB_BITRATE_2MBPS
+    bool "Set ESB bitrate to 2Mbps"
+    default n
+
 module = ZMK_SPLIT_ESB
 module-str = ZMK_SPLIT_ESB
 source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"

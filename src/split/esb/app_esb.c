@@ -136,7 +136,11 @@ static int esb_initialize(app_esb_mode_t mode) {
     config.protocol = ESB_PROTOCOL_ESB_DPL;
     config.retransmit_delay = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY;
     config.retransmit_count = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT;
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_BITRATE_2MBPS)
     config.bitrate = ESB_BITRATE_2MBPS;
+#else
+    config.bitrate = ESB_BITRATE_1MBPS;
+#endif
     config.event_handler = event_handler;
     config.mode = (mode == APP_ESB_MODE_PTX) ? ESB_MODE_PTX : ESB_MODE_PRX;
     config.tx_mode = ESB_TXMODE_MANUAL_START;
