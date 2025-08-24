@@ -5,6 +5,7 @@
  */
 
 #include "app_esb.h"
+#include "common.h"
 #include "timeslot.h"
 #include <zephyr/drivers/clock_control.h>
 #include <zephyr/drivers/clock_control/nrf_clock_control.h>
@@ -36,12 +37,12 @@ LOG_MODULE_REGISTER(app_esb, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #endif
 
 #if (!HAS_ADDR_PREFIX || ADDR_PREFIX_LEN != 8)
-#error "zmk,esb-split :: base-addr-0 must include 8 bytes"
+#error "zmk,esb-split :: addr-prefix must include 8 bytes"
 #endif
 
 uint8_t esb_base_addr_0[4] = DT_INST_PROP(0, base_addr_0);
 uint8_t esb_base_addr_1[4] = DT_INST_PROP(0, base_addr_1);
-uint8_t esb_addr_prefix[4] = DT_INST_PROP(0, addr_prefix);
+uint8_t esb_addr_prefix[8] = DT_INST_PROP(0, addr_prefix);
 
 #else
 #error "Need to create a node with compatible of 'zmk,esb-split` with `all `address` property set."
@@ -258,7 +259,13 @@ int zmk_split_esb_set_enable(bool enabled) {
 int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     int ret = 0;
     static struct esb_payload tx_payload;
-    tx_payload.pipe = 0;
+
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID)
+    tx_payload.pipe = peripheral_id; // use the peripheral_id as the ESB pipe number
+#else
+    tx_payload.pipe = ((struct esb_command_envelope*)tx_packet->data)->payload.source;
+#endif
+
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK)
     tx_payload.noack = false;
 #else
