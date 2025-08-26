@@ -65,7 +65,7 @@ static int pull_packet_from_tx_msgq(void);
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
 static void event_handler(struct esb_evt const *event) {
-    const int init_backoff_ms = 2;
+    const int init_backoff_us = 600;
     static int tx_attempts = 0;
     app_esb_event_t m_event;
     switch (event->evt_id) {
@@ -87,12 +87,12 @@ static void event_handler(struct esb_evt const *event) {
             m_callback(&m_event);
 
             // Implement a simple backoff mechanism before sending the next packet
-            uint32_t backoff_ms = init_backoff_ms + (rand() % (init_backoff_ms * (1 << tx_attempts)));
-            if (backoff_ms > 100) {
-                backoff_ms = 100;
+            uint32_t backoff_us = init_backoff_us + (rand() % (init_backoff_us * (1 << tx_attempts)));
+            if (backoff_us > 1500) {
+                backoff_us = 1500;
             }
-            LOG_WRN("Backing off for %d ms", backoff_ms);
-            k_msleep(backoff_ms);
+            LOG_WRN("Backing off for %d us", backoff_us);
+            k_usleep(backoff_us);
             pull_packet_from_tx_msgq();
             break;
         case ESB_EVENT_RX_RECEIVED:
@@ -208,6 +208,7 @@ static int pull_packet_from_tx_msgq(void) {
 
         if (ret == 0)
         {
+            esb_start_tx();
             que_was_fulled = 0;
         }
 
@@ -235,7 +236,6 @@ static int pull_packet_from_tx_msgq(void) {
     }
 
 exit_pull:
-    esb_start_tx();
 
     return ret;
 }
