@@ -12,7 +12,9 @@
 #include <esb.h>
 
 // for backoff logic
-// #include <zephyr/kernel.h>
+#include <zephyr/kernel.h>
+#include <zephyr/random/random.h>
+
 #include <zmk/events/activity_state_changed.h>
 
 #include <zephyr/logging/log.h>
@@ -60,6 +62,8 @@ K_MSGQ_DEFINE(m_msgq_tx_payloads, sizeof(struct esb_payload),
 K_MSGQ_DEFINE(m_msgq_tx_payloads_sent, sizeof(struct esb_payload), 
               CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
 
+K_TIMER_DEFINE(tx_retry_timer, tx_retry_callback, NULL);
+
 static app_esb_mode_t m_mode;
 static bool m_active = false;
 static bool m_enabled = false;
@@ -67,6 +71,24 @@ static bool m_enabled = false;
 static int pull_packet_from_tx_msgq(void);
 
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
+
+void tx_retry_callback(struct k_timer *timer) {
+    LOG_DBG("Backoff timer expired, retrying transmission");
+    pull_packet_from_tx_msgq();
+}
+
+uint32_t calculate_backoff_ms(int attempts) {
+    const uint32_t base_ms = 2;
+    const uint32_t max_ms = 20;
+    
+    uint32_t exp_backoff = base_ms * (1 << attempts);
+    if (exp_backoff > max_ms) {
+        exp_backoff = max_ms;
+    }
+    
+    uint32_t jitter = sys_rand32_get() % exp_backoff;
+    return exp_backoff + jitter;
+}
 
 static void event_handler(struct esb_evt const *event) {
     const int init_backoff_us = 600;
@@ -95,13 +117,9 @@ static void event_handler(struct esb_evt const *event) {
             m_callback(&m_event);
 
             // Implement a simple backoff mechanism before sending the next packet
-            // uint32_t backoff_us = init_backoff_us + (rand() % (init_backoff_us * (1 << tx_attempts)));
-            // if (backoff_us > 1500) {
-            //     backoff_us = 1500;
-            // }
-            // LOG_WRN("Backing off for %d us", backoff_us);
-            // k_usleep(backoff_us);
-            pull_packet_from_tx_msgq();
+            uint32_t backoff_ms = calculate_backoff_ms(tx_attempts);
+            LOG_DBG("Backing off for %d ms before retrying", backoff_ms);
+            k_timer_start(&tx_retry_timer, K_MSEC(backoff_ms), K_NO_WAIT);
             break;
         case ESB_EVENT_RX_RECEIVED:
             // LOG_DBG("RX SUCCESS");
