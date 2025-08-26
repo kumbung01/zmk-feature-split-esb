@@ -66,9 +66,11 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
 static void event_handler(struct esb_evt const *event) {
     const int init_backoff_ms = 1;
+    static int tx_attempts = 0;
     app_esb_event_t m_event;
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
+            tx_attempts = 0;
             // LOG_DBG("TX SUCCESS, tx_attempts: %d", event->tx_attempts);
             // LOG_DBG("give d1");
             // Forward an event to the application
@@ -77,14 +79,15 @@ static void event_handler(struct esb_evt const *event) {
             pull_packet_from_tx_msgq();
             break;
         case ESB_EVENT_TX_FAILED:
-            LOG_WRN("TX FAILED, tx_attempts: %d", event->tx_attempts);
+            tx_attempts++;
+            LOG_WRN("TX FAILED, tx_attempts: %d", tx_attempts);
             // esb_flush_tx(); // DOUH, had fixed @ 3.1.0-rc1, not ready yet.
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
             m_callback(&m_event);
 
             // Implement a simple backoff mechanism before sending the next packet
-            k_msleep(init_backoff_ms + (rand() % (init_backoff_ms * (1 << event->tx_attempts))));
+            k_msleep(init_backoff_ms + (rand() % (init_backoff_ms * (1 << tx_attempts))));
             pull_packet_from_tx_msgq();
             break;
         case ESB_EVENT_RX_RECEIVED:
