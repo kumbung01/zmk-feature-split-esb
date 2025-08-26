@@ -196,9 +196,7 @@ static int esb_initialize(app_esb_mode_t mode) {
     if (mode == APP_ESB_MODE_PRX) {
         esb_start_rx();
     }
-
-    k_msleep(10); // let the radio settle
-
+    
     return 0;
 }
 
