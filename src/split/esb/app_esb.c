@@ -87,7 +87,12 @@ static void event_handler(struct esb_evt const *event) {
             m_callback(&m_event);
 
             // Implement a simple backoff mechanism before sending the next packet
-            k_msleep(init_backoff_ms + (rand() % (init_backoff_ms * (1 << tx_attempts))));
+            uint32_t backoff_ms = init_backoff_ms + (rand() % (init_backoff_ms * (1 << tx_attempts)));
+            if (backoff_ms > 100) {
+                backoff_ms = 100;
+            }
+            LOG_WRN("Backing off for %d ms", backoff_ms)
+            k_msleep(backoff_ms);
             pull_packet_from_tx_msgq();
             break;
         case ESB_EVENT_RX_RECEIVED:
