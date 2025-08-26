@@ -13,7 +13,6 @@
 
 // for backoff logic
 #include <zephyr/kernel.h>
-#include <zephyr/random/random.h>
 
 #include <zmk/events/activity_state_changed.h>
 
@@ -79,6 +78,13 @@ void tx_retry_callback(struct k_timer *timer) {
     pull_packet_from_tx_msgq();
 }
 
+static uint32_t prng_state = 1;
+
+uint32_t simple_rand32(void) {
+    prng_state = (1103515245 * prng_state + 12345) & 0x7FFFFFFF;
+    return prng_state;
+}
+
 uint32_t calculate_backoff_ms(int attempts) {
     const uint32_t base_ms = 2;
     const uint32_t max_ms = 20;
@@ -88,7 +94,7 @@ uint32_t calculate_backoff_ms(int attempts) {
         exp_backoff = max_ms;
     }
     
-    uint32_t jitter = sys_rand32_get() % exp_backoff;
+    uint32_t jitter = simple_rand32() % exp_backoff;
     return exp_backoff + jitter;
 }
 
