@@ -12,9 +12,7 @@
 #include <esb.h>
 
 // for backoff logic
-#include <stdlib.h>
-#include <time.h>
-
+#include <zephyr/kernel.h>
 #include <zmk/events/activity_state_changed.h>
 
 #include <zephyr/logging/log.h>
@@ -179,13 +177,12 @@ static int esb_initialize(app_esb_mode_t mode) {
 
     NVIC_SetPriority(RADIO_IRQn, 0);
 
-    k_msleep(10); // let the radio settle
-
     if (mode == APP_ESB_MODE_PRX) {
         esb_start_rx();
     }
 
-    srand(time(NULL)); // seed the random number generator for backoff logic
+    srand(k_uptime_get()); // seed the random number generator for backoff logic
+    k_msleep(10); // let the radio settle
 
     return 0;
 }
