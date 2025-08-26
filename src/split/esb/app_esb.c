@@ -224,7 +224,7 @@ static int esb_initialize(app_esb_mode_t mode) {
         esb_start_rx();
     }
 
-    k_msleep(10); // Give the radio time to start up
+    k_msleep(50); // Give the radio time to start up
 
     return 0;
 }
