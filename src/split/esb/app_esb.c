@@ -251,10 +251,10 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     int ret = 0;
     static struct esb_payload tx_payload;
 
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID)
-    tx_payload.pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID + 1; // use the peripheral_id as the ESB pipe number, offset by 1
-#else
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     tx_payload.pipe = ((struct esb_command_envelope*)tx_packet->data)->payload.source;
+#else
+    tx_payload.pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID + 1; // use the peripheral_id as the ESB pipe number, offset by 1
 #endif
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK)
