@@ -65,7 +65,7 @@ static int pull_packet_from_tx_msgq(void);
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
 static void event_handler(struct esb_evt const *event) {
-    const int init_backoff_ms = 1;
+    const int init_backoff_ms = 2;
     static int tx_attempts = 0;
     app_esb_event_t m_event;
     switch (event->evt_id) {
@@ -203,7 +203,7 @@ static int pull_packet_from_tx_msgq(void) {
     struct esb_payload tx_payload;
     static uint8_t que_was_fulled = 0;
 
-    if (k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT) == 0) {
+    while (k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT) == 0) {
         ret = esb_write_payload(&tx_payload);
 
         if (ret == 0)
