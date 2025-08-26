@@ -209,17 +209,15 @@ static int esb_initialize(app_esb_mode_t mode) {
 static int pull_packet_from_tx_msgq(void) {
     int ret = 0;
     struct esb_payload tx_payload;
-    static uint8_t que_was_fulled = 0;
+    // static uint8_t que_was_fulled = 0;
 
-    while (k_msgq_peek(&m_msgq_tx_payloads, &tx_payload) == 0) {
+    while (k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT) == 0) {
         ret = esb_write_payload(&tx_payload);
 
         if (ret == 0)
         {
-            k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
             k_msgq_put(&m_msgq_tx_payloads_sent, &tx_payload, K_NO_WAIT);
-            esb_start_tx();
-            que_was_fulled = 0;
+            // que_was_fulled = 0;
         }
 
         else
@@ -233,18 +231,19 @@ static int pull_packet_from_tx_msgq(void) {
             else if (ret == -ENOMEM)
             {
                 LOG_WRN("esb_tx_fifo: esb tx fifo full");
-
+                k_msgq_put(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
                 goto exit_pull;
             }
             else {
                 LOG_DBG("requeueing tx_payload");
+                k_msgq_put(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
                 // requeue FIFO msg
             }
         }
     }
 
 exit_pull:
-
+    esb_start_tx();
     return ret;
 }
 
