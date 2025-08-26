@@ -203,12 +203,11 @@ static int pull_packet_from_tx_msgq(void) {
     struct esb_payload tx_payload;
     static uint8_t que_was_fulled = 0;
 
-    if (k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT) == 0) {
+    while (k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT) == 0) {
         ret = esb_write_payload(&tx_payload);
 
         if (ret == 0)
         {
-            esb_start_tx();
             que_was_fulled = 0;
         }
 
@@ -220,6 +219,13 @@ static int pull_packet_from_tx_msgq(void) {
                 LOG_WRN("esb_tx_fifo: tx_payload size too large (%d) > CONFIG_ESB_MAX_PAYLOAD_LENGTH (%d)",
                         tx_payload.length, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
             }
+            else if (ret == -ENOMEM)
+            {
+                LOG_DBG("esb_tx_fifo: esb tx fifo full, requeuing tx_payload");
+                k_msgq_put(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
+
+                goto exit_pull;
+            }
             else {
                 LOG_DBG("requeueing tx_payload");
                 // requeue FIFO msg
@@ -227,6 +233,10 @@ static int pull_packet_from_tx_msgq(void) {
             }
         }
     }
+
+exit_pull:
+    esb_start_tx();
+
     return ret;
 }
 
