@@ -11,6 +11,10 @@
 #include <zephyr/drivers/clock_control/nrf_clock_control.h>
 #include <esb.h>
 
+// for backoff logic
+#include <stdlib.h>
+#include <time.h>
+
 #include <zmk/events/activity_state_changed.h>
 
 #include <zephyr/logging/log.h>
@@ -63,6 +67,7 @@ static int pull_packet_from_tx_msgq(void);
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
 static void event_handler(struct esb_evt const *event) {
+    const int init_backoff_ms = 1;
     app_esb_event_t m_event;
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
@@ -79,6 +84,9 @@ static void event_handler(struct esb_evt const *event) {
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
             m_callback(&m_event);
+
+            // Implement a simple backoff mechanism before sending the next packet
+            k_msleep(init_backoff_ms + (rand() % (init_backoff_ms * (1 << event->tx_attempts))));
             pull_packet_from_tx_msgq();
             break;
         case ESB_EVENT_RX_RECEIVED:
@@ -87,6 +95,7 @@ static void event_handler(struct esb_evt const *event) {
             uint8_t buf[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
             if (esb_read_rx_payload(&rx_payload) == 0) {
                 // LOG_DBG("Chunk %d, len: %d", rx_payload.pid, rx_payload.length);
+                LOG_DBg("RX pipe: %d", rx_payload.pipe);
                 memcpy(buf, rx_payload.data, rx_payload.length);
                 // LOG_DBG("Packet len: %d", rx_payload.length);
                 m_event.evt_type = APP_ESB_EVT_RX;
@@ -170,9 +179,13 @@ static int esb_initialize(app_esb_mode_t mode) {
 
     NVIC_SetPriority(RADIO_IRQn, 0);
 
+    k_msleep(10); // let the radio settle
+
     if (mode == APP_ESB_MODE_PRX) {
         esb_start_rx();
     }
+
+    srand(time(NULL)); // seed the random number generator for backoff logic
 
     return 0;
 }
@@ -185,50 +198,31 @@ static int pull_packet_from_tx_msgq(void) {
     struct esb_payload tx_payload;
     static uint8_t que_was_fulled = 0;
 
-    if (k_msgq_peek(&m_msgq_tx_payloads, &tx_payload) == 0) {
+    if (k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT) == 0) {
         ret = esb_write_payload(&tx_payload);
 
-        if (ret == -ENOMEM) {
-            LOG_WRN("esb_tx_fifo: queue full %d", que_was_fulled);
-
-            // *** deprecated pre-emptive queuing logic ***
-            // LOG_DBG("esb_tx_fifo: queue full, popping first message and queueing again");
-            // ret = esb_pop_tx();
-            // if (ret) {
-            //     LOG_ERR("esb_tx_fifo: popping first message and queueing failed (%d)", ret);
-            // }
-            // ret = esb_write_payload(&tx_payload);
-            // if (ret) {
-            //     LOG_ERR("esb_write_payload failed (%d)", ret);
-            // }
-
-            // force dequeue, guarding for phantom PRX.
-            que_was_fulled++;
-            if (que_was_fulled >= ESB_TX_FIFO_REQUE_MAX) {
-                esb_flush_tx();
-                // dequeue FIFO msg
-                k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
-            }
-
-        } else if (ret == -EMSGSIZE) {
-            LOG_WRN("esb_tx_fifo: tx_payload size too large (%d) > CONFIG_ESB_MAX_PAYLOAD_LENGTH (%d)",
-                    tx_payload.length, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
-            // dequeue FIFO msg
-            k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
-
-        } else if (ret) {
-            LOG_WRN("esb_write_payload failed (%d)", ret);
-
-        } else {
-            // LOG_DBG("Payload len: %d", tx_payload.length);
+        if (ret == 0)
+        {
             esb_start_tx();
-            // dequeue FIFO msg
-            k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
             que_was_fulled = 0;
+        }
+
+        else
+        {
+            LOG_DBG("esb_write_payload returned %d", ret);
+            if (ret == -EMSGSIZE) {
+                // msg size too large, discard it
+                LOG_WRN("esb_tx_fifo: tx_payload size too large (%d) > CONFIG_ESB_MAX_PAYLOAD_LENGTH (%d)",
+                        tx_payload.length, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
+            }
+            else {
+                LOG_DBG("requeueing tx_payload");
+                // requeue FIFO msg
+                k_msgq_put(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
+            }
         }
     }
 
-    esb_start_tx();
     return ret;
 }
 
