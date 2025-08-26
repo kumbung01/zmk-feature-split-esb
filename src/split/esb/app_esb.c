@@ -207,6 +207,7 @@ static int pull_packet_from_tx_msgq(void) {
     int ret = 0;
     struct esb_payload tx_payload;
     // static uint8_t que_was_fulled = 0;
+    bool tx_started = false;
 
     while (k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT) == 0) {
         ret = esb_write_payload(&tx_payload);
@@ -214,7 +215,12 @@ static int pull_packet_from_tx_msgq(void) {
         if (ret == 0)
         {
             k_msgq_put(&m_msgq_tx_payloads_sent, &tx_payload, K_NO_WAIT);
-            esb_start_tx();
+            if (!tx_started)
+            {
+                tx_started = true;
+                esb_start_tx();
+            }
+       
             // que_was_fulled = 0;
         }
 
