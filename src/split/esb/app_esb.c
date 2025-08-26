@@ -106,7 +106,7 @@ static void event_handler(struct esb_evt const *event) {
         case ESB_EVENT_RX_RECEIVED:
             // LOG_DBG("RX SUCCESS");
             struct esb_payload rx_payload;
-            uint8_t buf[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
+            static uint8_t buf[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
             if (esb_read_rx_payload(&rx_payload) == 0) {
                 // LOG_DBG("Chunk %d, len: %d", rx_payload.pid, rx_payload.length);
                 LOG_DBG("RX pipe: %d", rx_payload.pipe);
@@ -232,17 +232,16 @@ static int pull_packet_from_tx_msgq(void) {
                 // msg size too large, discard it
                 LOG_WRN("esb_tx_fifo: tx_payload size too large (%d) > CONFIG_ESB_MAX_PAYLOAD_LENGTH (%d)",
                         tx_payload.length, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
+                k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
             }
             else if (ret == -ENOMEM)
             {
                 LOG_WRN("esb_tx_fifo: esb tx fifo full");
-                // k_msgq_put(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
                 goto exit_pull;
             }
             else {
-                LOG_DBG("requeueing tx_payload");
-                // k_msgq_put(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
-                // requeue FIFO msg
+                LOG_DBG("other errors, retry later");
+                goto exit_pull;
             }
         }
     }
