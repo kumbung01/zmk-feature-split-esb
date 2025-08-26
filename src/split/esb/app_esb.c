@@ -203,7 +203,7 @@ static int pull_packet_from_tx_msgq(void) {
     struct esb_payload tx_payload;
     static uint8_t que_was_fulled = 0;
 
-    while (k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT) == 0) {
+    if (k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT) == 0) {
         ret = esb_write_payload(&tx_payload);
 
         if (ret == 0)
@@ -227,7 +227,6 @@ static int pull_packet_from_tx_msgq(void) {
             }
         }
     }
-
     return ret;
 }
 
