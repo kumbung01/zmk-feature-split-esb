@@ -93,7 +93,7 @@ static void event_handler(struct esb_evt const *event) {
             uint8_t buf[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
             if (esb_read_rx_payload(&rx_payload) == 0) {
                 // LOG_DBG("Chunk %d, len: %d", rx_payload.pid, rx_payload.length);
-                LOG_DBg("RX pipe: %d", rx_payload.pipe);
+                LOG_DBG("RX pipe: %d", rx_payload.pipe);
                 memcpy(buf, rx_payload.data, rx_payload.length);
                 // LOG_DBG("Packet len: %d", rx_payload.length);
                 m_event.evt_type = APP_ESB_EVT_RX;
