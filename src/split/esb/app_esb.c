@@ -95,12 +95,12 @@ static void event_handler(struct esb_evt const *event) {
             m_callback(&m_event);
 
             // Implement a simple backoff mechanism before sending the next packet
-            uint32_t backoff_us = init_backoff_us + (rand() % (init_backoff_us * (1 << tx_attempts)));
-            if (backoff_us > 1500) {
-                backoff_us = 1500;
-            }
-            LOG_WRN("Backing off for %d us", backoff_us);
-            k_usleep(backoff_us);
+            // uint32_t backoff_us = init_backoff_us + (rand() % (init_backoff_us * (1 << tx_attempts)));
+            // if (backoff_us > 1500) {
+            //     backoff_us = 1500;
+            // }
+            // LOG_WRN("Backing off for %d us", backoff_us);
+            // k_usleep(backoff_us);
             pull_packet_from_tx_msgq();
             break;
         case ESB_EVENT_RX_RECEIVED:
@@ -209,11 +209,12 @@ static int pull_packet_from_tx_msgq(void) {
     // static uint8_t que_was_fulled = 0;
     bool tx_started = false;
 
-    while (k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT) == 0) {
+    while (k_msgq_peek(&m_msgq_tx_payloads, &tx_payload) == 0) {
         ret = esb_write_payload(&tx_payload);
 
         if (ret == 0)
         {
+            k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
             k_msgq_put(&m_msgq_tx_payloads_sent, &tx_payload, K_NO_WAIT);
             if (!tx_started)
             {
@@ -235,12 +236,12 @@ static int pull_packet_from_tx_msgq(void) {
             else if (ret == -ENOMEM)
             {
                 LOG_WRN("esb_tx_fifo: esb tx fifo full");
-                k_msgq_put(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
+                // k_msgq_put(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
                 goto exit_pull;
             }
             else {
                 LOG_DBG("requeueing tx_payload");
-                k_msgq_put(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
+                // k_msgq_put(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
                 // requeue FIFO msg
             }
         }
