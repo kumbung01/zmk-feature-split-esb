@@ -54,6 +54,8 @@ uint8_t esb_addr_prefix[8] = DT_INST_PROP(0, addr_prefix);
 
 static app_esb_callback_t m_callback;
 
+void tx_retry_callback(struct k_timer *timer);
+
 // Define a buffer of payloads to store TX payloads in between timeslots
 K_MSGQ_DEFINE(m_msgq_tx_payloads, sizeof(struct esb_payload), 
               CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
