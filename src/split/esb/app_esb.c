@@ -53,7 +53,7 @@ uint8_t esb_addr_prefix[8] = DT_INST_PROP(0, addr_prefix);
 
 static app_esb_callback_t m_callback;
 
-void tx_retry_callback(struct k_timer *timer);
+// void tx_retry_callback(struct k_timer *timer);
 
 // Define a buffer of payloads to store TX payloads in between timeslots
 K_MSGQ_DEFINE(m_msgq_tx_payloads, sizeof(struct esb_payload), 
@@ -63,7 +63,7 @@ K_MSGQ_DEFINE(m_msgq_tx_payloads, sizeof(struct esb_payload),
 K_MSGQ_DEFINE(m_msgq_tx_payloads_sent, sizeof(struct esb_payload), 
               CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
 
-K_TIMER_DEFINE(tx_retry_timer, tx_retry_callback, NULL);
+// K_TIMER_DEFINE(tx_retry_timer, tx_retry_callback, NULL);
 
 static app_esb_mode_t m_mode;
 static bool m_active = false;
@@ -73,30 +73,30 @@ static int pull_packet_from_tx_msgq(void);
 
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
-void tx_retry_callback(struct k_timer *timer) {
-    LOG_DBG("Backoff timer expired, retrying transmission");
-    pull_packet_from_tx_msgq();
-}
+// void tx_retry_callback(struct k_timer *timer) {
+//     LOG_DBG("Backoff timer expired, retrying transmission");
+//     pull_packet_from_tx_msgq();
+// }
 
-static uint32_t prng_state = 1;
+// static uint32_t prng_state = 1;
 
-uint32_t simple_rand32(void) {
-    prng_state = (1103515245 * prng_state + 12345) & 0x7FFFFFFF;
-    return prng_state;
-}
+// uint32_t simple_rand32(void) {
+//     prng_state = (1103515245 * prng_state + 12345) & 0x7FFFFFFF;
+//     return prng_state;
+// }
 
-uint32_t calculate_backoff_ms(int attempts) {
-    const uint32_t base_ms = 2;
-    const uint32_t max_ms = 20;
+// uint32_t calculate_backoff_ms(int attempts) {
+//     const uint32_t base_ms = 2;
+//     const uint32_t max_ms = 20;
     
-    uint32_t exp_backoff = base_ms * (1 << attempts);
-    if (exp_backoff > max_ms) {
-        exp_backoff = max_ms;
-    }
+//     uint32_t exp_backoff = base_ms * (1 << attempts);
+//     if (exp_backoff > max_ms) {
+//         exp_backoff = max_ms;
+//     }
     
-    uint32_t jitter = simple_rand32() % exp_backoff;
-    return exp_backoff + jitter;
-}
+//     uint32_t jitter = simple_rand32() % exp_backoff;
+//     return exp_backoff + jitter;
+// }
 
 static void event_handler(struct esb_evt const *event) {
     const int init_backoff_us = 600;
@@ -306,8 +306,8 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     static struct esb_payload tx_payload;
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-    // tx_payload.pipe = ((struct esb_command_envelope*)tx_packet->data)->payload.source;
-    tx_payload.pipe = 0; // use pipe 0 for central role
+    tx_payload.pipe = ((struct esb_command_envelope*)tx_packet->data)->payload.source;
+    // tx_payload.pipe = 0; // use pipe 0 for central role
 #else
     tx_payload.pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID + 1; // use the peripheral_id as the ESB pipe number, offset by 1
 #endif
