@@ -95,12 +95,12 @@ static void event_handler(struct esb_evt const *event) {
             m_callback(&m_event);
 
             // Implement a simple backoff mechanism before sending the next packet
-            // uint32_t backoff_us = init_backoff_us + (rand() % (init_backoff_us * (1 << tx_attempts)));
-            // if (backoff_us > 1500) {
-            //     backoff_us = 1500;
-            // }
-            // LOG_WRN("Backing off for %d us", backoff_us);
-            // k_usleep(backoff_us);
+            uint32_t backoff_us = init_backoff_us + (rand() % (init_backoff_us * (1 << tx_attempts)));
+            if (backoff_us > 1500) {
+                backoff_us = 1500;
+            }
+            LOG_WRN("Backing off for %d us", backoff_us);
+            k_usleep(backoff_us);
             pull_packet_from_tx_msgq();
             break;
         case ESB_EVENT_RX_RECEIVED:
@@ -196,7 +196,7 @@ static int esb_initialize(app_esb_mode_t mode) {
     if (mode == APP_ESB_MODE_PRX) {
         esb_start_rx();
     }
-    
+
     return 0;
 }
 
