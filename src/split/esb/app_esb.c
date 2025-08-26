@@ -91,7 +91,7 @@ static void event_handler(struct esb_evt const *event) {
             if (backoff_ms > 100) {
                 backoff_ms = 100;
             }
-            LOG_WRN("Backing off for %d ms", backoff_ms)
+            LOG_WRN("Backing off for %d ms", backoff_ms);
             k_msleep(backoff_ms);
             pull_packet_from_tx_msgq();
             break;
