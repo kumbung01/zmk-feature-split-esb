@@ -100,12 +100,12 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
 static void event_handler(struct esb_evt const *event) {
     const int init_backoff_us = 600;
-    static int tx_attempts = 0;
+    // static int tx_attempts = 0;
     app_esb_event_t m_event;
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
             k_msgq_get(&m_msgq_tx_payloads_sent, NULL, K_NO_WAIT); // remove the sent payload from the sent queue
-            tx_attempts = 0;
+            // tx_attempts = 0;
             // LOG_DBG("TX SUCCESS, tx_attempts: %d", event->tx_attempts);
             // LOG_DBG("give d1");
             // Forward an event to the application
@@ -116,23 +116,12 @@ static void event_handler(struct esb_evt const *event) {
         case ESB_EVENT_TX_FAILED:
             struct esb_payload tx_payload;
             k_msgq_get(&m_msgq_tx_payloads_sent, &tx_payload, K_NO_WAIT); // peek the failed payload from the sent queue
-            if (tx_attempts < CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT) {
-                k_msgq_put(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT); // requeue it to the main queue
-                tx_attempts++;
-                LOG_WRN("TX FAILED, tx_attempts: %d", tx_attempts);
-            }
-            else {
-                tx_attempts = 0;
-            }
+            k_msgq_put(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT); // requeue it to the main queue
+           
             // esb_flush_tx(); // DOUH, had fixed @ 3.1.0-rc1, not ready yet.
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
             m_callback(&m_event);
-
-            // Implement a simple backoff mechanism before sending the next packet
-            // uint32_t backoff_ms = calculate_backoff_ms(tx_attempts);
-            // LOG_DBG("Backing off for %d ms before retrying", backoff_ms);
-            // k_timer_start(&tx_retry_timer, K_MSEC(backoff_ms), K_NO_WAIT);
             pull_packet_from_tx_msgq();
             break;
         case ESB_EVENT_RX_RECEIVED:
@@ -240,7 +229,7 @@ static int pull_packet_from_tx_msgq(void) {
     struct esb_payload tx_payload;
     // bool tx_started = false;
 
-    while (k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT) == 0) {
+    if (k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT) == 0) {
         ret = esb_write_payload(&tx_payload);
 
         if (ret == 0)
