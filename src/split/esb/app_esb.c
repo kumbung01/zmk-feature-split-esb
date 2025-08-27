@@ -105,7 +105,7 @@ static void event_handler(struct esb_evt const *event) {
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
             // k_msgq_get(&m_msgq_tx_payloads_sent, NULL, K_NO_WAIT); // remove the sent payload from the sent queue
-            tx_attempts = 0;
+            // tx_attempts = 0;
             // LOG_DBG("TX SUCCESS, tx_attempts: %d", event->tx_attempts);
             // LOG_DBG("give d1");
             // Forward an event to the application
