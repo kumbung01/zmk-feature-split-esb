@@ -117,7 +117,7 @@ static void event_handler(struct esb_evt const *event) {
             struct esb_payload tx_payload;
             k_msgq_get(&m_msgq_tx_payloads_sent, &tx_payload, K_NO_WAIT); // peek the failed payload from the sent queue
             if (tx_attempts < CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT) {
-                k_msgq_put_front(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT); // requeue it to the main queue
+                k_msgq_put(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT); // requeue it to the main queue
                 tx_attempts++;
                 LOG_WRN("TX FAILED, tx_attempts: %d", tx_attempts);
             }
@@ -269,12 +269,12 @@ static int pull_packet_from_tx_msgq(void) {
             else if (ret == -ENOMEM)
             {
                 LOG_WRN("esb_tx_fifo: esb tx fifo full");
-                k_msgq_put_front(&m_msgq_tx_payloads_sent, &tx_payload, K_NO_WAIT);
+                k_msgq_put(&m_msgq_tx_payloads_sent, &tx_payload, K_NO_WAIT);
                 goto exit_pull;
             }
             else {
                 LOG_DBG("other errors, retry later");
-                k_msgq_put_front(&m_msgq_tx_payloads_sent, &tx_payload, K_NO_WAIT);
+                k_msgq_put(&m_msgq_tx_payloads_sent, &tx_payload, K_NO_WAIT);
                 goto exit_pull;
             }
         }
