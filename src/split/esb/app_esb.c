@@ -105,7 +105,7 @@ static void event_handler(struct esb_evt const *event) {
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
             k_msgq_get(&m_msgq_tx_payloads_sent, NULL, K_NO_WAIT); // remove the sent payload from the sent queue
-            // tx_attempts = 0;
+            tx_attempts = 0;
             // LOG_DBG("TX SUCCESS, tx_attempts: %d", event->tx_attempts);
             // LOG_DBG("give d1");
             // Forward an event to the application
@@ -116,8 +116,14 @@ static void event_handler(struct esb_evt const *event) {
         case ESB_EVENT_TX_FAILED:
             struct esb_payload tx_payload;
             k_msgq_get(&m_msgq_tx_payloads_sent, &tx_payload, K_NO_WAIT); // peek the failed payload from the sent queue
-            k_msgq_put(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT); // requeue it to the main queue
-           
+            if (tx_attempts < CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT) {
+                k_msgq_put(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT); // requeue it to the main queue
+                tx_attempts++;
+                LOG_WRN("TX FAILED, tx_attempts: %d", tx_attempts);
+            }
+            else {
+                tx_attempts = 0;
+            }
             // esb_flush_tx(); // DOUH, had fixed @ 3.1.0-rc1, not ready yet.
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
@@ -234,13 +240,7 @@ static int pull_packet_from_tx_msgq(void) {
 
         if (ret == 0)
         {
-            k_msgq_put(&m_msgq_tx_payloads_sent, &tx_payload, K_NO_WAIT);
-            // if (!tx_started)
-            // {
-            //     tx_started = true;
-                
-            // }
-       
+            // k_msgq_put(&m_msgq_tx_payloads_sent, &tx_payload, K_NO_WAIT);
         }
 
         else
@@ -254,12 +254,12 @@ static int pull_packet_from_tx_msgq(void) {
             else if (ret == -ENOMEM)
             {
                 LOG_WRN("esb_tx_fifo: esb tx fifo full");
-                k_msgq_put(&m_msgq_tx_payloads_sent, &tx_payload, K_NO_WAIT);
+                // k_msgq_put(&m_msgq_tx_payloads_sent, &tx_payload, K_NO_WAIT);
                 goto exit_pull;
             }
             else {
                 LOG_DBG("other errors, retry later");
-                k_msgq_put(&m_msgq_tx_payloads_sent, &tx_payload, K_NO_WAIT);
+                // k_msgq_put(&m_msgq_tx_payloads_sent, &tx_payload, K_NO_WAIT);
                 goto exit_pull;
             }
         }
