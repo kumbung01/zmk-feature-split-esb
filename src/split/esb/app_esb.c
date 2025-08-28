@@ -307,7 +307,7 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     tx_payload.pipe = ((struct esb_command_envelope*)tx_packet->data)->payload.source;
     // tx_payload.pipe = 0; // use pipe 0 for central role
 #else
-    tx_payload.pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID + 1; // use the peripheral_id as the ESB pipe number, offset by 1
+    tx_payload.pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID; // use the peripheral_id as the ESB pipe number, offset by 1
 #endif
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK)
