@@ -240,13 +240,12 @@ static int pull_packet_from_tx_msgq(void) {
         return 0;
     }
 
-    while (k_msgq_peek(&m_msgq_tx_payloads, &tx_payload) == 0) {
+    while (!esb_tx_full() && k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT) == 0) {
         ret = esb_write_payload(&tx_payload);
 
         if (ret == 0)
         {
             write_cnt++;
-            k_msgq_get(&m_msgq_tx_payloads, NULL, K_NO_WAIT);
         }
 
         else
