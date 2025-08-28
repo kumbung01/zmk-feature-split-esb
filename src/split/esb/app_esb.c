@@ -236,6 +236,10 @@ static int pull_packet_from_tx_msgq(void) {
     struct esb_payload tx_payload;
     // bool tx_started = false;
 
+    if (!esb_is_idle()) {
+        return 0;
+    }
+
     while (k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT) == 0) {
         ret = esb_write_payload(&tx_payload);
 
