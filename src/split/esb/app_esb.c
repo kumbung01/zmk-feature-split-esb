@@ -234,18 +234,19 @@ static int esb_initialize(app_esb_mode_t mode) {
 static int pull_packet_from_tx_msgq(void) {
     int ret = 0;
     struct esb_payload tx_payload;
-    // bool tx_started = false;
+    int write_cnt = 0;
 
     if (!esb_is_idle()) {
         return 0;
     }
 
-    while (k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT) == 0) {
+    while (k_msgq_peek(&m_msgq_tx_payloads, &tx_payload) == 0) {
         ret = esb_write_payload(&tx_payload);
 
         if (ret == 0)
         {
-            // k_msgq_put(&m_msgq_tx_payloads_sent, &tx_payload, K_NO_WAIT);
+            write_cnt++;
+            k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
         }
 
         else
@@ -271,7 +272,11 @@ static int pull_packet_from_tx_msgq(void) {
     }
 
 exit_pull:
-    esb_start_tx();
+    if (write_cnt > 0) {
+        LOG_DBG("%d packets written", write_cnt);
+        esb_start_tx();
+    }
+    
     return ret;
 }
 
