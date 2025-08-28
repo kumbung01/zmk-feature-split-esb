@@ -307,6 +307,11 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     int ret = 0;
     static struct esb_payload tx_payload;
 
+    if (k_msgq_num_free_get(&m_msgq_tx_payloads) == 0) {
+        LOG_WRN("esb tx_payload_q full, dropping packet");
+        return -ENOSPC;
+    }
+
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     tx_payload.pipe = ((struct esb_command_envelope*)tx_packet->data)->payload.source; // this should match tx FIFO pipe
     // tx_payload.pipe = 0; // use pipe 0 for central role
@@ -319,6 +324,7 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
 #else
     tx_payload.noack = true;
 #endif
+
     memcpy(tx_payload.data, tx_packet->data, tx_packet->len);
     tx_payload.length = tx_packet->len;
     if (!tx_payload.length) {
