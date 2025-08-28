@@ -114,7 +114,7 @@ static void event_handler(struct esb_evt const *event) {
             pull_packet_from_tx_msgq();
             break;
         case ESB_EVENT_TX_FAILED:
-            struct esb_payload tx_payload;
+            // struct esb_payload tx_payload;
             // k_msgq_get(&m_msgq_tx_payloads_sent, &tx_payload, K_NO_WAIT); // peek the failed payload from the sent queue
             // if (tx_attempts < CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT) {
             //     k_msgq_put(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT); // requeue it to the main queue
@@ -132,15 +132,13 @@ static void event_handler(struct esb_evt const *event) {
             break;
         case ESB_EVENT_RX_RECEIVED:
             // LOG_DBG("RX SUCCESS");
-            struct esb_payload rx_payload;
-            static uint8_t buf[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
             if (esb_read_rx_payload(&rx_payload) == 0) {
+                static struct esb_payload rx_payload;
                 // LOG_DBG("Chunk %d, len: %d", rx_payload.pid, rx_payload.length);
                 LOG_DBG("RX pipe: %d", rx_payload.pipe);
-                memcpy(buf, rx_payload.data, rx_payload.length);
                 // LOG_DBG("Packet len: %d", rx_payload.length);
                 m_event.evt_type = APP_ESB_EVT_RX;
-                m_event.buf = buf;
+                m_event.buf = rx.payload.data;
                 m_event.data_length = rx_payload.length;
                 m_callback(&m_event);
             }
