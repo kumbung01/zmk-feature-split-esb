@@ -246,7 +246,7 @@ static int pull_packet_from_tx_msgq(void) {
         if (ret == 0)
         {
             write_cnt++;
-            k_msgq_get(&m_msgq_tx_payloads_sent, NULL, K_NO_WAIT);
+            k_msgq_get(&m_msgq_tx_payloads, NULL, K_NO_WAIT);
         }
 
         else
