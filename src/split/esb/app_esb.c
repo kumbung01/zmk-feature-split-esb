@@ -138,7 +138,7 @@ static void event_handler(struct esb_evt const *event) {
                 LOG_DBG("RX pipe: %d", rx_payload.pipe);
                 // LOG_DBG("Packet len: %d", rx_payload.length);
                 m_event.evt_type = APP_ESB_EVT_RX;
-                m_event.buf = rx.payload.data;
+                m_event.buf = rx_payload.data;
                 m_event.data_length = rx_payload.length;
                 m_callback(&m_event);
             }
