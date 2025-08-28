@@ -245,8 +245,7 @@ static int pull_packet_from_tx_msgq(void) {
 
         if (ret == 0)
         {
-            write_cnt++;
-            k_msgq_get(&m_msgq_tx_payloads, NULL, K_NO_WAIT);
+            // k_msgq_put(&m_msgq_tx_payloads_sent, &tx_payload, K_NO_WAIT);
         }
 
         else
@@ -272,11 +271,7 @@ static int pull_packet_from_tx_msgq(void) {
     }
 
 exit_pull:
-    if (write_cnt > 0) {
-        LOG_DBG("%d packets written", write_cnt);
-        esb_start_tx();
-    }
-
+    esb_start_tx();
     return ret;
 }
 
