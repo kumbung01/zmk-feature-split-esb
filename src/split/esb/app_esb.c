@@ -245,7 +245,8 @@ static int pull_packet_from_tx_msgq(void) {
 
         if (ret == 0)
         {
-            // k_msgq_put(&m_msgq_tx_payloads_sent, &tx_payload, K_NO_WAIT);
+            write_cnt++;
+            k_msgq_get(&m_msgq_tx_payloads_sent, NULL, K_NO_WAIT);
         }
 
         else
@@ -258,7 +259,7 @@ static int pull_packet_from_tx_msgq(void) {
             }
             else if (ret == -ENOMEM)
             {
-                LOG_WRN("esb_tx_fifo: esb tx fifo full");
+                LOG_DBG("esb_tx_fifo: esb tx fifo full");
                 // k_msgq_put(&m_msgq_tx_payloads_sent, &tx_payload, K_NO_WAIT);
                 goto exit_pull;
             }
@@ -271,7 +272,11 @@ static int pull_packet_from_tx_msgq(void) {
     }
 
 exit_pull:
-    esb_start_tx();
+    if (write_cnt)
+    {
+        esb_start_tx();
+    }
+ 
     return ret;
 }
 
