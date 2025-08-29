@@ -59,12 +59,6 @@ static app_esb_callback_t m_callback;
 K_MSGQ_DEFINE(m_msgq_tx_payloads, sizeof(struct esb_payload), 
               CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
 
-// Define a buffer of payloads to store TX payloads in between timeslots
-// K_MSGQ_DEFINE(m_msgq_tx_payloads_sent, sizeof(struct esb_payload), 
-//               CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
-
-// K_TIMER_DEFINE(tx_retry_timer, tx_retry_callback, NULL);
-
 static app_esb_mode_t m_mode;
 static bool m_active = false;
 static bool m_enabled = false;
@@ -73,30 +67,6 @@ static int pull_packet_from_tx_msgq(void);
 
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
-// void tx_retry_callback(struct k_timer *timer) {
-//     LOG_DBG("Backoff timer expired, retrying transmission");
-//     pull_packet_from_tx_msgq();
-// }
-
-// static uint32_t prng_state = 1;
-
-// uint32_t simple_rand32(void) {
-//     prng_state = (1103515245 * prng_state + 12345) & 0x7FFFFFFF;
-//     return prng_state;
-// }
-
-// uint32_t calculate_backoff_ms(int attempts) {
-//     const uint32_t base_ms = 2;
-//     const uint32_t max_ms = 20;
-    
-//     uint32_t exp_backoff = base_ms * (1 << attempts);
-//     if (exp_backoff > max_ms) {
-//         exp_backoff = max_ms;
-//     }
-    
-//     uint32_t jitter = simple_rand32() % exp_backoff;
-//     return exp_backoff + jitter;
-// }
 
 static void event_handler(struct esb_evt const *event) {
     const int init_backoff_us = 600;
@@ -104,27 +74,16 @@ static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event;
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
-            // k_msgq_get(&m_msgq_tx_payloads_sent, NULL, K_NO_WAIT); // remove the sent payload from the sent queue
-            // tx_attempts = 0;
-            // LOG_DBG("TX SUCCESS, tx_attempts: %d", event->tx_attempts);
-            // LOG_DBG("give d1");
+   
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
             break;
         case ESB_EVENT_TX_FAILED:
-            // struct esb_payload tx_payload;
-            // k_msgq_get(&m_msgq_tx_payloads_sent, &tx_payload, K_NO_WAIT); // peek the failed payload from the sent queue
-            // if (tx_attempts < CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT) {
-            //     k_msgq_put(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT); // requeue it to the main queue
-            //     tx_attempts++;
-            //     LOG_WRN("TX FAILED, tx_attempts: %d", tx_attempts);
-            // }
-            // else {
-            //     tx_attempts = 0;
-            // }
-            // esb_flush_tx(); // DOUH, had fixed @ 3.1.0-rc1, not ready yet.
+            if (m_mode == APP_ESB_MODE_PTX) {
+                esb_flush_tx();
+            }
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
             m_callback(&m_event);
