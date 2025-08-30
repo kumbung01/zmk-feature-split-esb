@@ -81,9 +81,6 @@ static void event_handler(struct esb_evt const *event) {
             pull_packet_from_tx_msgq();
             break;
         case ESB_EVENT_TX_FAILED:
-            if (m_mode == APP_ESB_MODE_PTX) {
-                esb_flush_tx();
-            }
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
             m_callback(&m_event);
@@ -197,12 +194,13 @@ static int pull_packet_from_tx_msgq(void) {
         return 0;
     }
 
-    while (!esb_tx_full() &&  k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT) == 0) {
+    while (!esb_tx_full() && k_msgq_peek(&m_msgq_tx_payloads, &tx_payload) == 0) {
         ret = esb_write_payload(&tx_payload);
 
         if (ret == 0)
         {
             write_cnt++;
+            k_msgq_get(&m_msgq_tx_payloads, NULL, K_NO_WAIT);
         }
 
         else
@@ -212,6 +210,7 @@ static int pull_packet_from_tx_msgq(void) {
                 // msg size too large, discard it
                 LOG_WRN("esb_tx_fifo: tx_payload size too large (%d) > CONFIG_ESB_MAX_PAYLOAD_LENGTH (%d)",
                         tx_payload.length, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
+                k_msgq_get(&m_msgq_tx_payloads, NULL, K_NO_WAIT)
             }
             else if (ret == -ENOMEM)
             {
