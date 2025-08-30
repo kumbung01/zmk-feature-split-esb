@@ -210,7 +210,7 @@ static int pull_packet_from_tx_msgq(void) {
                 // msg size too large, discard it
                 LOG_WRN("esb_tx_fifo: tx_payload size too large (%d) > CONFIG_ESB_MAX_PAYLOAD_LENGTH (%d)",
                         tx_payload.length, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
-                k_msgq_get(&m_msgq_tx_payloads, NULL, K_NO_WAIT)
+                k_msgq_get(&m_msgq_tx_payloads, NULL, K_NO_WAIT);
             }
             else if (ret == -ENOMEM)
             {
