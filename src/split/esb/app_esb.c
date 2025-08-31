@@ -83,6 +83,10 @@ static void event_handler(struct esb_evt const *event) {
         case ESB_EVENT_TX_FAILED:
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
+            if (m_mode == APP_ESB_MODE_PTX)
+            {
+                esb_flush_tx();
+            }
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
             break;
@@ -172,7 +176,7 @@ static int esb_initialize(app_esb_mode_t mode) {
         return err;
     }
 
-    NVIC_SetPriority(RADIO_IRQn, 0);
+    NVIC_SetPriority(RADIO_IRQn, 0);see s 
 
     if (mode == APP_ESB_MODE_PRX) {
         esb_start_rx();
