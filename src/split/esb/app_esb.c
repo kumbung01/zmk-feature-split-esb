@@ -71,7 +71,7 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 static void event_handler(struct esb_evt const *event) {
     const int init_backoff_us = 600;
     // static int tx_attempts = 0;
-    app_esb_event_t m_event;
+    app_esb_event_t m_event = {0};
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
    
@@ -92,7 +92,7 @@ static void event_handler(struct esb_evt const *event) {
             break;
         case ESB_EVENT_RX_RECEIVED:
             // LOG_DBG("RX SUCCESS");
-            static volatile struct esb_payload rx_payload;
+            static struct esb_payload rx_payload = {0};
             if (esb_read_rx_payload(&rx_payload) == 0) {
                 // LOG_DBG("Chunk %d, len: %d", rx_payload.pid, rx_payload.length);
                 LOG_DBG("RX pipe: %d", rx_payload.pipe);
@@ -176,7 +176,7 @@ static int esb_initialize(app_esb_mode_t mode) {
         return err;
     }
 
-    NVIC_SetPriority(RADIO_IRQn, 0);see s 
+    NVIC_SetPriority(RADIO_IRQn, 0);
 
     if (mode == APP_ESB_MODE_PRX) {
         esb_start_rx();
