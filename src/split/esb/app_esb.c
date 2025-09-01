@@ -71,11 +71,11 @@ static void inc_retransmit_delay(void)
 {
     // Implement simple exponential backoff for retransmit attempts
     static int current_backoff_us = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY;
-    const int max_backoff_us = current_backoff_us * 4;
+    const int max_backoff_us = current_backoff_us * 2;
 
     if (current_backoff_us < max_backoff_us)
     {
-        current_backoff_us <<= 1;
+        current_backoff_us += CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY / 2;
         esb_set_retransmit_delay(current_backoff_us);
     }
 }
@@ -93,9 +93,6 @@ static void reset_retransmit_delay(void)
 }
 
 static void event_handler(struct esb_evt const *event) {
-    const int init_backoff_us = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY;
-    const int max_backoff_us = init_backoff_us * 4;
-    static int current_backoff_us = init_backoff_us;
     app_esb_event_t m_event = {0};
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
@@ -116,6 +113,8 @@ static void event_handler(struct esb_evt const *event) {
 
             if (m_mode == APP_ESB_MODE_PTX)
                 inc_retransmit_delay();
+
+            k_msleep(1);
 
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
