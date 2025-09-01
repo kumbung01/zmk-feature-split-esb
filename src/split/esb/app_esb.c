@@ -112,7 +112,10 @@ static void event_handler(struct esb_evt const *event) {
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
 
             if (m_mode == APP_ESB_MODE_PTX)
+            {
+                esb_flush_tx();
                 inc_retransmit_delay();
+            }
 
             k_msleep(1);
 
