@@ -184,7 +184,7 @@ static int esb_initialize(app_esb_mode_t mode) {
     config.mode = (mode == APP_ESB_MODE_PTX) ? ESB_MODE_PTX : ESB_MODE_PRX;
     config.tx_mode = ESB_TXMODE_MANUAL_START;
     config.selective_auto_ack = true;
-    config.tx_power = ESB_TXPOWER_0DBM;
+    config.tx_output_power = ESB_TXPOWER_0DBM;
 
     err = esb_init(&config);
 
