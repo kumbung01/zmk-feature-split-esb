@@ -226,7 +226,8 @@ static int esb_initialize(app_esb_mode_t mode) {
 static int pull_packet_from_tx_msgq(void) {
     int ret = 0;
     struct esb_payload tx_payload;
-    int loop_count = 0;
+    unsigned int write_cnt = 0;
+    unsigned int loop_count = 0;
     const int MAX_LOOP_COUNT = CONFIG_ESB_TX_FIFO_SIZE;
 
     if (m_mode == APP_ESB_MODE_PTX && !esb_is_idle()) {
