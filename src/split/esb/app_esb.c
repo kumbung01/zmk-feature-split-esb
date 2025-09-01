@@ -73,8 +73,6 @@ static void inc_retransmit_delay(void)
     static int current_backoff_us = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY;
     const int max_backoff_us = current_backoff_us * 4;
 
-    assert(m_mode == APP_ESB_MODE_PTX);
-
     if (current_backoff_us < max_backoff_us)
     {
         current_backoff_us <<= 1;
@@ -86,8 +84,6 @@ static void reset_retransmit_delay(void)
 {
     const int init_backoff_us = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY;
     static int current_backoff_us = init_backoff_us;
-
-    assert(m_mode == APP_ESB_MODE_PTX);
 
     if (current_backoff_us > init_backoff_us)
     {
