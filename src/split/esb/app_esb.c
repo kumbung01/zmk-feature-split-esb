@@ -327,7 +327,7 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
 
     if (k_msgq_num_free_get(&m_msgq_tx_payloads) == 0) {
         LOG_WRN("esb tx_payload_q full, dropping packet");
-        return -ENOSPC;
+        k_msgq_get(&m_msgq_tx_payloads, NULL, K_NO_WAIT); // drop the oldest packet
     }
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
@@ -362,6 +362,7 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     if (ret != 0) {
         LOG_WRN("Failed to queue esb tx_payload_q (%d)", ret);
     }
+
     if (m_active) {
         pull_packet_from_tx_msgq();
     }
