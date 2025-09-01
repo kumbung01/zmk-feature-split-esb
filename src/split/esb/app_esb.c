@@ -112,7 +112,6 @@ static void event_handler(struct esb_evt const *event) {
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
 
             if (m_mode == APP_ESB_MODE_PTX)
-                esb_flush_tx();
                 inc_retransmit_delay();
 
             k_msleep(1);
@@ -226,10 +225,25 @@ static int pull_packet_from_tx_msgq(void) {
     int write_cnt = 0;
 
     if (!esb_is_idle()) {
+        LOG_WRN("ESB busy, skip pulling from msgq");
+
         return 0;
     }
 
-    while (!esb_tx_full() && k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT) == 0) {
+    while (true) {
+        if (esb_tx_full()) {
+            LOG_DBG("ESB TX full, stop pulling from msgq");
+
+            goto exit_pull;
+        }
+
+        if (k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT) != 0)
+        {
+            LOG_DBG("No more packets in msgq");
+
+            goto exit_pull;
+        }
+
         ret = esb_write_payload(&tx_payload);
 
         if (ret == 0)
