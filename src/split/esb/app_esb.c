@@ -227,7 +227,7 @@ static int pull_packet_from_tx_msgq(void) {
     struct esb_payload tx_payload;
     int write_cnt = 0;
 
-    if (!esb_is_idle()) {
+    if (m_mode == APP_ESB_MODE_PTX && !esb_is_idle()) {
         LOG_WRN("ESB busy, skip pulling from msgq");
 
         return 0;
