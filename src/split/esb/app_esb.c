@@ -62,6 +62,7 @@ K_MSGQ_DEFINE(m_msgq_tx_payloads, sizeof(struct esb_payload),
 static app_esb_mode_t m_mode;
 static bool m_active = false;
 static bool m_enabled = false;
+static unsigned int write_fail_count = 0;
 
 static int pull_packet_from_tx_msgq(void);
 
@@ -271,12 +272,11 @@ static int pull_packet_from_tx_msgq(void) {
             else if (ret == -ENOMEM)
             {
                 LOG_DBG("esb_tx_fifo: esb tx fifo full");
-                // k_msgq_put(&m_msgq_tx_payloads_sent, &tx_payload, K_NO_WAIT);
                 goto exit_pull;
             }
             else {
                 LOG_DBG("other errors, retry later");
-                // k_msgq_put(&m_msgq_tx_payloads_sent, &tx_payload, K_NO_WAIT);
+                esb_flush_tx();
                 goto exit_pull;
             }
         }
