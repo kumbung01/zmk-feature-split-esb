@@ -220,6 +220,8 @@ static int esb_initialize(app_esb_mode_t mode) {
         esb_start_rx();
     }
 
+    k_msleep(100);
+
     return 0;
 }
 
