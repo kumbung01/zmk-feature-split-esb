@@ -125,6 +125,7 @@ static void event_handler(struct esb_evt const *event) {
             if (esb_read_rx_payload(&rx_payload) == 0) {
                 // LOG_DBG("Chunk %d, len: %d", rx_payload.pid, rx_payload.length);
                 LOG_DBG("RX pipe: %d", rx_payload.pipe);
+                LOG_DBG("RX rssi: %d", rx_payload.rssi);
                 // LOG_DBG("Packet len: %d", rx_payload.length);
                 m_event.evt_type = APP_ESB_EVT_RX;
                 m_event.buf = rx_payload.data;
@@ -183,6 +184,7 @@ static int esb_initialize(app_esb_mode_t mode) {
     config.mode = (mode == APP_ESB_MODE_PTX) ? ESB_MODE_PTX : ESB_MODE_PRX;
     config.tx_mode = ESB_TXMODE_MANUAL_START;
     config.selective_auto_ack = true;
+    config.tx_power = ESB_TXPOWER_0DBM;
 
     err = esb_init(&config);
 
