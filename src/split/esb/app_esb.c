@@ -69,16 +69,25 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
 
 static void event_handler(struct esb_evt const *event) {
-    const int init_backoff_us = 600;
-    // static int tx_attempts = 0;
+    const int init_backoff_us = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY;
+    const int max_backoff_us = init_backoff_us * 4;
+    static int current_backoff_us = init_backoff_us;
     app_esb_event_t m_event = {0};
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
    
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
+
+            if (current_backoff_us > init_backoff_us)
+            {
+                current_backoff_us = init_backoff_us;
+                esb_set_retransmit_delay(current_backoff_us);
+            }
+
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
+
             break;
         case ESB_EVENT_TX_FAILED:
             // Forward an event to the application
@@ -87,6 +96,14 @@ static void event_handler(struct esb_evt const *event) {
             {
                 esb_flush_tx();
             }
+
+            // Implement simple exponential backoff for retransmit attempts
+            if (current_backoff_us < max_backoff_us)
+            {
+                current_backoff_us <<= 1;
+                esb_set_retransmit_delay(current_backoff_us);
+            }
+
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
             break;
