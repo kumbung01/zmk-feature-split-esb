@@ -226,7 +226,8 @@ static int esb_initialize(app_esb_mode_t mode) {
 static int pull_packet_from_tx_msgq(void) {
     int ret = 0;
     struct esb_payload tx_payload;
-    int write_cnt = 0;
+    int loop_count = 0;
+    const int MAX_LOOP_COUNT = CONFIG_ESB_TX_FIFO_SIZE;
 
     if (m_mode == APP_ESB_MODE_PTX && !esb_is_idle()) {
         LOG_WRN("ESB busy, skip pulling from msgq");
@@ -234,7 +235,7 @@ static int pull_packet_from_tx_msgq(void) {
         return 0;
     }
 
-    while (true) {
+    while (loop_count++ < MAX_LOOP_COUNT) {
         if (esb_tx_full()) {
             LOG_DBG("ESB TX full, stop pulling from msgq");
 
@@ -247,15 +248,18 @@ static int pull_packet_from_tx_msgq(void) {
             goto exit_pull;
         }
 
-        if (k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT) != 0)
+
+        ret = k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
+        if (ret != 0)
         {
             LOG_WRN("Failed to get packet from msgq");
+
+            k_msgq_purge(&m_msgq_tx_payloads);
 
             goto exit_pull;
         }
 
         ret = esb_write_payload(&tx_payload);
-
         if (ret == 0)
         {
             write_cnt++;
@@ -268,11 +272,6 @@ static int pull_packet_from_tx_msgq(void) {
                 // msg size too large, discard it
                 LOG_WRN("esb_tx_fifo: tx_payload size too large (%d) > CONFIG_ESB_MAX_PAYLOAD_LENGTH (%d)",
                         tx_payload.length, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
-            }
-            else if (ret == -ENOMEM)
-            {
-                LOG_DBG("esb_tx_fifo: esb tx fifo full");
-                goto exit_pull;
             }
             else {
                 LOG_DBG("other errors, retry later");
