@@ -129,11 +129,12 @@ static void event_handler(struct esb_evt const *event) {
             static struct esb_payload rx_payload = {0};
             static bool is_rxing = false;
 
-            is_rxing = true;
             if (is_rxing) {
                 // Prevent re-entrance
                 break;
             }
+
+            is_rxing = true;
             if (esb_read_rx_payload(&rx_payload) == 0) {
                 // LOG_DBG("Chunk %d, len: %d", rx_payload.pid, rx_payload.length);
                 LOG_DBG("RX pipe: %d", rx_payload.pipe);
