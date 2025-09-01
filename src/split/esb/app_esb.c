@@ -114,7 +114,6 @@ static void event_handler(struct esb_evt const *event) {
 
             if (m_mode == APP_ESB_MODE_PTX)
             {
-                esb_flush_tx();
                 inc_retransmit_delay();
             }
 
@@ -237,6 +236,7 @@ static int pull_packet_from_tx_msgq(void) {
     while (loop_count < MAX_LOOP_COUNT) {
         if (esb_tx_full()) {
             LOG_DBG("ESB TX full, stop pulling from msgq");
+            write_cnt++; // if tx_full, resume tx
 
             goto exit_pull;
         }
@@ -272,7 +272,7 @@ static int pull_packet_from_tx_msgq(void) {
             }
             else {
                 LOG_DBG("other errors, retry later");
-                esb_flush_tx();
+                
                 goto exit_pull;
             }
         }
