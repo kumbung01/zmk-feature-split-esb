@@ -234,7 +234,7 @@ static int pull_packet_from_tx_msgq(void) {
         return 0;
     }
 
-    while (loop_count++ < MAX_LOOP_COUNT) {
+    while (loop_count < MAX_LOOP_COUNT) {
         if (esb_tx_full()) {
             LOG_DBG("ESB TX full, stop pulling from msgq");
 
@@ -276,6 +276,8 @@ static int pull_packet_from_tx_msgq(void) {
                 goto exit_pull;
             }
         }
+
+        loop_count++;
     }
 
 exit_pull:
