@@ -67,6 +67,34 @@ static int pull_packet_from_tx_msgq(void);
 
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
+static void inc_retransmit_delay(void)
+{
+    // Implement simple exponential backoff for retransmit attempts
+    static int current_backoff_us = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY;
+    const int max_backoff_us = current_backoff_us * 4;
+
+    assert(m_mode == APP_ESB_MODE_PTX);
+
+    if (current_backoff_us < max_backoff_us)
+    {
+        current_backoff_us <<= 1;
+        esb_set_retransmit_delay(current_backoff_us);
+    }
+}
+
+static void reset_retransmit_delay(void)
+{
+    const int init_backoff_us = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY;
+    static int current_backoff_us = init_backoff_us;
+
+    assert(m_mode == APP_ESB_MODE_PTX);
+
+    if (current_backoff_us > init_backoff_us)
+    {
+        current_backoff_us = init_backoff_us;
+        esb_set_retransmit_delay(current_backoff_us);
+    }
+}
 
 static void event_handler(struct esb_evt const *event) {
     const int init_backoff_us = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY;
@@ -79,14 +107,11 @@ static void event_handler(struct esb_evt const *event) {
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
 
-            if (current_backoff_us > init_backoff_us)
-            {
-                current_backoff_us = init_backoff_us;
-                esb_set_retransmit_delay(current_backoff_us);
-            }
+            reset_retransmit_delay();
 
             m_callback(&m_event);
-            pull_packet_from_tx_msgq();
+            if(m_mode == APP_ESB_MODE_PTX)
+                pull_packet_from_tx_msgq();
 
             break;
         case ESB_EVENT_TX_FAILED:
@@ -97,12 +122,8 @@ static void event_handler(struct esb_evt const *event) {
                 esb_flush_tx();
             }
 
-            // Implement simple exponential backoff for retransmit attempts
-            if (current_backoff_us < max_backoff_us)
-            {
-                current_backoff_us <<= 1;
-                esb_set_retransmit_delay(current_backoff_us);
-            }
+            if (m_mode == APP_ESB_MODE_PTX)
+                inc_retransmit_delay();
 
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
@@ -110,6 +131,13 @@ static void event_handler(struct esb_evt const *event) {
         case ESB_EVENT_RX_RECEIVED:
             // LOG_DBG("RX SUCCESS");
             static struct esb_payload rx_payload = {0};
+            static bool is_rxing = false;
+
+            is_rxing = true;
+            if (is_rxing) {
+                // Prevent re-entrance
+                break;
+            }
             if (esb_read_rx_payload(&rx_payload) == 0) {
                 // LOG_DBG("Chunk %d, len: %d", rx_payload.pid, rx_payload.length);
                 LOG_DBG("RX pipe: %d", rx_payload.pipe);
@@ -119,6 +147,7 @@ static void event_handler(struct esb_evt const *event) {
                 m_event.data_length = rx_payload.length;
                 m_callback(&m_event);
             }
+            is_rxing = false;
             break;
     }
 }
