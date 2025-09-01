@@ -125,9 +125,10 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
         LOG_WRN("Failed to put the whole message (%d vs %d)", put, pfx_len);
     }
 
-    begin_tx();
-
     k_sem_give(&esb_send_evt_sem);
+
+    begin_tx();
+    
     return 0;
 }
 
