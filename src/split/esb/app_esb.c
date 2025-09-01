@@ -220,8 +220,6 @@ static int esb_initialize(app_esb_mode_t mode) {
         esb_start_rx();
     }
 
-    k_msleep(100);
-
     return 0;
 }
 
@@ -286,6 +284,8 @@ int zmk_split_esb_init(app_esb_mode_t mode, app_esb_callback_t callback) {
     }
     LOG_INF("Timeslothandler init");
     zmk_split_esb_timeslot_init(on_timeslot_start_stop);
+
+    k_msleep(100);
     return 0;
 }
 
