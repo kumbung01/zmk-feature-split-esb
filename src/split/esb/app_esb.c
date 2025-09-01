@@ -104,6 +104,7 @@ static void event_handler(struct esb_evt const *event) {
 
             m_callback(&m_event);
             if(m_mode == APP_ESB_MODE_PTX)
+                esb_flush_tx();
                 pull_packet_from_tx_msgq();
 
             break;
@@ -277,6 +278,10 @@ int zmk_split_esb_init(app_esb_mode_t mode, app_esb_callback_t callback) {
     }
     LOG_INF("Timeslothandler init");
     zmk_split_esb_timeslot_init(on_timeslot_start_stop);
+    ret = esb_set_rf_channel(6);
+    if (ret < 0) {
+        LOG_ERR("esb_set_rf_channel failed: %d", ret);
+    }
 
     k_msleep(100);
     return 0;
