@@ -255,8 +255,6 @@ static int pull_packet_from_tx_msgq(void) {
         {
             LOG_WRN("Failed to get packet from msgq");
 
-            k_msgq_purge(&m_msgq_tx_payloads);
-
             goto exit_pull;
         }
 
