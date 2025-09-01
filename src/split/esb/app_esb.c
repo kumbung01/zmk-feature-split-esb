@@ -118,8 +118,6 @@ static void event_handler(struct esb_evt const *event) {
                 inc_retransmit_delay();
             }
 
-            k_msleep(1);
-
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
             break;
