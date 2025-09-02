@@ -98,7 +98,8 @@ int simple_random_bit(void) {
     seed = (1103515245 * seed + 12345) % (1u << 31);
     return seed & 0x1;
 }
-static int is_tx_failed = false;
+
+static int tx_fail_count = 0;
 static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
     switch (event->evt_id) {
@@ -106,11 +107,12 @@ static void event_handler(struct esb_evt const *event) {
    
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
+            
+            tx_fail_count = 0;
 
             if (m_mode == APP_ESB_MODE_PTX) {
                 reset_retransmit_delay();
             }
-            is_tx_failed = false;
           
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
@@ -119,14 +121,14 @@ static void event_handler(struct esb_evt const *event) {
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
 
+            tx_fail_count++;
             if (tx_fail_count > CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT
              && m_mode == APP_ESB_MODE_PTX) {
                 tx_fail_count = 0;
                 esb_flush_tx();
                 inc_retransmit_delay();
             } 
-
-            is_tx_failed = true;
+            
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
             break;
@@ -238,7 +240,7 @@ static int pull_packet_from_tx_msgq(void) {
 
     if (m_mode == APP_ESB_MODE_PTX && !esb_is_idle()) {
         LOG_WRN("ESB busy, skip pulling from msgq");
-        if (is_tx_failed) { // if last TX failed, try to push again
+        if (tx_fail_count > 0) { // if last TX failed, try to push again
             write_cnt++;
 
             goto exit_pull;
