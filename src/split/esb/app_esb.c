@@ -108,7 +108,6 @@ static void event_handler(struct esb_evt const *event) {
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
 
             if (m_mode == APP_ESB_MODE_PTX) {
-                tx_fail_count = 0;
                 reset_retransmit_delay();
             }
             is_tx_failed = false;
@@ -126,7 +125,7 @@ static void event_handler(struct esb_evt const *event) {
                 esb_flush_tx();
                 inc_retransmit_delay();
             } 
-            
+
             is_tx_failed = true;
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
