@@ -126,8 +126,6 @@ static void event_handler(struct esb_evt const *event) {
             //     inc_retransmit_delay();
             // } 
 
-            k_msleep(1 + simple_random_bit()); // add small random delay to avoid collisions
-
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
             break;
@@ -239,8 +237,9 @@ static int pull_packet_from_tx_msgq(void) {
 
     if (m_mode == APP_ESB_MODE_PTX && !esb_is_idle()) {
         LOG_WRN("ESB busy, skip pulling from msgq");
+        write_cnt++;
 
-        return 0;
+        goto exit_pull;
     }
 
     for (int i = 0; i < MAX_LOOP_COUNT; i++) {
