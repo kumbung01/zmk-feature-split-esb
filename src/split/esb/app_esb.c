@@ -93,7 +93,12 @@ static void reset_retransmit_delay(void)
     }
 }
 
-static int tx_fail_count = 0;
+int simple_random_bit(void) {
+    static unsigned int seed = 123456789; 
+    seed = (1103515245 * seed + 12345) % (1u << 31);
+    return seed & 0x1;
+}
+
 static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
     switch (event->evt_id) {
@@ -102,20 +107,11 @@ static void event_handler(struct esb_evt const *event) {
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
 
-            if (m_mode == APP_ESB_MODE_PTX) {
-                tx_fail_count = 0;
-                reset_retransmit_delay();
-
-                struct esb_payload rx_payload = {0};
-                if (esb_read_rx_payload(&rx_payload) == 0) {
-                    LOG_WRN("RX received after TX");
-                    LOG_DBG("RX pipe: %d", rx_payload.pipe);
-                    LOG_DBG("RX rssi: %d", rx_payload.rssi);
-                    m_event.evt_type = APP_ESB_EVT_RX;
-                    m_event.payload = &rx_payload;
-                }
-            }
-
+            // if (m_mode == APP_ESB_MODE_PTX) {
+            //     tx_fail_count = 0;
+            //     reset_retransmit_delay();
+            // }
+          
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
             break;
@@ -123,12 +119,14 @@ static void event_handler(struct esb_evt const *event) {
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
 
-            if (tx_fail_count > CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT
-             && m_mode == APP_ESB_MODE_PTX) {
-                tx_fail_count = 0;
-                esb_flush_tx();
-                inc_retransmit_delay();
-            } 
+            // if (tx_fail_count > CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT
+            //  && m_mode == APP_ESB_MODE_PTX) {
+            //     tx_fail_count = 0;
+            //     esb_flush_tx();
+            //     inc_retransmit_delay();
+            // } 
+
+            k_msleep(1 + simple_random_bit()); // add small random delay to avoid collisions
 
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
