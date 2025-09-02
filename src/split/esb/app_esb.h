@@ -8,6 +8,7 @@
 #define __APP_ESB_H
 
 #include <zephyr/kernel.h>
+#include <esb.h>
 
 typedef enum {
     APP_ESB_EVT_TX_SUCCESS,
@@ -22,8 +23,7 @@ typedef enum {
 
 typedef struct {
     app_esb_event_type_t evt_type;
-    uint8_t *buf;
-    uint32_t data_length;
+    struct esb_payload*  payload;
 } app_esb_event_t;
 
 typedef struct {

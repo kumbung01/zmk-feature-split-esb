@@ -72,11 +72,11 @@ static void inc_retransmit_delay(void)
 {
     // Implement simple exponential backoff for retransmit attempts
     static int current_backoff_us = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY;
-    const int max_backoff_us = current_backoff_us * 2;
+    const int max_backoff_us = current_backoff_us * 3;
 
     if (current_backoff_us < max_backoff_us)
     {
-        current_backoff_us += CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY / 2;
+        current_backoff_us += CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY;
         esb_set_retransmit_delay(current_backoff_us);
     }
 }
@@ -93,13 +93,6 @@ static void reset_retransmit_delay(void)
     }
 }
 
-int simple_random_bit(void) {
-    static unsigned int seed = 123456789;
-    seed = (1103515245 * seed + 12345) % (1u << 31);
-    return seed & 0x1;
-}
-
-
 static int tx_fail_count = 0;
 static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
@@ -112,6 +105,15 @@ static void event_handler(struct esb_evt const *event) {
             if (m_mode == APP_ESB_MODE_PTX) {
                 tx_fail_count = 0;
                 reset_retransmit_delay();
+
+                struct esb_payload rx_payload = {0};
+                if (esb_read_rx_payload(&rx_payload) == 0) {
+                    LOG_WRN("RX received after TX");
+                    LOG_DBG("RX pipe: %d", rx_payload.pipe);
+                    LOG_DBG("RX rssi: %d", rx_payload.rssi);
+                    m_event.evt_type = APP_ESB_EVT_RX;
+                    m_event.payload = &rx_payload;
+                }
             }
 
             m_callback(&m_event);
@@ -140,8 +142,7 @@ static void event_handler(struct esb_evt const *event) {
                 LOG_DBG("RX rssi: %d", rx_payload.rssi);
                 // LOG_DBG("Packet len: %d", rx_payload.length);
                 m_event.evt_type = APP_ESB_EVT_RX;
-                m_event.buf = rx_payload.data;
-                m_event.data_length = rx_payload.length;
+                m_event.payload = &rx_payload;
                 m_callback(&m_event);
             }
             break;

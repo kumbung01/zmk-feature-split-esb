@@ -10,6 +10,7 @@
 #include <zephyr/drivers/uart.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
+#include <esb.h>
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
@@ -65,7 +66,7 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
             }
             break;
         case APP_ESB_EVT_RX:
-            // LOG_DBG("ESB RX received: %d", event->data_length);
+            // LOG_DBG("ESB RX received: %d", event->payload->length);
 
             // lock it for a safe result from ring_buf_space_get()
             int ret = k_sem_take(&esb_cb_sem, K_FOREVER);
@@ -74,17 +75,17 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
                 break;
             }
 
-            if (ring_buf_space_get(state->rx_buf) < event->data_length) {
+            if (ring_buf_space_get(state->rx_buf) < event->payload->length) {
                 LOG_WRN("No room to receive from peripheral (have %d but only space for %d/%d)",
-                        event->data_length, ring_buf_space_get(state->rx_buf), 
+                        event->payload->length, ring_buf_space_get(state->rx_buf), 
                         ring_buf_capacity_get(state->rx_buf));
                 k_sem_give(&esb_cb_sem);
                 break;
             }
 
-            size_t received = ring_buf_put(state->rx_buf, event->buf, event->data_length);
-            if (received < event->data_length) {
-                LOG_ERR("RX overrun! %d < %d", received, event->data_length);
+            size_t received = ring_buf_put(state->rx_buf, event->payload->data, event->payload->length);
+            if (received < event->payload->length) {
+                LOG_ERR("RX overrun! %d < %d", received, event->payload->length);
                 k_sem_give(&esb_cb_sem);
                 break;
             }
