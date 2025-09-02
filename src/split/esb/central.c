@@ -117,9 +117,9 @@ static int split_central_esb_send_command(uint8_t source,
         LOG_WRN("Failed to put the whole message (%d vs %d)", put, pfx_len);
     }
 
-    k_sem_give(&esb_send_cmd_sem);
-
     begin_tx();
+
+    k_sem_give(&esb_send_cmd_sem);
     
     return 0;
 }

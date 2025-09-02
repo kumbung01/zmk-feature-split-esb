@@ -99,6 +99,8 @@ int simple_random_bit(void) {
     return seed & 0x1;
 }
 
+
+static int tx_fail_count = 0;
 static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
     switch (event->evt_id) {
@@ -107,6 +109,11 @@ static void event_handler(struct esb_evt const *event) {
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
 
+            if (m_mode == APP_ESB_MODE_PTX) {
+                tx_fail_count = 0;
+                reset_retransmit_delay();
+            }
+
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
             break;
@@ -114,7 +121,12 @@ static void event_handler(struct esb_evt const *event) {
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
 
-            k_msleep(1 + simple_random_bit());
+            if (tx_fail_count > CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT
+             && m_mode == APP_ESB_MODE_PTX) {
+                tx_fail_count = 0;
+                esb_flush_tx();
+                inc_retransmit_delay();
+            } 
 
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
@@ -223,7 +235,7 @@ static int pull_packet_from_tx_msgq(void) {
     int ret = 0;
     struct esb_payload tx_payload;
     unsigned int write_cnt = 0;
-    unsigned int loop_count = 0;
+
     const int MAX_LOOP_COUNT = CONFIG_ESB_TX_FIFO_SIZE;
 
     if (m_mode == APP_ESB_MODE_PTX && !esb_is_idle()) {
@@ -232,7 +244,7 @@ static int pull_packet_from_tx_msgq(void) {
         return 0;
     }
 
-    while (loop_count < MAX_LOOP_COUNT) {
+    for (int i = 0; i < MAX_LOOP_COUNT; i++) {
         if (esb_tx_full()) {
             LOG_DBG("ESB TX full, stop pulling from msgq");
             write_cnt++; // if tx_full, resume tx
@@ -245,7 +257,6 @@ static int pull_packet_from_tx_msgq(void) {
 
             goto exit_pull;
         }
-
 
         ret = k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
         if (ret != 0)
@@ -275,8 +286,6 @@ static int pull_packet_from_tx_msgq(void) {
                 goto exit_pull;
             }
         }
-
-        loop_count++;
     }
 
 exit_pull:
