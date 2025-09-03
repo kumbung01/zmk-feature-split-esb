@@ -101,7 +101,7 @@ static void set_tx_power()
     int rssi_diff = rssi - rssi_target;
     int target_tx_power = current_tx_power;
 
-    esb_tx_power power_levels[] = {
+    int power_levels[] = {
 #if defined(ESB_TX_POWER_NEG8DBM)
         ESB_TX_POWER_NEG8DBM,
 #endif  
