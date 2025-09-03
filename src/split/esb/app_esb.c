@@ -125,8 +125,15 @@ static void set_tx_power()
     const int min_power = 0;
     const int max_power = sizeof(power_levels) / sizeof(int) - 1;
 
+    static uint32_t last = 0;
+    uint32_t now = k_uptime_get_32;
     LOG_DBG("current/target RSSI: %d/%d dBm", rssi, rssi_target);
     LOG_DBG("diff: %d", rssi_diff);
+
+    if (now - last < 500)
+        return;
+
+    last = now;
 
     if (rssi_diff <= -4) {
         if (current_tx_power < max_power) {
