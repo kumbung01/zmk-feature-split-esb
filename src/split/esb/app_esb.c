@@ -117,6 +117,7 @@ static void set_tx_power()
                 return;
             }
 
+            current_tx_power = target_tx_power;
             esb_set_tx_power(current_tx_power);
             LOG_DBG("increasing tx power");
         }
@@ -133,6 +134,7 @@ static void set_tx_power()
                 return;
             }
 
+            current_tx_power = target_tx_power;
             esb_set_tx_power(current_tx_power);
             LOG_DBG("decreasing tx power");
         }
