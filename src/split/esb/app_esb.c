@@ -108,7 +108,7 @@ static void set_tx_power()
     if (rssi_diff > 2) {
         // increase tx power
         if (current_tx_power < max_tx_power) {
-            target_tx_power++;
+            target_tx_power--;
             if (target_tx_power > max_tx_power) {
                 target_tx_power = max_tx_power;
             }
@@ -125,7 +125,7 @@ static void set_tx_power()
     else if (rssi_diff < -2) {
         // decrease tx power
         if (current_tx_power > min_tx_power) {
-            target_tx_power--;
+            target_tx_power++;
             if (target_tx_power < min_tx_power) {
                 target_tx_power = min_tx_power;
             }
