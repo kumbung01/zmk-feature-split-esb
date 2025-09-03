@@ -93,22 +93,47 @@ static void reset_retransmit_delay(void)
     }
 }
 
-static int current_tx_power = ESB_TX_POWER_0DBM;
+static int current_tx_power = 4;
 static void set_tx_power()
 {
     int rssi = NRF_RADIO->RSSISAMPLE;
     const int rssi_target = 55; // target RSSI in dBm
-    const int max_tx_power = ESB_TX_POWER_4DBM;
-    const int min_tx_power = ESB_TX_POWER_NEG8DBM;
     int rssi_diff = rssi - rssi_target;
     int target_tx_power = current_tx_power;
+
+    esb_tx_power power_levels[] = {
+#if defined(ESB_TX_POWER_NEG8DBM)
+        ESB_TX_POWER_NEG8DBM,
+#endif  
+#if defined(ESB_TX_POWER_NEG6DBM)
+        ESB_TX_POWER_NEG6DBM,
+#endif  
+#if defined(ESB_TX_POWER_NEG4DBM)
+        ESB_TX_POWER_NEG4DBM,
+#endif  
+#if defined(ESB_TX_POWER_NEG2DBM)
+        ESB_TX_POWER_NEG2DBM,
+#endif  
+#if defined(ESB_TX_POWER_0DBM)
+        ESB_TX_POWER_0DBM,
+#endif  
+#if defined(ESB_TX_POWER_2DBM)
+        ESB_TX_POWER_2DBM,
+#endif  
+#if defined(ESB_TX_POWER_4DBM)
+        ESB_TX_POWER_4DBM,
+#endif  
+    };
+
+    const int min_power = 0;
+    const int max_power = sizeof(power_levels) / sizeof(esb_tx_power);
 
     LOG_DBG("current RSSI: %d dBm", -rssi);
 
     if (rssi_diff > 2) {
         // increase tx power
-        if (current_tx_power > max_tx_power) {
-            target_tx_power--;
+        if (current < max_power) {
+            target_tx_power++;
 
             if (target_tx_power == current_tx_power) {
                 return;
@@ -116,14 +141,14 @@ static void set_tx_power()
 
             LOG_DBG("increasing tx power %d to %d", current_tx_power, target_tx_power);
             current_tx_power = target_tx_power;
-            esb_set_tx_power(current_tx_power);
+            esb_set_tx_power(power_levels[current_tx_power]);
             
         }
     }
     else if (rssi_diff < -2) {
         // decrease tx power
-        if (current_tx_power < min_tx_power) {
-            target_tx_power++;
+        if (current_tx_power > min_power) {
+            target_tx_power--;
 
             if (target_tx_power == current_tx_power) {
                 return;
@@ -131,7 +156,7 @@ static void set_tx_power()
 
             LOG_DBG("decreasing tx power %d to %d", current_tx_power, target_tx_power);
             current_tx_power = target_tx_power;
-            esb_set_tx_power(current_tx_power);
+            esb_set_tx_power(power_levels[current_tx_power]);
         }
     }
     else {
