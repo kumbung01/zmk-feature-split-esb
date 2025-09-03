@@ -105,7 +105,7 @@ static void set_tx_power()
     bool is_tx_power_set = false;
 
     static uint32_t last = 0;
-    uint32_t now = k_uptime_get_32;
+    uint32_t now = k_uptime_get_32();
     LOG_DBG("current/target RSSI: %d/%d dBm", rssi, rssi_target);
     LOG_DBG("diff: %d", rssi_diff);
 
@@ -115,15 +115,15 @@ static void set_tx_power()
     last = now;
 
     if (rssi_diff <= -4) {
-        if (current_tx_power < max_power) {
-            target_tx_power+=4;
+        if (current_tx_power < max) {
+            target_tx_power += 4;
             
         }
     }
     else if (rssi_diff >= 4) {
         // decrease tx power
-        if (current_tx_power > min_power) {
-            target_tx_power-=4;
+        if (current_tx_power > min) {
+            target_tx_power -= 4;
         }
     }
     else {
