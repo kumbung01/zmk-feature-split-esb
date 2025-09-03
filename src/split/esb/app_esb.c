@@ -112,6 +112,8 @@ static void event_handler(struct esb_evt const *event) {
 
             if (m_mode == APP_ESB_MODE_PTX) {
                 reset_retransmit_delay();
+                int rssi = -NRF_RADIO->RSSISAMPLE;
+                LOG_DBG("TX SUCCESS, RSSI: %d dBm", rssi);
             }
           
             m_callback(&m_event);
