@@ -104,7 +104,7 @@ static void event_handler(struct esb_evt const *event) {
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
             evt_type = APP_ESB_EVT_TX_SUCCESS;
             tx_fail_count = 0;
-          
+            LOG_DBG("tx output power: %d dbm", NRF_RADIO->TXPOWER);
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
             break;
@@ -321,7 +321,7 @@ int zmk_split_esb_init(app_esb_mode_t mode, app_esb_callback_t callback) {
         LOG_ERR("esb_set_rf_channel failed: %d", ret);
     }
 
-    LOG_DBG("tx output power: %d dbm", NRF_RADIO->TXPOWER); 
+     
 
     k_msleep(100);
     return 0;
