@@ -109,7 +109,7 @@ static void set_tx_power()
     LOG_DBG("current/target RSSI: %d/%d dBm", rssi, rssi_target);
     LOG_DBG("diff: %d", rssi_diff);
 
-    if (now - last < 500)
+    if (now - last < 1000)
         return;
 
     last = now;
@@ -134,8 +134,11 @@ static void set_tx_power()
 
     if (is_tx_power_set)
     {
-        current_tx_power = target_tx_power;
         LOG_WRN("tx_power set to %d", current_tx_power);
+    }
+    else
+    {
+        LOG_WRN("tx_power not set");
     }
 }
 
@@ -143,6 +146,8 @@ static int tx_fail_count = 0;
 static int evt_type = APP_ESB_EVT_TX_SUCCESS;
 static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
+
+    set_tx_power();
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
    
@@ -295,8 +300,6 @@ static int pull_packet_from_tx_msgq(void) {
             default:
                 break;
         }
-        
-        set_tx_power();
     }
 
     for (int i = 0; i < MAX_LOOP_COUNT; i++) {
