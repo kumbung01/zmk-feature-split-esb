@@ -100,7 +100,7 @@ static void set_tx_power()
     const int rssi_target = -55; // target RSSI in dBm
     int rssi_diff = rssi - rssi_target;
     int target_tx_power = current_tx_power;
-    bool is_tx_power_set = true;
+    bool is_tx_power_set = false;
 
     int power_levels[] = {
         ESB_TX_POWER_NEG20DBM,
@@ -123,7 +123,7 @@ static void set_tx_power()
     };
 
     const int min_power = 0;
-    const int max_power = sizeof(power_levels) / sizeof(int);
+    const int max_power = sizeof(power_levels) / sizeof(int) - 1;
 
     LOG_DBG("current/target RSSI: %d/%d dBm", rssi, rssi_target);
     LOG_DBG("diff: %d", rssi_diff);
