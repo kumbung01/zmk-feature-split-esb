@@ -102,19 +102,23 @@ static void set_tx_power()
     int target_tx_power = current_tx_power;
 
     int power_levels[] = {
+        ESB_TX_POWER_NEG20DBM,
+        ESB_TX_POWER_NEG16DBM,
+        ESB_TX_POWER_NEG12DBM,
         ESB_TX_POWER_NEG8DBM,
         ESB_TX_POWER_NEG4DBM,
         ESB_TX_POWER_0DBM,
         ESB_TX_POWER_4DBM,
+        ESB_TX_POWER_8DBM,
     };
 
     const int min_power = 0;
     const int max_power = sizeof(power_levels) / sizeof(int);
 
-    LOG_DBG("current/target RSSI: %d/%d dBm", -rssi, -rssi_target);
+    LOG_DBG("current/target RSSI: %d/%d dBm", rssi, rssi_target);
     LOG_DBG("diff: %d", rssi_diff);
 
-    if (rssi_diff <= -4) {
+    if (rssi_diff <= -2) {
         // increase tx power
         if (current_tx_power < max_power) {
             target_tx_power++;
@@ -129,7 +133,7 @@ static void set_tx_power()
             
         }
     }
-    else if (rssi_diff >= 4) {
+    else if (rssi_diff >= 2) {
         // decrease tx power
         if (current_tx_power > min_power) {
             target_tx_power--;
