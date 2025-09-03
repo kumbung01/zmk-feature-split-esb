@@ -129,10 +129,11 @@ static void set_tx_power()
     const int max_power = sizeof(power_levels) / sizeof(int);
 
     LOG_DBG("current RSSI: %d dBm", -rssi);
+    LOG_DBG("min/max: %d/%d", min_power, max_power);
 
     if (rssi_diff > 2) {
         // increase tx power
-        if (current < max_power) {
+        if (current_tx_power < max_power) {
             target_tx_power++;
 
             if (target_tx_power == current_tx_power) {
