@@ -93,37 +93,16 @@ static void reset_retransmit_delay(void)
     }
 }
 
-static int current_tx_power = 4;
 static void set_tx_power()
 {
     int rssi = -NRF_RADIO->RSSISAMPLE;
     const int rssi_target = -55; // target RSSI in dBm
     int rssi_diff = rssi - rssi_target;
+    int current_tx_power = NRF_RADIO->TXPOWER;
     int target_tx_power = current_tx_power;
+    int min = -16;
+    int max = 4;
     bool is_tx_power_set = false;
-
-    int power_levels[] = {
-        ESB_TX_POWER_NEG20DBM,
-        ESB_TX_POWER_NEG16DBM,
-        ESB_TX_POWER_NEG12DBM,
-        ESB_TX_POWER_NEG8DBM,
-        ESB_TX_POWER_NEG4DBM,
-        ESB_TX_POWER_0DBM,
-        ESB_TX_POWER_4DBM,
-    };
-
-    int level_to_dbm[] = {
-        -20,
-        -16,
-        -12,
-        -8,
-        -4,
-        0,
-        4,
-    };
-
-    const int min_power = 0;
-    const int max_power = sizeof(power_levels) / sizeof(int) - 1;
 
     static uint32_t last = 0;
     uint32_t now = k_uptime_get_32;
@@ -137,29 +116,26 @@ static void set_tx_power()
 
     if (rssi_diff <= -4) {
         if (current_tx_power < max_power) {
-            target_tx_power++;
+            target_tx_power+=4;
             
         }
     }
     else if (rssi_diff >= 4) {
         // decrease tx power
         if (current_tx_power > min_power) {
-            target_tx_power--;
+            target_tx_power-=4;
         }
     }
     else {
         return;
     }
-
-    LOG_WRN("change tx power %d to %d", level_to_dbm[current_tx_power],
-                                        level_to_dbm[target_tx_power]);
     
-    is_tx_power_set = !esb_set_tx_power(power_levels[target_tx_power]);
+    is_tx_power_set = !esb_set_tx_power(target_tx_power);
 
     if (is_tx_power_set)
     {
         current_tx_power = target_tx_power;
-        LOG_WRN("tx_power set to %d", level_to_dbm[current_tx_power]);
+        LOG_WRN("tx_power set to %d", current_tx_power);
     }
 }
 
