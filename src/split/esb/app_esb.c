@@ -96,8 +96,8 @@ static void reset_retransmit_delay(void)
 static int current_tx_power = 4;
 static void set_tx_power()
 {
-    int rssi = NRF_RADIO->RSSISAMPLE;
-    const int rssi_target = 55; // target RSSI in dBm
+    int rssi = -NRF_RADIO->RSSISAMPLE;
+    const int rssi_target = -55; // target RSSI in dBm
     int rssi_diff = rssi - rssi_target;
     int target_tx_power = current_tx_power;
 
@@ -114,7 +114,7 @@ static void set_tx_power()
     LOG_DBG("current/target RSSI: %d/%d dBm", -rssi, -rssi_target);
     LOG_DBG("diff: %d", rssi_diff);
 
-    if (rssi_diff >= 4) {
+    if (rssi_diff <= -4) {
         // increase tx power
         if (current_tx_power < max_power) {
             target_tx_power++;
@@ -129,7 +129,7 @@ static void set_tx_power()
             
         }
     }
-    else if (rssi_diff <= -4) {
+    else if (rssi_diff >= 4) {
         // decrease tx power
         if (current_tx_power > min_power) {
             target_tx_power--;
