@@ -134,7 +134,7 @@ static void set_tx_power()
 
     if (is_tx_power_set)
     {
-        LOG_WRN("tx_power set to %d", (int8_t)(NRF_RADIO->TX_POWER));
+        LOG_WRN("tx_power set to %d", (int8_t)(NRF_RADIO->TXPOWER));
     }
     else
     {
