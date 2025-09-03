@@ -114,9 +114,10 @@ static void set_tx_power()
                 return;
             }
 
+            LOG_DBG("increasing tx power %d to %d", current_tx_power, target_tx_power);
             current_tx_power = target_tx_power;
             esb_set_tx_power(current_tx_power);
-            LOG_DBG("increasing tx power");
+            
         }
     }
     else if (rssi_diff < -2) {
@@ -128,9 +129,9 @@ static void set_tx_power()
                 return;
             }
 
+            LOG_DBG("decreasing tx power %d to %d", current_tx_power, target_tx_power);
             current_tx_power = target_tx_power;
             esb_set_tx_power(current_tx_power);
-            LOG_DBG("decreasing tx power");
         }
     }
     else {
