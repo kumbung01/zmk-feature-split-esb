@@ -103,11 +103,8 @@ static void set_tx_power()
 
     int power_levels[] = {
         ESB_TX_POWER_NEG8DBM,
-        ESB_TX_POWER_NEG6DBM,
         ESB_TX_POWER_NEG4DBM,
-        ESB_TX_POWER_NEG2DBM,
         ESB_TX_POWER_0DBM,
-        ESB_TX_POWER_2DBM,
         ESB_TX_POWER_4DBM,
     };
 
