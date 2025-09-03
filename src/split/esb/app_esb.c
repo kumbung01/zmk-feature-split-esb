@@ -94,7 +94,7 @@ static void reset_retransmit_delay(void)
 }
 
 static int current_tx_power = 4;
-static bool is_tx_power_set = false;
+static bool is_tx_power_set = true;
 static void set_tx_power()
 {
     int rssi = -NRF_RADIO->RSSISAMPLE;
@@ -140,7 +140,7 @@ static void set_tx_power()
                 return;
             }
 
-            LOG_DBG("increasing tx power %d to %d", level_to_dbm[current_tx_power],
+            LOG_WRN("increasing tx power %d to %d", level_to_dbm[current_tx_power],
                                                     level_to_dbm[target_tx_power]);
             current_tx_power = target_tx_power;
             is_tx_power_set = !esb_set_tx_power(power_levels[current_tx_power]);
@@ -157,7 +157,7 @@ static void set_tx_power()
                 return;
             }
 
-            LOG_DBG("decreasing tx power %d to %d", level_to_dbm[current_tx_power],
+            LOG_WRN("decreasing tx power %d to %d", level_to_dbm[current_tx_power],
                                                     level_to_dbm[target_tx_power]);
             current_tx_power = target_tx_power;
             is_tx_power_set = !esb_set_tx_power(power_levels[current_tx_power]);
@@ -169,7 +169,7 @@ static void set_tx_power()
 
     if (is_tx_power_set)
     {
-        LOG_DBG("tx_power set to %d", level_to_dbm[current_tx_power]);
+        LOG_WRN("tx_power set to %d", level_to_dbm[current_tx_power]);
     }
 }
 
