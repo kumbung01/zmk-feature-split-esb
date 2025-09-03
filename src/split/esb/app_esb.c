@@ -186,6 +186,7 @@ static int esb_initialize(app_esb_mode_t mode) {
     config.mode = (mode == APP_ESB_MODE_PTX) ? ESB_MODE_PTX : ESB_MODE_PRX;
     config.tx_mode = ESB_TXMODE_MANUAL_START;
     config.selective_auto_ack = true;
+    config.tx_output_power = -4;
 
     err = esb_init(&config);
 
@@ -236,19 +237,19 @@ static int pull_packet_from_tx_msgq(void) {
         }
     }
 
-    if (m_mode == APP_ESB_MODE_PTX) {
-        switch (evt_type)
-        {
-            case APP_ESB_EVT_TX_FAIL:
-                inc_retransmit_delay();
-                break;
-            case APP_ESB_EVT_TX_SUCCESS:
-                reset_retransmit_delay();
-                break;
-            default:
-                break;
-        }
-    }
+    // if (m_mode == APP_ESB_MODE_PTX) {
+    //     switch (evt_type)
+    //     {
+    //         case APP_ESB_EVT_TX_FAIL:
+    //             inc_retransmit_delay();
+    //             break;
+    //         case APP_ESB_EVT_TX_SUCCESS:
+    //             reset_retransmit_delay();
+    //             break;
+    //         default:
+    //             break;
+    //     }
+    // }
 
     for (int i = 0; i < MAX_LOOP_COUNT; i++) {
         if (esb_tx_full()) {
@@ -319,6 +320,8 @@ int zmk_split_esb_init(app_esb_mode_t mode, app_esb_callback_t callback) {
     if (ret < 0) {
         LOG_ERR("esb_set_rf_channel failed: %d", ret);
     }
+
+    LOG_DBG("tx output power: %d dbm", NRF_RADIO->TXPOWER); 
 
     k_msleep(100);
     return 0;
