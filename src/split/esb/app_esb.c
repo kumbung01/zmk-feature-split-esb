@@ -93,10 +93,39 @@ static void reset_retransmit_delay(void)
     }
 }
 
-int simple_random_bit(void) {
-    static unsigned int seed = 123456789; 
-    seed = (1103515245 * seed + 12345) % (1u << 31);
-    return seed & 0x1;
+static void set_tx_power()
+{
+    int rssi = -NRF_RADIO->RSSISAMPLE;
+    const int rssi_target = -60; // target RSSI in dBm
+    const int max_tx_power = ESB_TX_POWER_4DBM;
+    const int min_tx_power = ESB_TX_POWER_NEG8DBM;
+    int rssi_diff = rssi_target - rssi;
+    int current_tx_power = esb_cfg.tx_output_power;
+
+    LOG_DBG("current RSSI: %d dBm", rssi);
+    
+    if (rssi_diff > 0) {
+        // increase tx power
+        if (current_tx_power < max_tx_power) {
+            current_tx_power++;
+            if (current_tx_power > max_tx_power) {
+                current_tx_power = max_tx_power;
+            }
+            esb_set_tx_output_power(current_tx_power);
+            LOG_DBG("increasing tx power");
+        }
+    }
+    else if (rssi_diff < 0) {
+        // decrease tx power
+        if (current_tx_power > min_tx_power) {
+            current_tx_power--;
+            if (current_tx_power < min_tx_power) {
+                current_tx_power = min_tx_power;
+            }
+            esb_set_tx_output_power(current_tx_power);
+            LOG_DBG("decreasing tx power");
+        }
+    }
 }
 
 static int tx_fail_count = 0;
@@ -112,8 +141,7 @@ static void event_handler(struct esb_evt const *event) {
 
             if (m_mode == APP_ESB_MODE_PTX) {
                 reset_retransmit_delay();
-                int rssi = -NRF_RADIO->RSSISAMPLE;
-                LOG_DBG("TX SUCCESS, RSSI: %d dBm", rssi);
+                set_tx_power();
             }
           
             m_callback(&m_event);
@@ -129,7 +157,8 @@ static void event_handler(struct esb_evt const *event) {
                 tx_fail_count = 0;
                 esb_flush_tx();
             } 
-            inc_retransmit_delay();
+            if (m_mode == APP_ESB_MODE_PTX)
+                inc_retransmit_delay();
             
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
