@@ -126,7 +126,7 @@ static void set_tx_power()
     };
 
     const int min_power = 0;
-    const int max_power = sizeof(power_levels) / sizeof(esb_tx_power);
+    const int max_power = sizeof(power_levels) / sizeof(int);
 
     LOG_DBG("current RSSI: %d dBm", -rssi);
 
