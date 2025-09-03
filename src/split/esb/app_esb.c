@@ -117,7 +117,7 @@ static void set_tx_power()
     LOG_DBG("current/target RSSI: %d/%d dBm", rssi, rssi_target);
     LOG_DBG("diff: %d", rssi_diff);
 
-    if (rssi_diff <= -2) {
+    if (rssi_diff <= -4) {
         // increase tx power
         if (current_tx_power < max_power) {
             target_tx_power++;
@@ -132,7 +132,7 @@ static void set_tx_power()
             
         }
     }
-    else if (rssi_diff >= 2) {
+    else if (rssi_diff >= 4) {
         // decrease tx power
         if (current_tx_power > min_power) {
             target_tx_power--;
@@ -253,7 +253,7 @@ static int esb_initialize(app_esb_mode_t mode) {
     config.mode = (mode == APP_ESB_MODE_PTX) ? ESB_MODE_PTX : ESB_MODE_PRX;
     config.tx_mode = ESB_TXMODE_MANUAL_START;
     config.selective_auto_ack = true;
-    config.tx_output_power = current_tx_power;
+    config.tx_output_power = ESB_TX_POWER_NEG4DBM;
 
     err = esb_init(&config);
 
