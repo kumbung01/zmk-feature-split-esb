@@ -115,7 +115,7 @@ static void set_tx_power()
             if (target_tx_power == current_tx_power) {
                 return;
             }
-            
+
             esb_set_tx_power(current_tx_power);
             LOG_DBG("increasing tx power");
         }
@@ -166,9 +166,12 @@ static void event_handler(struct esb_evt const *event) {
              && m_mode == APP_ESB_MODE_PTX) {
                 tx_fail_count = 0;
                 esb_flush_tx();
-            } 
-            if (m_mode == APP_ESB_MODE_PTX)
+            }
+             
+            if (m_mode == APP_ESB_MODE_PTX) {
                 inc_retransmit_delay();
+                set_tx_power();
+            }
             
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
