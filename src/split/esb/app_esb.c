@@ -98,8 +98,8 @@ static void set_tx_power()
     int rssi = -NRF_RADIO->RSSISAMPLE;
     const int rssi_target = -55; // target RSSI in dBm
     int rssi_diff = rssi - rssi_target;
-    int current_tx_power = NRF_RADIO->TXPOWER;
-    int target_tx_power = current_tx_power;
+    int8_t current_tx_power = NRF_RADIO->TXPOWER;
+    int8_t target_tx_power = current_tx_power;
     int min = -16;
     int max = 4;
     bool is_tx_power_set = false;
