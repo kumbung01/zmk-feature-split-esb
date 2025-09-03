@@ -97,7 +97,7 @@ static int current_tx_power = ESB_TX_POWER_0DBM;
 static void set_tx_power()
 {
     int rssi = -NRF_RADIO->RSSISAMPLE;
-    const int rssi_target = -60; // target RSSI in dBm
+    const int rssi_target = -55; // target RSSI in dBm
     const int max_tx_power = ESB_TX_POWER_4DBM;
     const int min_tx_power = ESB_TX_POWER_NEG8DBM;
     int rssi_diff = rssi_target - rssi;
@@ -176,7 +176,6 @@ static void event_handler(struct esb_evt const *event) {
 
             if (m_mode == APP_ESB_MODE_PTX) {
                 inc_retransmit_delay();
-                set_tx_power();
             }
             
             m_callback(&m_event);
