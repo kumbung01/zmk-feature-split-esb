@@ -151,8 +151,8 @@ static void set_tx_power()
 
     if (is_tx_power_set)
     {
-        LOG_WRN("tx_power set to %d", level_to_dbm[current_tx_power]);
         current_tx_power = target_tx_power;
+        LOG_WRN("tx_power set to %d", level_to_dbm[current_tx_power]);
     }
 }
 
