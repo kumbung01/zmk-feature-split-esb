@@ -94,13 +94,13 @@ static void reset_retransmit_delay(void)
 }
 
 static int current_tx_power = 4;
-static bool is_tx_power_set = true;
 static void set_tx_power()
 {
     int rssi = -NRF_RADIO->RSSISAMPLE;
     const int rssi_target = -55; // target RSSI in dBm
     int rssi_diff = rssi - rssi_target;
     int target_tx_power = current_tx_power;
+    bool is_tx_power_set = true;
 
     int power_levels[] = {
         ESB_TX_POWER_NEG20DBM,
@@ -129,47 +129,30 @@ static void set_tx_power()
     LOG_DBG("diff: %d", rssi_diff);
 
     if (rssi_diff <= -4) {
-        // increase tx power
-        if (level_to_dbm)
-
         if (current_tx_power < max_power) {
-            if (is_tx_power_set)
-                target_tx_power++;
-
-            if (target_tx_power == current_tx_power) {
-                return;
-            }
-
-            LOG_WRN("increasing tx power %d to %d", level_to_dbm[current_tx_power],
-                                                    level_to_dbm[target_tx_power]);
-            current_tx_power = target_tx_power;
-            is_tx_power_set = !esb_set_tx_power(power_levels[current_tx_power]);
+            target_tx_power++;
             
         }
     }
     else if (rssi_diff >= 4) {
         // decrease tx power
         if (current_tx_power > min_power) {
-            if (is_tx_power_set)
-                target_tx_power--;
-
-            if (target_tx_power == current_tx_power) {
-                return;
-            }
-
-            LOG_WRN("decreasing tx power %d to %d", level_to_dbm[current_tx_power],
-                                                    level_to_dbm[target_tx_power]);
-            current_tx_power = target_tx_power;
-            is_tx_power_set = !esb_set_tx_power(power_levels[current_tx_power]);
+            target_tx_power--;
         }
     }
     else {
         return;
     }
 
+    LOG_WRN("change tx power %d to %d", level_to_dbm[current_tx_power],
+                                        level_to_dbm[target_tx_power]);
+    
+    is_tx_power_set = !esb_set_tx_power(power_levels[target_tx_power]);
+
     if (is_tx_power_set)
     {
         LOG_WRN("tx_power set to %d", level_to_dbm[current_tx_power]);
+        current_tx_power = target_tx_power;
     }
 }
 
