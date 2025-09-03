@@ -93,61 +93,10 @@ static void reset_retransmit_delay(void)
     }
 }
 
-static void set_tx_power()
-{
-    int rssi = -NRF_RADIO->RSSISAMPLE;
-    const int rssi_target = -55; // target RSSI in dBm
-    int rssi_diff = rssi - rssi_target;
-    int8_t current_tx_power = NRF_RADIO->TXPOWER;
-    int8_t target_tx_power = current_tx_power;
-    int min = -16;
-    int max = 4;
-    bool is_tx_power_set = false;
-
-    static uint32_t last = 0;
-    uint32_t now = k_uptime_get_32();
-    LOG_DBG("current/target RSSI: %d/%d dBm", rssi, rssi_target);
-    LOG_DBG("diff: %d", rssi_diff);
-
-    if (now - last < 1000)
-        return;
-
-    last = now;
-
-    if (rssi_diff <= -4) {
-        if (current_tx_power < max) {
-            target_tx_power += 4;
-            
-        }
-    }
-    else if (rssi_diff >= 4) {
-        // decrease tx power
-        if (current_tx_power > min) {
-            target_tx_power -= 4;
-        }
-    }
-    else {
-        return;
-    }
-    
-    is_tx_power_set = !esb_set_tx_power(target_tx_power);
-
-    if (is_tx_power_set)
-    {
-        LOG_WRN("tx_power set to %d", (int8_t)(NRF_RADIO->TXPOWER));
-    }
-    else
-    {
-        LOG_WRN("tx_power not set");
-    }
-}
-
 static int tx_fail_count = 0;
 static int evt_type = APP_ESB_EVT_TX_SUCCESS;
 static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
-
-    set_tx_power();
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
    
@@ -237,7 +186,7 @@ static int esb_initialize(app_esb_mode_t mode) {
     config.mode = (mode == APP_ESB_MODE_PTX) ? ESB_MODE_PTX : ESB_MODE_PRX;
     config.tx_mode = ESB_TXMODE_MANUAL_START;
     config.selective_auto_ack = true;
-    config.tx_output_power = ESB_TX_POWER_NEG4DBM;
+    config.tx_output_power = ESB_TX_POWER_NEG2DBM;
 
     err = esb_init(&config);
 
