@@ -109,7 +109,6 @@ static void set_tx_power()
         ESB_TX_POWER_NEG4DBM,
         ESB_TX_POWER_0DBM,
         ESB_TX_POWER_4DBM,
-        ESB_TX_POWER_8DBM,
     };
 
     const int min_power = 0;
