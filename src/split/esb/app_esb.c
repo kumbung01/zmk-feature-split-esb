@@ -94,6 +94,7 @@ static void reset_retransmit_delay(void)
 }
 
 static int current_tx_power = 4;
+static bool is_tx_power_set = false;
 static void set_tx_power()
 {
     int rssi = -NRF_RADIO->RSSISAMPLE;
@@ -132,7 +133,8 @@ static void set_tx_power()
         if (level_to_dbm)
 
         if (current_tx_power < max_power) {
-            target_tx_power++;
+            if (is_tx_power_set)
+                target_tx_power++;
 
             if (target_tx_power == current_tx_power) {
                 return;
@@ -141,14 +143,15 @@ static void set_tx_power()
             LOG_DBG("increasing tx power %d to %d", level_to_dbm[current_tx_power],
                                                     level_to_dbm[target_tx_power]);
             current_tx_power = target_tx_power;
-            esb_set_tx_power(power_levels[current_tx_power]);
+            is_tx_power_set = !esb_set_tx_power(power_levels[current_tx_power]);
             
         }
     }
     else if (rssi_diff >= 4) {
         // decrease tx power
         if (current_tx_power > min_power) {
-            target_tx_power--;
+            if (is_tx_power_set)
+                target_tx_power--;
 
             if (target_tx_power == current_tx_power) {
                 return;
@@ -157,11 +160,16 @@ static void set_tx_power()
             LOG_DBG("decreasing tx power %d to %d", level_to_dbm[current_tx_power],
                                                     level_to_dbm[target_tx_power]);
             current_tx_power = target_tx_power;
-            esb_set_tx_power(power_levels[current_tx_power]);
+            is_tx_power_set = !esb_set_tx_power(power_levels[current_tx_power]);
         }
     }
     else {
         return;
+    }
+
+    if (is_tx_power_set)
+    {
+        LOG_DBG("tx_power set to %d", level_to_dbm[current_tx_power]);
     }
 }
 
