@@ -102,27 +102,13 @@ static void set_tx_power()
     int target_tx_power = current_tx_power;
 
     int power_levels[] = {
-#if defined(ESB_TX_POWER_NEG8DBM)
         ESB_TX_POWER_NEG8DBM,
-#endif  
-#if defined(ESB_TX_POWER_NEG6DBM)
         ESB_TX_POWER_NEG6DBM,
-#endif  
-#if defined(ESB_TX_POWER_NEG4DBM)
         ESB_TX_POWER_NEG4DBM,
-#endif  
-#if defined(ESB_TX_POWER_NEG2DBM)
         ESB_TX_POWER_NEG2DBM,
-#endif  
-#if defined(ESB_TX_POWER_0DBM)
         ESB_TX_POWER_0DBM,
-#endif  
-#if defined(ESB_TX_POWER_2DBM)
         ESB_TX_POWER_2DBM,
-#endif  
-#if defined(ESB_TX_POWER_4DBM)
         ESB_TX_POWER_4DBM,
-#endif  
     };
 
     const int min_power = 0;
