@@ -111,6 +111,16 @@ static void set_tx_power()
         ESB_TX_POWER_4DBM,
     };
 
+    int level_to_dbm[] = {
+        -20,
+        -16,
+        -12,
+        -8,
+        -4,
+        0,
+        4,
+    }
+
     const int min_power = 0;
     const int max_power = sizeof(power_levels) / sizeof(int);
 
@@ -119,6 +129,8 @@ static void set_tx_power()
 
     if (rssi_diff <= -4) {
         // increase tx power
+        if (level_to_dbm)
+
         if (current_tx_power < max_power) {
             target_tx_power++;
 
@@ -126,7 +138,8 @@ static void set_tx_power()
                 return;
             }
 
-            LOG_DBG("increasing tx power %d to %d", current_tx_power, target_tx_power);
+            LOG_DBG("increasing tx power %d to %d", level_to_dbm[current_tx_power],
+                                                    level_to_dbm[target_tx_power]);
             current_tx_power = target_tx_power;
             esb_set_tx_power(power_levels[current_tx_power]);
             
@@ -141,7 +154,8 @@ static void set_tx_power()
                 return;
             }
 
-            LOG_DBG("decreasing tx power %d to %d", current_tx_power, target_tx_power);
+            LOG_DBG("decreasing tx power %d to %d", level_to_dbm[current_tx_power],
+                                                    level_to_dbm[target_tx_power]);
             current_tx_power = target_tx_power;
             esb_set_tx_power(power_levels[current_tx_power]);
         }
