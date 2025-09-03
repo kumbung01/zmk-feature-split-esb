@@ -68,33 +68,33 @@ static int pull_packet_from_tx_msgq(void);
 
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
-static void inc_retransmit_delay(void)
-{
-    // Implement simple exponential backoff for retransmit attempts
-    static int current_backoff_us = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY;
-    const int max_backoff_us = current_backoff_us * 3;
+// static void inc_retransmit_delay(void)
+// {
+//     // Implement simple exponential backoff for retransmit attempts
+//     static int current_backoff_us = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY;
+//     const int max_backoff_us = current_backoff_us * 3;
 
-    if (current_backoff_us < max_backoff_us)
-    {
-        current_backoff_us += CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY;
-        esb_set_retransmit_delay(current_backoff_us);
-    }
-}
+//     if (current_backoff_us < max_backoff_us)
+//     {
+//         current_backoff_us += CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY;
+//         esb_set_retransmit_delay(current_backoff_us);
+//     }
+// }
 
-static void reset_retransmit_delay(void)
-{
-    const int init_backoff_us = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY;
-    static int current_backoff_us = init_backoff_us;
+// static void reset_retransmit_delay(void)
+// {
+//     const int init_backoff_us = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY;
+//     static int current_backoff_us = init_backoff_us;
 
-    if (current_backoff_us > init_backoff_us)
-    {
-        current_backoff_us = init_backoff_us;
-        esb_set_retransmit_delay(current_backoff_us);
-    }
-}
+//     if (current_backoff_us > init_backoff_us)
+//     {
+//         current_backoff_us = init_backoff_us;
+//         esb_set_retransmit_delay(current_backoff_us);
+//     }
+// }
 
 static int tx_fail_count = 0;
-static int evt_type = APP_ESB_EVT_TX_SUCCESS;
+// static int evt_type = APP_ESB_EVT_TX_SUCCESS;
 static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
     switch (event->evt_id) {
@@ -102,21 +102,15 @@ static void event_handler(struct esb_evt const *event) {
    
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
-            evt_type = APP_ESB_EVT_TX_SUCCESS;
             tx_fail_count = 0;
+
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
             break;
         case ESB_EVENT_TX_FAILED:
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
-            evt_type = APP_ESB_EVT_TX_FAIL;
             tx_fail_count++;
-            if (tx_fail_count > CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT
-             && m_mode == APP_ESB_MODE_PTX) {
-                tx_fail_count = 0;
-                esb_flush_tx();
-            }
             
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
@@ -185,7 +179,7 @@ static int esb_initialize(app_esb_mode_t mode) {
     config.mode = (mode == APP_ESB_MODE_PTX) ? ESB_MODE_PTX : ESB_MODE_PRX;
     config.tx_mode = ESB_TXMODE_MANUAL_START;
     config.selective_auto_ack = true;
-    config.tx_output_power = ESB_TX_POWER_NEG6DBM;
+    config.tx_output_power = ESB_TX_POWER_NEG4DBM;
 
     err = esb_init(&config);
 
@@ -230,9 +224,17 @@ static int pull_packet_from_tx_msgq(void) {
     if (m_mode == APP_ESB_MODE_PTX && !esb_is_idle()) {
         LOG_WRN("ESB busy, skip pulling from msgq");
         if (tx_fail_count > 0) { // if last TX failed, try to push again
-            write_cnt++;
+            if (tx_fail_count > CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT
+             && m_mode == APP_ESB_MODE_PTX) {
+                tx_fail_count = 0;
+                esb_flush_tx();
+            }
+            else
+            {
+                write_cnt++;
 
-            goto exit_pull;
+                goto exit_pull;
+            }
         }
     }
 
