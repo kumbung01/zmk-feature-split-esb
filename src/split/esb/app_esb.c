@@ -111,10 +111,10 @@ static void set_tx_power()
     const int min_power = 0;
     const int max_power = sizeof(power_levels) / sizeof(int);
 
-    LOG_DBG("current RSSI: %d dBm", -rssi);
-    LOG_DBG("min/max: %d/%d", min_power, max_power);
+    LOG_DBG("current/target RSSI: %d/%d dBm", -rssi, -rssi_target);
+    LOG_DBG("diff: %d", rssi_diff);
 
-    if (rssi_diff > 2) {
+    if (rssi_diff >= 4) {
         // increase tx power
         if (current_tx_power < max_power) {
             target_tx_power++;
@@ -129,7 +129,7 @@ static void set_tx_power()
             
         }
     }
-    else if (rssi_diff < -2) {
+    else if (rssi_diff <= -4) {
         // decrease tx power
         if (current_tx_power > min_power) {
             target_tx_power--;
