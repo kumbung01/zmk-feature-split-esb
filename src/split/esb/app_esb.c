@@ -93,6 +93,7 @@ static void reset_retransmit_delay(void)
     }
 }
 
+static int current_tx_power = ESB_TX_POWER_0DBM;
 static void set_tx_power()
 {
     int rssi = -NRF_RADIO->RSSISAMPLE;
@@ -100,14 +101,14 @@ static void set_tx_power()
     const int max_tx_power = ESB_TX_POWER_4DBM;
     const int min_tx_power = ESB_TX_POWER_NEG8DBM;
     int rssi_diff = rssi_target - rssi;
-    int current_tx_power = esb_cfg.tx_output_power;
+    int target_tx_power = current_tx_power;
 
     LOG_DBG("current RSSI: %d dBm", rssi);
 
-    if (rssi_diff > 0) {
+    if (rssi_diff > 2) {
         // increase tx power
         if (current_tx_power < max_tx_power) {
-            int target_tx_power = current_tx_power + 1;
+            target_tx_power++;
             if (target_tx_power > max_tx_power) {
                 target_tx_power = max_tx_power;
             }
@@ -120,10 +121,10 @@ static void set_tx_power()
             LOG_DBG("increasing tx power");
         }
     }
-    else if (rssi_diff < 0) {
+    else if (rssi_diff < -2) {
         // decrease tx power
         if (current_tx_power > min_tx_power) {
-            int target_tx_power = current_tx_power + 1;
+            target_tx_power--;
             if (target_tx_power < min_tx_power) {
                 target_tx_power = min_tx_power;
             }
@@ -135,6 +136,9 @@ static void set_tx_power()
             esb_set_tx_power(current_tx_power);
             LOG_DBG("decreasing tx power");
         }
+    }
+    else {
+        return;
     }
 }
 
@@ -167,7 +171,7 @@ static void event_handler(struct esb_evt const *event) {
                 tx_fail_count = 0;
                 esb_flush_tx();
             }
-             
+
             if (m_mode == APP_ESB_MODE_PTX) {
                 inc_retransmit_delay();
                 set_tx_power();
@@ -240,7 +244,7 @@ static int esb_initialize(app_esb_mode_t mode) {
     config.mode = (mode == APP_ESB_MODE_PTX) ? ESB_MODE_PTX : ESB_MODE_PRX;
     config.tx_mode = ESB_TXMODE_MANUAL_START;
     config.selective_auto_ack = true;
-    config.tx_output_power = ESB_TX_POWER_0DBM;
+    config.tx_output_power = current_tx_power;
 
     err = esb_init(&config);
 
