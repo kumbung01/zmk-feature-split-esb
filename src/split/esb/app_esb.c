@@ -119,7 +119,7 @@ static void set_tx_power()
         -4,
         0,
         4,
-    }
+    };
 
     const int min_power = 0;
     const int max_power = sizeof(power_levels) / sizeof(int);
