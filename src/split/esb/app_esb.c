@@ -103,26 +103,36 @@ static void set_tx_power()
     int current_tx_power = esb_cfg.tx_output_power;
 
     LOG_DBG("current RSSI: %d dBm", rssi);
-    
+
     if (rssi_diff > 0) {
         // increase tx power
         if (current_tx_power < max_tx_power) {
-            current_tx_power++;
-            if (current_tx_power > max_tx_power) {
-                current_tx_power = max_tx_power;
+            int target_tx_power = current_tx_power + 1;
+            if (target_tx_power > max_tx_power) {
+                target_tx_power = max_tx_power;
             }
-            esb_set_tx_output_power(current_tx_power);
+
+            if (target_tx_power == current_tx_power) {
+                return;
+            }
+            
+            esb_set_tx_power(current_tx_power);
             LOG_DBG("increasing tx power");
         }
     }
     else if (rssi_diff < 0) {
         // decrease tx power
         if (current_tx_power > min_tx_power) {
-            current_tx_power--;
-            if (current_tx_power < min_tx_power) {
-                current_tx_power = min_tx_power;
+            int target_tx_power = current_tx_power + 1;
+            if (target_tx_power < min_tx_power) {
+                target_tx_power = min_tx_power;
             }
-            esb_set_tx_output_power(current_tx_power);
+
+            if (target_tx_power == current_tx_power) {
+                return;
+            }
+
+            esb_set_tx_power(current_tx_power);
             LOG_DBG("decreasing tx power");
         }
     }
