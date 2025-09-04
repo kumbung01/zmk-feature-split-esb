@@ -230,7 +230,7 @@ static void set_tx_power(void)
     const int8_t pwr_min = -16;
     const int8_t pwr_max = 4;
 
-    int diff = rssi_now - rssi-target;
+    int8_t diff = rssi_now - rssi_target;
     int8_t pwr = pwr_now;
 
     LOG_WRN("RSSI: %d dbm", rssi_now);
