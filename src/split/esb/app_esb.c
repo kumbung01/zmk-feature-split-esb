@@ -222,7 +222,7 @@ static int esb_initialize(app_esb_mode_t mode) {
 
 static void set_tx_power(void)
 {
-    int8_t rssi_now = NRF_RADIO->RSSISAMPLE;
+    int8_t rssi_now = -NRF_RADIO->RSSISAMPLE;
     const int8_t rssi_target = -50;
     int8_t pwr_now = NRF_RADIO->TXPOWER;
     const int8_t pwr_min = -16;
@@ -230,6 +230,8 @@ static void set_tx_power(void)
 
     int diff = rssi_target - rssi_now;
     int8_t pwr = pwr_now;
+
+    LOG_DBG("RSSI: %d dbm", rssi_now);
 
     if (diff >= 2) {
         pwr = pwr - 2 <= pwr_min ? pwr_min : pwr;
@@ -245,10 +247,10 @@ static void set_tx_power(void)
     irq_unlock(irq_key);
 
     if (!ret) {
-        DBG_WRN("tx power set to %d", NRF_RADIO->TXPOWER);
+        LOG_WRN("tx power set to %d dbm", NRF_RADIO->TXPOWER);
     }
     else {
-        DBG_WRN("tx power not set");
+        LOG_WRN("tx power not set");
     }
 }
 
