@@ -233,7 +233,7 @@ static void set_tx_power(void)
     int diff = rssi_target - rssi_now;
     int8_t pwr = pwr_now;
 
-    LOG_DBG("RSSI: %d dbm", rssi_now);
+    LOG_WRN("RSSI: %d dbm", rssi_now);
 
     if (diff >= 2) {
         pwr = pwr - 2 <= pwr_min ? pwr_min : pwr;
