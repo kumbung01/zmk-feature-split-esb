@@ -106,6 +106,8 @@ static void event_handler(struct esb_evt const *event) {
 
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
+
+            LOG_WRN("tx power: %d dbm", NRF_RADIO->TXPOWER);
             break;
         case ESB_EVENT_TX_FAILED:
             // Forward an event to the application
@@ -240,18 +242,7 @@ static void set_tx_power(void)
         pwr = pwr + 2 >= pwr_max ? pwr_max : pwr;
     }
 
-    uint32_t irq_key = irq_lock();
-
     int ret = esb_set_tx_power(pwr);
-
-    irq_unlock(irq_key);
-
-    if (!ret) {
-        LOG_WRN("tx power set to %d dbm", NRF_RADIO->TXPOWER);
-    }
-    else {
-        LOG_WRN("tx power not set");
-    }
 }
 
 static int pull_packet_from_tx_msgq(void) {
@@ -355,8 +346,6 @@ int zmk_split_esb_init(app_esb_mode_t mode, app_esb_callback_t callback) {
     if (ret < 0) {
         LOG_ERR("esb_set_rf_channel failed: %d", ret);
     }
-
-     
 
     k_msleep(100);
     return 0;
