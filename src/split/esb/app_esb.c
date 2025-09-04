@@ -242,7 +242,13 @@ static void set_tx_power(void)
         pwr = pwr + 2 >= pwr_max ? pwr_max : pwr;
     }
 
+    LOG_WRN("Setting tx-power to %d dbm", pwr);
+
+    uint32_t key = irq_lock();
+
     int ret = esb_set_tx_power(pwr);
+
+    irq_unlock(key);
 }
 
 static int pull_packet_from_tx_msgq(void) {
