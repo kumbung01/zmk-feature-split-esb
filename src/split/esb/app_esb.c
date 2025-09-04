@@ -388,7 +388,6 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
 
 static int app_esb_suspend(void) {
     m_active = false;
-    LOG_DBG("")
     if(m_mode == APP_ESB_MODE_PTX) {
         uint32_t irq_key = irq_lock();
 
