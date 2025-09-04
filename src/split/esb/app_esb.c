@@ -111,6 +111,12 @@ static void event_handler(struct esb_evt const *event) {
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
             tx_fail_count++;
+
+            if (tx_fail_count > CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT
+             && m_mode == APP_ESB_MODE_PTX) {
+                tx_fail_count = 0;
+                esb_flush_tx();
+            }
             
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
@@ -213,6 +219,39 @@ static int esb_initialize(app_esb_mode_t mode) {
 #define ESB_TX_FIFO_REQUE_MAX (CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS \
                                * CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT)
 
+
+static void set_tx_power(void)
+{
+    int8_t rssi_now = NRF_RADIO->RSSISAMPLE;
+    const int8_t rssi_target = -50;
+    int8_t pwr_now = NRF_RADIO->TXPOWER;
+    const int8_t pwr_min = -16;
+    const int8_t pwr_max = 4;
+
+    int diff = rssi_target - rssi_now;
+    int8_t pwr = pwr_now;
+
+    if (diff >= 2) {
+        pwr = pwr - 2 <= pwr_min ? pwr_min : pwr;
+    }
+    else if (diff <= -2) {
+        pwr = pwr + 2 >= pwr_max ? pwr_max : pwr;
+    }
+
+    uint32_t irq_key = irq_lock();
+
+    int ret = esb_set_tx_power(pwr);
+
+    irq_unlock(irq_key);
+
+    if (!ret) {
+        DBG_WRN("tx power set to %d", NRF_RADIO->TXPOWER);
+    }
+    else {
+        DBG_WRN("tx power not set");
+    }
+}
+
 static int pull_packet_from_tx_msgq(void) {
     int ret = 0;
     struct esb_payload tx_payload;
@@ -223,19 +262,13 @@ static int pull_packet_from_tx_msgq(void) {
     if (m_mode == APP_ESB_MODE_PTX && !esb_is_idle()) {
         LOG_WRN("ESB busy, skip pulling from msgq");
         if (tx_fail_count > 0) { // if last TX failed, try to push again
-            if (tx_fail_count > CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT
-             && m_mode == APP_ESB_MODE_PTX) {
-                tx_fail_count = 0;
-                esb_flush_tx();
-            }
-            else
-            {
-                write_cnt++;
+            write_cnt++;
 
-                goto exit_pull;
-            }
+            goto exit_pull;
         }
     }
+
+    set_tx_power();
 
     // if (m_mode == APP_ESB_MODE_PTX) {
     //     switch (evt_type)
