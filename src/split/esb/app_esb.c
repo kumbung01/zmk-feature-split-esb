@@ -227,13 +227,10 @@ static int pull_packet_from_tx_msgq(void) {
         if (tx_fail_count > 0) { // if last TX failed, try to push again
             if (tx_fail_count >= CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT) {
                 tx_fail_count = 0;
-                evt_type = APP_ESB_EVT_TX_SUCCESS;
                 esb_flush_tx();
             }
             else {
                 write_cnt++;
-                if (evt_type == APP_ESB_EVT_TX_FAIL)
-                    inc_retransmit_delay();
 
                 goto exit_pull;
             }
@@ -242,6 +239,8 @@ static int pull_packet_from_tx_msgq(void) {
 
     if (evt_type == APP_ESB_EVT_TX_SUCCESS)
         reset_retransmit_delay();
+    else if (evt_type == APP_ESB_EVT_TX_FAIL)
+        inc_retransmit_delay();
 
     for (int i = 0; i < MAX_LOOP_COUNT; i++) {
         if (esb_tx_full()) {
