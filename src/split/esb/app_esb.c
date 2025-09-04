@@ -225,12 +225,11 @@ static int esb_initialize(app_esb_mode_t mode) {
 #define ESB_TX_FIFO_REQUE_MAX (CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS \
                                * CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT)
 
-
+static int8_t pwr_now = 0;
+static int8_t rssi_now = -50;
 static int get_next_tx_power(void)
 {
-    int8_t rssi_now = -NRF_RADIO->RSSISAMPLE;
     const int8_t rssi_target = -50;
-    int8_t pwr_now = NRF_RADIO->TXPOWER;
     const int8_t pwr_min = -16;
     const int8_t pwr_max = 4;
 
@@ -419,6 +418,9 @@ static int app_esb_suspend(void) {
     m_active = false;
     if(m_mode == APP_ESB_MODE_PTX) {
         uint32_t irq_key = irq_lock();
+
+        pwr_now = NRF_RADIO->TXPOWER;
+        rssi_now = NRF_RADIO->RSSISAMPLE;
 
         irq_disable(RADIO_IRQn);
         NVIC_DisableIRQ(RADIO_IRQn);
