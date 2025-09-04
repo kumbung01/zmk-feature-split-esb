@@ -187,10 +187,6 @@ static int esb_initialize(app_esb_mode_t mode) {
     config.mode = (mode == APP_ESB_MODE_PTX) ? ESB_MODE_PTX : ESB_MODE_PRX;
     config.tx_mode = ESB_TXMODE_MANUAL_START;
     config.selective_auto_ack = true;
-    if (mode == APP_ESB_MODE_PTX)
-    {
-        config.tx_output_power = get_next_tx_power();
-    }
 
     err = esb_init(&config);
 
@@ -225,31 +221,6 @@ static int esb_initialize(app_esb_mode_t mode) {
 #define ESB_TX_FIFO_REQUE_MAX (CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS \
                                * CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT)
 
-static int8_t pwr_now = 0;
-static int8_t rssi_now = -50;
-static int get_next_tx_power(void)
-{
-    const int8_t rssi_target = -50;
-    const int8_t pwr_min = -16;
-    const int8_t pwr_max = 4;
-
-    int8_t diff = rssi_now - rssi_target;
-    int8_t pwr = pwr_now;
-
-    LOG_WRN("RSSI: %d dbm", rssi_now);
-    LOG_WRN("diff: %d dbm", diff);
-
-    if (diff > 2) {
-        pwr = pwr - 4 <= pwr_min ? pwr_min : pwr - 4;
-    }
-    else if (diff < -2) {
-        pwr = pwr + 4 >= pwr_max ? pwr_max : pwr + 4;
-    }
-
-    LOG_WRN("Setting tx-power to %d -> %d dbm", pwr_now, pwr);
-
-    return pwr;
-}
 
 static int pull_packet_from_tx_msgq(void) {
     int ret = 0;
@@ -418,9 +389,6 @@ static int app_esb_suspend(void) {
     m_active = false;
     if(m_mode == APP_ESB_MODE_PTX) {
         uint32_t irq_key = irq_lock();
-
-        pwr_now = NRF_RADIO->TXPOWER;
-        rssi_now = -NRF_RADIO->RSSISAMPLE;
 
         irq_disable(RADIO_IRQn);
         NVIC_DisableIRQ(RADIO_IRQn);
