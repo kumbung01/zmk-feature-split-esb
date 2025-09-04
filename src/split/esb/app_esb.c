@@ -106,8 +106,6 @@ static void event_handler(struct esb_evt const *event) {
 
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
-
-            LOG_WRN("tx power: %d dbm", (int8_t)(NRF_RADIO->TXPOWER));
             break;
         case ESB_EVENT_TX_FAILED:
             // Forward an event to the application
@@ -230,7 +228,7 @@ static int pull_packet_from_tx_msgq(void) {
     const int MAX_LOOP_COUNT = CONFIG_ESB_TX_FIFO_SIZE;
 
     if (m_mode == APP_ESB_MODE_PTX && !esb_is_idle()) {
-        LOG_WRN("ESB busy, skip pulling from msgq");
+        LOG_DBG("ESB busy, skip pulling from msgq");
         if (tx_fail_count > 0) { // if last TX failed, try to push again
             write_cnt++;
 
