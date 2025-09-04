@@ -107,7 +107,8 @@ static void event_handler(struct esb_evt const *event) {
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
 
-            LOG_WRN("tx power: %d dbm", NRF_RADIO->TXPOWER);
+            LOG_WRN("tx power: %d dbm", (int8_t)(NRF_RADIO->TXPOWER));
+            set_tx_power();
             break;
         case ESB_EVENT_TX_FAILED:
             // Forward an event to the application
@@ -122,6 +123,7 @@ static void event_handler(struct esb_evt const *event) {
             
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
+            set_tx_power();
             break;
         case ESB_EVENT_RX_RECEIVED:
             // LOG_DBG("RX SUCCESS");
@@ -134,6 +136,7 @@ static void event_handler(struct esb_evt const *event) {
                 m_event.evt_type = APP_ESB_EVT_RX;
                 m_event.payload = &rx_payload;
                 m_callback(&m_event);
+                set_tx_power();
             }
             break;
     }
@@ -242,9 +245,15 @@ static void set_tx_power(void)
     else if (diff <= -2) {
         pwr = pwr + 2 >= pwr_max ? pwr_max : pwr + 2;
     }
+    else
+    {
+        LOG_WRN("now/pwr = %d/%d, skip", pwr_now, pwr);
 
-    LOG_WRN("Setting tx-power to %d dbm", pwr);
+        return;
+    }
 
+    LOG_WRN("Setting tx-power to %d -> %d dbm", pwr_now, pwr);
+    
     uint32_t key = irq_lock();
 
     int ret = esb_set_tx_power(pwr);
@@ -267,8 +276,6 @@ static int pull_packet_from_tx_msgq(void) {
             goto exit_pull;
         }
     }
-
-    set_tx_power();
 
     // if (m_mode == APP_ESB_MODE_PTX) {
     //     switch (evt_type)
