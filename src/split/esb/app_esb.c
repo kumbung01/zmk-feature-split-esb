@@ -94,7 +94,7 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 // }
 
 static int tx_fail_count = 0;
-// static int evt_type = APP_ESB_EVT_TX_SUCCESS;
+static int evt_type = APP_ESB_EVT_TX_SUCCESS;
 static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
     switch (event->evt_id) {
@@ -102,6 +102,7 @@ static void event_handler(struct esb_evt const *event) {
    
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
+            evt_type = APP_ESB_EVT_TX_SUCCESS;
             tx_fail_count = 0;
 
             m_callback(&m_event);
@@ -110,13 +111,8 @@ static void event_handler(struct esb_evt const *event) {
         case ESB_EVENT_TX_FAILED:
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
+            evt_type = APP_ESB_EVT_TX_FAIL;
             tx_fail_count++;
-
-            if (tx_fail_count > CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT
-             && m_mode == APP_ESB_MODE_PTX) {
-                tx_fail_count = 0;
-                esb_flush_tx();
-            }
             
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
@@ -230,25 +226,23 @@ static int pull_packet_from_tx_msgq(void) {
     if (m_mode == APP_ESB_MODE_PTX && !esb_is_idle()) {
         LOG_DBG("ESB busy, skip pulling from msgq");
         if (tx_fail_count > 0) { // if last TX failed, try to push again
-            write_cnt++;
+            if (tx_fail_count >= CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT) {
+                tx_fail_count = 0;
+                evt_type = APP_ESB_EVT_TX_SUCCESS;
+                esb_flush_tx();
+            }
+            else {
+                write_cnt++;
+                if (evt_type == APP_ESB_EVT_TX_FAIL)
+                    inc_retransmit_delay();
 
-            goto exit_pull;
+                goto exit_pull;
+            }
         }
     }
 
-    // if (m_mode == APP_ESB_MODE_PTX) {
-    //     switch (evt_type)
-    //     {
-    //         case APP_ESB_EVT_TX_FAIL:
-    //             inc_retransmit_delay();
-    //             break;
-    //         case APP_ESB_EVT_TX_SUCCESS:
-    //             reset_retransmit_delay();
-    //             break;
-    //         default:
-    //             break;
-    //     }
-    // }
+    if (evt_type == APP_ESB_EVT_TX_SUCCESS)
+        reset_retransmit_delay();
 
     for (int i = 0; i < MAX_LOOP_COUNT; i++) {
         if (esb_tx_full()) {

@@ -15,7 +15,7 @@
 #define ZMK_SPLIT_ESB_ENVELOPE_MAGIC_PREFIX "ZmKe"
 
 struct esb_msg_prefix {
-    uint8_t magic_prefix[sizeof(ZMK_SPLIT_ESB_ENVELOPE_MAGIC_PREFIX) - 1];
+    // uint8_t magic_prefix[sizeof(ZMK_SPLIT_ESB_ENVELOPE_MAGIC_PREFIX) - 1];
     uint8_t payload_size;
 } __packed;
 
@@ -25,7 +25,7 @@ struct esb_command_payload {
 } __packed;
 
 struct esb_command_envelope {
-    struct esb_msg_prefix prefix;
+    // struct esb_msg_prefix prefix;
     struct esb_command_payload payload;
 } __packed;
 
