@@ -65,7 +65,7 @@ static bool m_enabled = false;
 static unsigned int write_fail_count = 0;
 
 static int pull_packet_from_tx_msgq(void);
-static void set_tx_power(void);
+static int get_next_tx_power(void);
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
 // static void inc_retransmit_delay(void)
@@ -108,7 +108,6 @@ static void event_handler(struct esb_evt const *event) {
             pull_packet_from_tx_msgq();
 
             LOG_WRN("tx power: %d dbm", (int8_t)(NRF_RADIO->TXPOWER));
-            set_tx_power();
             break;
         case ESB_EVENT_TX_FAILED:
             // Forward an event to the application
@@ -123,7 +122,6 @@ static void event_handler(struct esb_evt const *event) {
             
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
-            set_tx_power();
             break;
         case ESB_EVENT_RX_RECEIVED:
             // LOG_DBG("RX SUCCESS");
@@ -136,7 +134,6 @@ static void event_handler(struct esb_evt const *event) {
                 m_event.evt_type = APP_ESB_EVT_RX;
                 m_event.payload = &rx_payload;
                 m_callback(&m_event);
-                set_tx_power();
             }
             break;
     }
@@ -190,6 +187,10 @@ static int esb_initialize(app_esb_mode_t mode) {
     config.mode = (mode == APP_ESB_MODE_PTX) ? ESB_MODE_PTX : ESB_MODE_PRX;
     config.tx_mode = ESB_TXMODE_MANUAL_START;
     config.selective_auto_ack = true;
+    if (mode == APP_ESB_MODE_PRX)
+    {
+        config.tx_output_power = get_next_tx_power();
+    }
 
     err = esb_init(&config);
 
@@ -225,7 +226,7 @@ static int esb_initialize(app_esb_mode_t mode) {
                                * CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT)
 
 
-static void set_tx_power(void)
+static int get_next_tx_power(void)
 {
     int8_t rssi_now = -NRF_RADIO->RSSISAMPLE;
     const int8_t rssi_target = -50;
@@ -245,20 +246,9 @@ static void set_tx_power(void)
     else if (diff <= -2) {
         pwr = pwr + 2 >= pwr_max ? pwr_max : pwr + 2;
     }
-    else
-    {
-        LOG_WRN("now/pwr = %d/%d, skip", pwr_now, pwr);
 
-        return;
-    }
-
+se
     LOG_WRN("Setting tx-power to %d -> %d dbm", pwr_now, pwr);
-    
-    uint32_t key = irq_lock();
-
-    int ret = esb_set_tx_power(pwr);
-
-    irq_unlock(key);
 }
 
 static int pull_packet_from_tx_msgq(void) {
