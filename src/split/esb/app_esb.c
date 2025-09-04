@@ -68,10 +68,10 @@ static int pull_packet_from_tx_msgq(void);
 // static int get_next_tx_power(void);
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
+static int current_backoff_us = init_backoff_us;
 static void inc_retransmit_delay(void)
 {
     // Implement simple exponential backoff for retransmit attempts
-    static int current_backoff_us = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY;
     const int max_backoff_us = current_backoff_us * 3;
 
     if (current_backoff_us < max_backoff_us)
@@ -84,9 +84,8 @@ static void inc_retransmit_delay(void)
 static void reset_retransmit_delay(void)
 {
     const int init_backoff_us = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY;
-    static int current_backoff_us = init_backoff_us;
 
-    if (current_backoff_us > init_backoff_us)
+    if (current_backoff_us != init_backoff_us)
     {
         current_backoff_us = init_backoff_us;
         esb_set_retransmit_delay(current_backoff_us);
