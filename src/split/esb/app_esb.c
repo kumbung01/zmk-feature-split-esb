@@ -65,7 +65,7 @@ static bool m_enabled = false;
 static unsigned int write_fail_count = 0;
 
 static int pull_packet_from_tx_msgq(void);
-
+static void set_tx_power(void);
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
 // static void inc_retransmit_delay(void)
