@@ -236,10 +236,10 @@ static void set_tx_power(void)
     LOG_WRN("RSSI: %d dbm", rssi_now);
 
     if (diff >= 2) {
-        pwr = pwr - 2 <= pwr_min ? pwr_min : pwr;
+        pwr = pwr - 2 <= pwr_min ? pwr_min : pwr - 2;
     }
     else if (diff <= -2) {
-        pwr = pwr + 2 >= pwr_max ? pwr_max : pwr;
+        pwr = pwr + 2 >= pwr_max ? pwr_max : pwr + 2;
     }
 
     LOG_WRN("Setting tx-power to %d dbm", pwr);
