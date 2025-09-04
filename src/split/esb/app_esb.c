@@ -247,8 +247,9 @@ static int get_next_tx_power(void)
         pwr = pwr + 2 >= pwr_max ? pwr_max : pwr + 2;
     }
 
-se
     LOG_WRN("Setting tx-power to %d -> %d dbm", pwr_now, pwr);
+
+    return pwr;
 }
 
 static int pull_packet_from_tx_msgq(void) {
