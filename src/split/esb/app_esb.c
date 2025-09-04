@@ -420,7 +420,7 @@ static int app_esb_suspend(void) {
         uint32_t irq_key = irq_lock();
 
         pwr_now = NRF_RADIO->TXPOWER;
-        rssi_now = NRF_RADIO->RSSISAMPLE;
+        rssi_now = -NRF_RADIO->RSSISAMPLE;
 
         irq_disable(RADIO_IRQn);
         NVIC_DisableIRQ(RADIO_IRQn);
