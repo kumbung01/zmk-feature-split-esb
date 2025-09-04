@@ -206,9 +206,9 @@ static int esb_initialize(app_esb_mode_t mode) {
     NVIC_SetPriority(RADIO_IRQn, 0);
 
     LOG_DBG("setting rf channel to 1");
-    err = esb_set_rf_channel(6);
+    err = esb_set_rf_channel(9);
     if (err < 0) {
-        LOG_ERR("esb_set_rf_channel failed: %d", ret);
+        LOG_ERR("esb_set_rf_channel failed: %d", err);
     }
 
     if (mode == APP_ESB_MODE_PRX) {
