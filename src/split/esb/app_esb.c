@@ -204,12 +204,6 @@ static int esb_initialize(app_esb_mode_t mode) {
 
     NVIC_SetPriority(RADIO_IRQn, 0);
 
-    LOG_DBG("setting rf channel to 1");
-    err = esb_set_rf_channel(9);
-    if (err < 0) {
-        LOG_ERR("esb_set_rf_channel failed: %d", err);
-    }
-
     if (mode == APP_ESB_MODE_PRX) {
         esb_start_rx();
     }
@@ -311,6 +305,12 @@ int zmk_split_esb_init(app_esb_mode_t mode, app_esb_callback_t callback) {
     }
     LOG_INF("Timeslothandler init");
     zmk_split_esb_timeslot_init(on_timeslot_start_stop);
+    
+    LOG_DBG("setting rf channel to 9");
+    err = esb_set_rf_channel(9);
+    if (err < 0) {
+        LOG_ERR("esb_set_rf_channel failed: %d", err);
+    }
 
     return 0;
 }
@@ -411,7 +411,6 @@ static int app_esb_resume(void) {
     if(m_mode == APP_ESB_MODE_PTX) {
         int err = esb_initialize(m_mode);
         m_active = true;
-        k_msleep(10);
         pull_packet_from_tx_msgq();
         return err;
     }
