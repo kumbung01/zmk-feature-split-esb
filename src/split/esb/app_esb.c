@@ -328,7 +328,7 @@ int zmk_split_esb_set_enable(bool enabled) {
 
 int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     int ret = 0;
-    static struct esb_payload tx_payload;
+    struct esb_payload tx_payload;
 
     if (k_msgq_num_free_get(&m_msgq_tx_payloads) == 0) {
         LOG_WRN("esb tx_payload_q full, dropping packet");
