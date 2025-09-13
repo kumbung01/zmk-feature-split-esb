@@ -48,7 +48,7 @@ config ZMK_SPLIT_ESB_BITRATE_2MBPS
     bool "Set ESB bitrate to 2Mbps"
     default n
 
-config ZMK_SPLIT_ESB_KEYBOARD_EVENT_TIMMEOUT_MS
+config ZMK_SPLIT_ESB_KEYBOARD_EVENT_TIMEOUT_MS
     int "keyboard event timeout in ms"
     default 3
 
