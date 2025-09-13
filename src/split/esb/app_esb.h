@@ -37,7 +37,7 @@ typedef struct {
 
 typedef struct {
     struct esb_payload payload;
-    uint32_t timestamp;
+    int64_t timestamp;
 } payload_t;
 
 typedef void (*app_esb_callback_t)(app_esb_event_t *event);

@@ -266,7 +266,7 @@ static int pull_packet_from_tx_msgq(void) {
             goto exit_pull;
         }
 
-        if (k_uptime_delta(payload.timestamp) >= TIMEOUT_MS)
+        if (k_uptime_delta(&payload.timestamp) >= TIMEOUT_MS)
         {
             // LOG_DBG("event timeout expired, skip event")
             continue;
@@ -341,7 +341,7 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
 
     while (k_msgq_peek(&m_msgq_tx_payloads, &payload) == 0)
     {
-        if (k_uptime_delta(payload.timestamp) >= TIMEOUT_MS)
+        if (k_uptime_delta(&payload.timestamp) >= TIMEOUT_MS)
         {
             k_msgq_get(&m_msgq_tx_payloads, NULL, K_NO_WAIT);
         }
