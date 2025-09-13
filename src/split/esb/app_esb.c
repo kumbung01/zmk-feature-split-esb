@@ -337,7 +337,7 @@ int zmk_split_esb_set_enable(bool enabled) {
 int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     int ret = 0;
     payload_t payload;
-    uint32_t timestamp = k_uptime_get();
+    int64_t timestamp = k_uptime_get();
 
     while (k_msgq_peek(&m_msgq_tx_payloads, &payload) == 0)
     {
