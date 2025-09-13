@@ -35,6 +35,11 @@ typedef struct {
     app_esb_mode_t mode;
 } app_esb_config_t;
 
+typedef struct {
+    struct esb_payload payload;
+    uint32_t timestamp;
+} payload_t;
+
 typedef void (*app_esb_callback_t)(app_esb_event_t *event);
 
 struct esb_simple_addr {

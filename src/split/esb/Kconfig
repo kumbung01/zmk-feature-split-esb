@@ -48,6 +48,10 @@ config ZMK_SPLIT_ESB_BITRATE_2MBPS
     bool "Set ESB bitrate to 2Mbps"
     default n
 
+config ZMK_SPLIT_ESB_KEYBOARD_EVENT_TIMMEOUT_MS
+    int "keyboard event timeout in ms"
+    default 3
+
 module = ZMK_SPLIT_ESB
 module-str = ZMK_SPLIT_ESB
 source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"

@@ -51,12 +51,14 @@ uint8_t esb_addr_prefix[8] = DT_INST_PROP(0, addr_prefix);
 #error "Need to create a node with compatible of 'zmk,esb-split` with `all `address` property set."
 #endif
 
+#define TIMEOUT_MS ZMK_SPLIT_ESB_KEYBOARD_EVENT_TIMMEOUT_MS
+
 static app_esb_callback_t m_callback;
 
 // void tx_retry_callback(struct k_timer *timer);
 
 // Define a buffer of payloads to store TX payloads in between timeslots
-K_MSGQ_DEFINE(m_msgq_tx_payloads, sizeof(struct esb_payload), 
+K_MSGQ_DEFINE(m_msgq_tx_payloads, sizeof(struct payload_t), 
               CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
 
 static app_esb_mode_t m_mode;
@@ -218,22 +220,22 @@ static int esb_initialize(app_esb_mode_t mode) {
 static int pull_packet_from_tx_msgq(void) {
     int ret = 0;
     struct esb_payload tx_payload;
+    struct payload_t payload;
     unsigned int write_cnt = 0;
 
     const int MAX_LOOP_COUNT = CONFIG_ESB_TX_FIFO_SIZE;
 
+    if (tx_fail_count >= CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT) {
+        tx_fail_count = 0;
+        esb_flush_tx();
+    }
+
     if (m_mode == APP_ESB_MODE_PTX && !esb_is_idle()) {
         LOG_DBG("ESB busy, skip pulling from msgq");
         if (tx_fail_count > 0) { // if last TX failed, try to push again
-            if (tx_fail_count >= CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT) {
-                tx_fail_count = 0;
-                esb_flush_tx();
-            }
-            else {
-                write_cnt++;
+            write_cnt++;
 
-                goto exit_pull;
-            }
+            goto exit_pull;
         }
     }
 
@@ -256,12 +258,18 @@ static int pull_packet_from_tx_msgq(void) {
             goto exit_pull;
         }
 
-        ret = k_msgq_get(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
+        ret = k_msgq_get(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
         if (ret != 0)
         {
             LOG_WRN("Failed to get packet from msgq");
 
             goto exit_pull;
+        }
+
+        if (k_uptime_delta(payload.timestamp) >= TIMEOUT_MS)
+        {
+            // LOG_DBG("event timeout expired, skip event")
+            continue;
         }
 
         ret = esb_write_payload(&tx_payload);
@@ -328,33 +336,49 @@ int zmk_split_esb_set_enable(bool enabled) {
 
 int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     int ret = 0;
-    struct esb_payload tx_payload;
+    struct payload_t payload;
+    uint32_t timestamp = k_uptime_get();
+
+    while (k_msgq_peek(&m_msgq_tx_payloads, &payload) == 0)
+    {
+        if (k_uptime_delta(payload.timestamp) >= TIMEOUT_MS)
+        {
+            k_msgq_get(&m_msgq_tx_payloads, NULL, K_NO_WAIT);
+        }
+        else
+        {
+            // no more expired events
+            break;
+        }
+    }
 
     if (k_msgq_num_free_get(&m_msgq_tx_payloads) == 0) {
         LOG_WRN("esb tx_payload_q full, dropping packet");
         k_msgq_get(&m_msgq_tx_payloads, NULL, K_NO_WAIT); // drop the oldest packet
     }
+    
+    payload.timestamp = timestamp;
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-    tx_payload.pipe = ((struct esb_command_envelope*)tx_packet->data)->payload.source; // this should match tx FIFO pipe
+    payload.payload.pipe = ((struct esb_command_envelope*)tx_packet->data)->payload.source; // this should match tx FIFO pipe
     // tx_payload.pipe = 0; // use pipe 0 for central role
 #else
-    tx_payload.pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID; // use the peripheral_id as the ESB pipe number, offset by 1
+    payload.payload.pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID; // use the peripheral_id as the ESB pipe number, offset by 1
 #endif
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK)
-    tx_payload.noack = false;
+    payload.payload.noack = false;
 #else
-    tx_payload.noack = true;
+    payload.payload.noack = true;
 #endif
 
-    memcpy(tx_payload.data, tx_packet->data, tx_packet->len);
-    tx_payload.length = tx_packet->len;
-    if (!tx_payload.length) {
+    memcpy(payload.payload.data, tx_packet->data, tx_packet->len);
+    payload.payload.length = tx_packet->len;
+    if (!payload.payload.length) {
         LOG_WRN("bypass queuing null payload");
         return 0;
     }
-    ret = k_msgq_put(&m_msgq_tx_payloads, &tx_payload, K_NO_WAIT);
+    ret = k_msgq_put(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
 
     // *** deprecated pre-emptive queuing logic ***
     // if (ret == -EAGAIN || ret == -ENOMSG) {
