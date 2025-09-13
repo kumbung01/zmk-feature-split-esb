@@ -58,7 +58,7 @@ static app_esb_callback_t m_callback;
 // void tx_retry_callback(struct k_timer *timer);
 
 // Define a buffer of payloads to store TX payloads in between timeslots
-K_MSGQ_DEFINE(m_msgq_tx_payloads, sizeof(struct payload_t), 
+K_MSGQ_DEFINE(m_msgq_tx_payloads, sizeof(payload_t), 
               CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
 
 static app_esb_mode_t m_mode;
@@ -220,7 +220,7 @@ static int esb_initialize(app_esb_mode_t mode) {
 static int pull_packet_from_tx_msgq(void) {
     int ret = 0;
     struct esb_payload tx_payload;
-    struct payload_t payload;
+    payload_t payload;
     unsigned int write_cnt = 0;
 
     const int MAX_LOOP_COUNT = CONFIG_ESB_TX_FIFO_SIZE;
@@ -336,7 +336,7 @@ int zmk_split_esb_set_enable(bool enabled) {
 
 int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     int ret = 0;
-    struct payload_t payload;
+    payload_t payload;
     uint32_t timestamp = k_uptime_get();
 
     while (k_msgq_peek(&m_msgq_tx_payloads, &payload) == 0)
