@@ -272,7 +272,7 @@ static int pull_packet_from_tx_msgq(void) {
             continue;
         }
 
-        ret = esb_write_payload(&tx_payload);
+        ret = esb_write_payload(&payload.payload);
         if (ret == 0)
         {
             write_cnt++;
