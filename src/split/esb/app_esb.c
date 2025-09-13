@@ -451,9 +451,11 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) 
     switch (type) {
         case APP_TS_STARTED:
             app_esb_resume();
+            LOG_WRN("APP RESUME");
             break;
         case APP_TS_STOPPED:
             app_esb_suspend();
+            LOG_WRN("APP_SUSPEND");
             break;
     }
 }
