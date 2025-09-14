@@ -14,6 +14,8 @@
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
+
+static K_SEM_DEFINE(esb_cb_sem2, 1, 1);
 void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
     size_t tx_buf_len = ring_buf_size_get(state->tx_buf);
     // LOG_DBG("tx_buf_len %u, CONFIG_ESB_MAX_PAYLOAD_LENGTH %u", 
@@ -23,34 +25,38 @@ void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
     }
     // LOG_DBG("tx_buf_len %d", tx_buf_len);
 
-    uint8_t buf[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
-    size_t claim_len = 0;
-    while (claim_len < tx_buf_len) {
-        uint8_t *b;
-        uint32_t buf_len = ring_buf_get_claim(state->tx_buf, &b, tx_buf_len - claim_len);
-        if (buf_len <= 0) {
-            break;
-        }
-        memcpy(&buf[claim_len], b, buf_len);
-        claim_len += buf_len;
-    }
-    if (claim_len <= 0) {
+    int ret = k_sem_take(&esb_cb_sem2, K_FOREVER);
+    if (ret) {
+        LOG_WRN("Shouldn't be called FOREVER");
         return;
     }
+
+    uint8_t buf[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
     // LOG_DBG("tx_buf_len: %d, claim_len: %d", tx_buf_len, claim_len);
     // LOG_HEXDUMP_DBG(buf, claim_len, "buf");
+    uint32_t buf_len = ring_buf_get(state->tx_buf, buf, tx_buf_len);
 
-    static app_esb_data_t my_data;
+    k_sem_give(&esb_cb_sem2);
+
+    if (buf_len != tx_buf_len)
+    {
+        LOG_WRN("buf size different?");
+
+        return;
+    }
+
+    app_esb_data_t my_data;
     my_data.data = buf;
     my_data.len = claim_len;
     zmk_split_esb_send(&my_data); // callback > zmk_split_esb_cb()
 
     // LOG_DBG("ESB TX Buf finish %d", claim_len);
-    ring_buf_get_finish(state->tx_buf, claim_len);
+
+
+
 }
 
 static K_SEM_DEFINE(esb_cb_sem, 1, 1);
-
 void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state) {
     switch(event->evt_type) {
         case APP_ESB_EVT_TX_SUCCESS:

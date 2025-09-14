@@ -121,17 +121,16 @@ static int split_central_esb_send_command(uint8_t source,
         LOG_WRN("Failed to put the whole message (%d vs %d)", put, pfx_len);
     }
 
-      struct esb_msg_postfix postfix = {.crc = crc32_ieee((void *)&env, pfx_len)};
+    struct esb_msg_postfix postfix = {.crc = crc32_ieee((void *)&env, pfx_len)};
 
     put = ring_buf_put(&tx_buf, (uint8_t *)&postfix, sizeof(postfix));
     if (put != sizeof(postfix)) {
         LOG_WRN("Failed to put the postfix (%d vs %d)", put, sizeof(postfix));
     }
 
+    k_sem_give(&esb_send_cmd_sem);
 
     begin_tx();
-
-    k_sem_give(&esb_send_cmd_sem);
     
     return 0;
 }
