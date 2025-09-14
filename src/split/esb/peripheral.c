@@ -97,7 +97,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     int ret = k_sem_take(&esb_send_evt_sem, K_NO_WAIT);
     if (ret) {
         LOG_WRN("semaphore taken");
-        return 0;
+        return -EAGAIN;
     }
 
     // Data + type + source
