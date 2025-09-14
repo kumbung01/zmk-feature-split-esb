@@ -451,11 +451,11 @@ static int app_esb_resume(void) {
         pull_packet_from_tx_msgq();
     }
 
-    uint32_t channel = 0;
-    if (!esb_get_rf_channel(&channel))    
-        LOG_WRN("channel: %d", channel);
-    else
-        LOG_WRN("get_rf_channel_failed");
+    // uint32_t channel = 0;
+    // if (!esb_get_rf_channel(&channel))    
+    //     LOG_WRN("channel: %d", channel);
+    // else
+    //     LOG_WRN("get_rf_channel_failed");
 
     return err;
 }
@@ -465,11 +465,9 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) 
     switch (type) {
         case APP_TS_STARTED:
             app_esb_resume();
-            LOG_WRN("APP RESUME");
             break;
         case APP_TS_STOPPED:
             app_esb_suspend();
-            LOG_WRN("APP_SUSPEND");
             break;
     }
 }

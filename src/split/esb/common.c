@@ -47,7 +47,7 @@ void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
 
     app_esb_data_t my_data;
     my_data.data = buf;
-    my_data.len = claim_len;
+    my_data.len = buf_len;
     zmk_split_esb_send(&my_data); // callback > zmk_split_esb_cb()
 
     // LOG_DBG("ESB TX Buf finish %d", claim_len);
