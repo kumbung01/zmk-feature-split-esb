@@ -17,9 +17,9 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 static K_SEM_DEFINE(async_tx_sem, 1, 1);
 void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
-    int ret = k_sem_take(&async_tx_sem, K_FOREVER);
+    int ret = k_sem_take(&async_tx_sem, K_NO_WAIT);
     if (ret) {
-        LOG_WRN("Shouldn't be called FOREVER");
+        LOG_WRN("semaphore taken");
         return;
     }
 
@@ -75,7 +75,7 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
             // LOG_DBG("ESB RX received: %d", event->payload->length);
 
             // lock it for a safe result from ring_buf_space_get()
-            int ret = k_sem_take(&esb_cb_sem, K_FOREVER);
+            int ret = k_sem_take(&esb_cb_sem, K_NO_WAIT);
             if (ret) {
                 LOG_WRN("Shouldn't be called FOREVER");
                 break;
@@ -114,11 +114,12 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
 
 static K_SEM_DEFINE(esb_get_item_sem, 1, 1);
 int zmk_split_esb_get_item(struct ring_buf *rx_buf, uint8_t *env, size_t env_size) {
-    int ret = k_sem_take(&esb_get_item_sem, K_FOREVER);
+    int ret = k_sem_take(&esb_get_item_sem, K_NO_WAIT);
     if (ret) {
         LOG_WRN("Shouldn't be called FOREVER");
-        return;
+        return -EAGAIN;
     }
+
     while (ring_buf_size_get(rx_buf) > sizeof(struct esb_msg_prefix) + sizeof(struct esb_msg_postfix)) {
         struct esb_msg_prefix prefix;
 
