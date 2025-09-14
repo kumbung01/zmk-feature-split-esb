@@ -235,7 +235,7 @@ static int pull_packet_from_tx_msgq(void) {
         esb_flush_tx();
     }
 
-    if (m_mode == APP_ESB_MODE_PTX && !esb_is_idle()) {
+    if (m_mode == APP_ESB_MODE_PTX) {
         if (!esb_is_idle()) {
             LOG_DBG("ESB busy, skip pulling from msgq");
 
