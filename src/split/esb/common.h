@@ -12,7 +12,7 @@
 #include <zmk/split/transport/types.h>
 #include "app_esb.h"
 
-#define ZMK_SPLIT_ESB_ENVELOPE_MAGIC_PREFIX "Zm"
+#define ZMK_SPLIT_ESB_ENVELOPE_MAGIC_PREFIX "ZmKe"
 
 struct esb_msg_prefix {
     uint8_t magic_prefix[sizeof(ZMK_SPLIT_ESB_ENVELOPE_MAGIC_PREFIX) - 1];
