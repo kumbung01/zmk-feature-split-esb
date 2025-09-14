@@ -451,8 +451,11 @@ static int app_esb_resume(void) {
         pull_packet_from_tx_msgq();
     }
 
-    int channel = esb_get_rf_channel();
-    LOG_WRN("channel: %d", channel);
+    uint32_t channel = 0;
+    if (esb_get_rf_channel(&channel))    
+        LOG_WRN("channel: %d", channel);
+    else
+        LOG_WRN("get_rf_channel_failed");
 
     return err;
 }
