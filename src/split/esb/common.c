@@ -77,7 +77,7 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
             // lock it for a safe result from ring_buf_space_get()
             int ret = k_sem_take(&esb_cb_sem, K_NO_WAIT);
             if (ret) {
-                LOG_WRN("Shouldn't be called FOREVER");
+                LOG_WRN("semaphore taken");
                 break;
             }
 
