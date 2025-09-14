@@ -452,7 +452,7 @@ static int app_esb_resume(void) {
     }
 
     uint32_t channel = 0;
-    if (esb_get_rf_channel(&channel))    
+    if (!esb_get_rf_channel(&channel))    
         LOG_WRN("channel: %d", channel);
     else
         LOG_WRN("get_rf_channel_failed");
