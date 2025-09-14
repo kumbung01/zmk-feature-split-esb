@@ -258,13 +258,13 @@ static int pull_packet_from_tx_msgq(void) {
 
     for (int i = 0; i < MAX_LOOP_COUNT; i++) {
         if (esb_tx_full()) {
-            // LOG_DBG("ESB TX full, stop pulling from msgq");
+            LOG_DBG("ESB TX full, stop pulling from msgq");
 
             goto exit_pull;
         }
 
         if (k_msgq_num_used_get(&m_msgq_tx_payloads) == 0) {
-            // LOG_DBG("No more packets in msgq");
+            LOG_DBG("No more packets in msgq");
 
             goto exit_pull;
         }
@@ -351,12 +351,6 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     int ret = 0;
     payload_t payload;
 
-    if (!m_enabled) {
-        LOG_WRN("not enabled, return");
-
-        return 0;
-    }
-
     if (k_msgq_num_free_get(&m_msgq_tx_payloads) == 0) {
         LOG_WRN("esb tx_payload_q full, dropping oldest packet");
         if (k_msgq_get(&m_msgq_tx_payloads, NULL, K_NO_WAIT) != 0) { // drop the oldest packet
@@ -381,6 +375,7 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     
     if (!(tx_packet->len)) {
         LOG_WRN("bypass queuing null payload");
+
         return 0;
     }
 
@@ -405,6 +400,7 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     if (m_active) {
         pull_packet_from_tx_msgq();
     }
+
     return ret;
 }
 
