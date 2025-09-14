@@ -51,6 +51,8 @@ uint8_t esb_addr_prefix[8] = DT_INST_PROP(0, addr_prefix);
 #error "Need to create a node with compatible of 'zmk,esb-split` with `all `address` property set."
 #endif
 
+#define RETRANSMIT_DELAY 0
+
 #define TIMEOUT_MS CONFIG_ZMK_SPLIT_ESB_KEYBOARD_EVENT_TIMEOUT_MS
 
 static app_esb_callback_t m_callback;
@@ -70,6 +72,7 @@ static int pull_packet_from_tx_msgq(void);
 // static int get_next_tx_power(void);
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
+#if RETRANSMIT_DELAY
 static int current_backoff_us = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY;
 static void inc_retransmit_delay(void)
 {
@@ -93,6 +96,7 @@ static void reset_retransmit_delay(void)
         esb_set_retransmit_delay(current_backoff_us);
     }
 }
+#endif
 
 static int tx_fail_count = 0;
 static int evt_type = APP_ESB_EVT_TX_SUCCESS;
@@ -239,10 +243,12 @@ static int pull_packet_from_tx_msgq(void) {
         }
     }
 
+#if RETRANSMIT_DELAY
     if (evt_type == APP_ESB_EVT_TX_SUCCESS)
         reset_retransmit_delay();
     else if (evt_type == APP_ESB_EVT_TX_FAIL)
         inc_retransmit_delay();
+#endif
 
     for (int i = 0; i < MAX_LOOP_COUNT; i++) {
         if (esb_tx_full()) {
