@@ -351,8 +351,8 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     int ret = 0;
     payload_t payload;
 
-    if (!m_active) {
-        LOG_WRN("not active, return");
+    if (!m_enabled) {
+        LOG_WRN("not enabled, return");
 
         return 0;
     }
