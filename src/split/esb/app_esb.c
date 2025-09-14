@@ -322,7 +322,7 @@ int zmk_split_esb_init(app_esb_mode_t mode, app_esb_callback_t callback) {
     zmk_split_esb_timeslot_init(on_timeslot_start_stop);
     
     LOG_DBG("setting rf channel to 4");
-    ret = esb_set_rf_channel(4);
+    ret = esb_set_rf_channel(1);
     if (ret < 0) {
         LOG_ERR("esb_set_rf_channel failed: %d", ret);
     }
