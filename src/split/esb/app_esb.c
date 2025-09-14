@@ -438,18 +438,23 @@ static int app_esb_suspend(void) {
 }
 
 static int app_esb_resume(void) {
+    int err = 0;
+
     if(m_mode == APP_ESB_MODE_PTX) {
-        int err = esb_initialize(m_mode);
+        err = esb_initialize(m_mode);
         m_active = true;
         pull_packet_from_tx_msgq();
-        return err;
     }
     else {
-        int err = esb_initialize(m_mode);
+        err = esb_initialize(m_mode);
         m_active = true;
         pull_packet_from_tx_msgq();
-        return err;
     }
+
+    int channel = esb_get_rf_channel();
+    LOG_WRN("channel: %d", channel);
+
+    return err;
 }
 
 /* Callback function signalling that a timeslot is started or stopped */
