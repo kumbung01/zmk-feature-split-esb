@@ -32,8 +32,6 @@ void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
     }
     // LOG_DBG("tx_buf_len %d", tx_buf_len);
 
-
-
     uint8_t buf[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
     // LOG_DBG("tx_buf_len: %d, claim_len: %d", tx_buf_len, claim_len);
     // LOG_HEXDUMP_DBG(buf, claim_len, "buf");

@@ -230,7 +230,7 @@ static int pull_packet_from_tx_msgq(void) {
 
     const int MAX_LOOP_COUNT = CONFIG_ESB_TX_FIFO_SIZE;
 
-    if (tx_fail_count >= CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT) {
+    if (tx_fail_count > CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT) {
         tx_fail_count = 0;
         esb_flush_tx();
     }
@@ -253,14 +253,13 @@ static int pull_packet_from_tx_msgq(void) {
 
     for (int i = 0; i < MAX_LOOP_COUNT; i++) {
         if (esb_tx_full()) {
-            LOG_DBG("ESB TX full, stop pulling from msgq");
-            write_cnt++; // if tx_full, resume tx
+            // LOG_DBG("ESB TX full, stop pulling from msgq");
 
             goto exit_pull;
         }
 
         if (k_msgq_num_used_get(&m_msgq_tx_payloads) == 0) {
-            LOG_DBG("No more packets in msgq");
+            // LOG_DBG("No more packets in msgq");
 
             goto exit_pull;
         }
@@ -273,7 +272,7 @@ static int pull_packet_from_tx_msgq(void) {
             goto exit_pull;
         }
 
-        if (k_uptime_delta(&payload.timestamp) >= TIMEOUT_MS)
+        if (k_uptime_delta(&payload.timestamp) > TIMEOUT_MS)
         {
             // LOG_DBG("event timeout expired, skip event")
             continue;
@@ -321,8 +320,9 @@ int zmk_split_esb_init(app_esb_mode_t mode, app_esb_callback_t callback) {
     LOG_INF("Timeslothandler init");
     zmk_split_esb_timeslot_init(on_timeslot_start_stop);
     
-    LOG_DBG("setting rf channel to 4");
-    ret = esb_set_rf_channel(1);
+    const uint32_t channel = 1;
+    LOG_DBG("setting rf channel to %d", channel);
+    ret = esb_set_rf_channel(channel);
     if (ret < 0) {
         LOG_ERR("esb_set_rf_channel failed: %d", ret);
     }
@@ -344,27 +344,21 @@ int zmk_split_esb_set_enable(bool enabled) {
 int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     int ret = 0;
     payload_t payload;
-    int64_t timestamp = k_uptime_get();
 
-    while (k_msgq_peek(&m_msgq_tx_payloads, &payload) == 0)
-    {
-        if (k_uptime_delta(&payload.timestamp) >= TIMEOUT_MS)
-        {
-            k_msgq_get(&m_msgq_tx_payloads, NULL, K_NO_WAIT);
-        }
-        else
-        {
-            // no more expired events
-            break;
-        }
+    if (!m_active) {
+        LOG_WRN("not active, return");
+
+        return 0;
     }
 
     if (k_msgq_num_free_get(&m_msgq_tx_payloads) == 0) {
-        LOG_WRN("esb tx_payload_q full, dropping packet");
-        k_msgq_get(&m_msgq_tx_payloads, NULL, K_NO_WAIT); // drop the oldest packet
+        LOG_WRN("esb tx_payload_q full, dropping oldest packet");
+        if (k_msgq_get(&m_msgq_tx_payloads, NULL, K_NO_WAIT) != 0) { // drop the oldest packet
+            LOG_WRN("msgq drop fail, early return");
+
+            return 0;
+        }
     }
-    
-    payload.timestamp = timestamp;
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     payload.payload.pipe = ((struct esb_command_envelope*)tx_packet->data)->payload.source; // this should match tx FIFO pipe
@@ -378,13 +372,16 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
 #else
     payload.payload.noack = true;
 #endif
-
-    memcpy(payload.payload.data, tx_packet->data, tx_packet->len);
-    payload.payload.length = tx_packet->len;
-    if (!payload.payload.length) {
+    
+    if (!(tx_packet->len)) {
         LOG_WRN("bypass queuing null payload");
         return 0;
     }
+
+    payload.timestamp = k_uptime_get();
+    payload.payload.length = tx_packet->len;
+    memcpy(payload.payload.data, tx_packet->data, tx_packet->len);
+    
     ret = k_msgq_put(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
 
     // *** deprecated pre-emptive queuing logic ***
