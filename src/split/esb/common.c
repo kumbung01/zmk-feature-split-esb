@@ -15,28 +15,31 @@
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 
-static K_SEM_DEFINE(esb_cb_sem2, 1, 1);
+static K_SEM_DEFINE(async_tx_sem, 1, 1);
 void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
-    size_t tx_buf_len = ring_buf_size_get(state->tx_buf);
-    // LOG_DBG("tx_buf_len %u, CONFIG_ESB_MAX_PAYLOAD_LENGTH %u", 
-    //         tx_buf_len, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
-    if (!tx_buf_len || tx_buf_len > CONFIG_ESB_MAX_PAYLOAD_LENGTH) {
-        return;
-    }
-    // LOG_DBG("tx_buf_len %d", tx_buf_len);
-
-    int ret = k_sem_take(&esb_cb_sem2, K_FOREVER);
+    int ret = k_sem_take(&async_tx_sem, K_FOREVER);
     if (ret) {
         LOG_WRN("Shouldn't be called FOREVER");
         return;
     }
+
+    size_t tx_buf_len = ring_buf_size_get(state->tx_buf);
+    // LOG_DBG("tx_buf_len %u, CONFIG_ESB_MAX_PAYLOAD_LENGTH %u", 
+    //         tx_buf_len, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
+    if (!tx_buf_len || tx_buf_len > CONFIG_ESB_MAX_PAYLOAD_LENGTH) {
+        k_sem_give(&async_tx_sem);
+        return;
+    }
+    // LOG_DBG("tx_buf_len %d", tx_buf_len);
+
+
 
     uint8_t buf[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
     // LOG_DBG("tx_buf_len: %d, claim_len: %d", tx_buf_len, claim_len);
     // LOG_HEXDUMP_DBG(buf, claim_len, "buf");
     uint32_t buf_len = ring_buf_get(state->tx_buf, buf, tx_buf_len);
 
-    k_sem_give(&esb_cb_sem2);
+    k_sem_give(&async_tx_sem);
 
     if (buf_len != tx_buf_len)
     {
@@ -51,9 +54,6 @@ void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
     zmk_split_esb_send(&my_data); // callback > zmk_split_esb_cb()
 
     // LOG_DBG("ESB TX Buf finish %d", claim_len);
-
-
-
 }
 
 static K_SEM_DEFINE(esb_cb_sem, 1, 1);
@@ -112,7 +112,13 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
     }
 }
 
+static K_SEM_DEFINE(esb_get_item_sem, 1, 1);
 int zmk_split_esb_get_item(struct ring_buf *rx_buf, uint8_t *env, size_t env_size) {
+    k_sem_take(&esb_get_item_sem, K_FOREVER);
+    if (ret) {
+        LOG_WRN("Shouldn't be called FOREVER");
+        return;
+    }
     while (ring_buf_size_get(rx_buf) > sizeof(struct esb_msg_prefix) + sizeof(struct esb_msg_postfix)) {
         struct esb_msg_prefix prefix;
 
@@ -134,10 +140,12 @@ int zmk_split_esb_get_item(struct ring_buf *rx_buf, uint8_t *env, size_t env_siz
         if (payload_to_read > env_size) {
             LOG_WRN("Invalid message with payload %d bigger than expected max %d", payload_to_read,
                     env_size);
+            k_sem_give(&esb_get_item_sem);
             return -EINVAL;
         }
 
         if (ring_buf_size_get(rx_buf) < payload_to_read + sizeof(struct esb_msg_postfix)) {
+            k_sem_give(&esb_get_item_sem);
             return -EAGAIN;
         }
 
@@ -161,12 +169,14 @@ int zmk_split_esb_get_item(struct ring_buf *rx_buf, uint8_t *env, size_t env_siz
         if (crc != postfix.crc) {
             LOG_WRN("Data corruption in received peripheral event, ignoring %d vs %d", crc,
                     postfix.crc);
+            k_sem_give(&esb_get_item_sem);
             return -EINVAL;
         }
 
-
+        k_sem_give(&esb_get_item_sem);
         return 0;
     }
 
+    k_sem_give(&esb_get_item_sem);
     return -EAGAIN;
 }

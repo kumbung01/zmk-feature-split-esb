@@ -201,7 +201,7 @@ SYS_INIT(zmk_split_esb_peripheral_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY
 static void process_tx_cb(void) {
     while (ring_buf_size_get(&chosen_rx_buf) > ESB_MSG_EXTRA_SIZE) {
         struct esb_command_envelope env;
-        int item_err = zmk_split_esb_get_item(&chosen_rx_buf, (uint8_t *)&env,
+        int item_err = (&chosen_rx_buf, (uint8_t *)&env,
                                                 sizeof(struct esb_command_envelope));
         switch (item_err) {
         case 0:
