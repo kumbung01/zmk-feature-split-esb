@@ -235,13 +235,18 @@ static int pull_packet_from_tx_msgq(void) {
         esb_flush_tx();
     }
 
-    if (m_mode == APP_ESB_MODE_PTX) {
-        LOG_DBG("ESB busy, skip pulling from msgq");
-        if (tx_fail_count > 0) { // if last TX failed, try to push again
-            write_cnt++;
+    if (m_mode == APP_ESB_MODE_PTX && !esb_is_idle()) {
+        if (!esb_is_idle()) {
+            LOG_DBG("ESB busy, skip pulling from msgq");
+
+            goto exit_pull;
         }
 
-        goto exit_pull;
+        if (tx_fail_count > 0) { // if last TX failed, try to push again
+            write_cnt++;
+
+            goto exit_pull;
+        }
     }
 
 #if RETRANSMIT_DELAY
@@ -254,7 +259,7 @@ static int pull_packet_from_tx_msgq(void) {
     for (int i = 0; i < MAX_LOOP_COUNT; i++) {
         if (esb_tx_full()) {
             // LOG_DBG("ESB TX full, stop pulling from msgq");
-            
+
             goto exit_pull;
         }
 
@@ -282,6 +287,7 @@ static int pull_packet_from_tx_msgq(void) {
         if (ret == 0)
         {
             write_cnt++;
+            continue;
         }
 
         else
