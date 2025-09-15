@@ -94,7 +94,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     }
 
     // lock it for a safe result from ring_buf_space_get()
-    int ret = k_sem_take(&esb_send_evt_sem, K_NO_WAIT);
+    int ret = k_sem_take(&esb_send_evt_sem, K_FOREVER);
     if (ret) {
         LOG_WRN("semaphore taken");
         return -EAGAIN;
@@ -137,9 +137,9 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     }
     // LOG_HEXDUMP_DBG(&postfix, sizeof(postfix), "postfix");
 
-    k_sem_give(&esb_send_evt_sem);
-
     begin_tx();
+
+    k_sem_give(&esb_send_evt_sem); 
 
     return 0;
 }
