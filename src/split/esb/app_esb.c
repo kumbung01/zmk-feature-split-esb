@@ -224,7 +224,6 @@ static int esb_initialize(app_esb_mode_t mode) {
 
 static int pull_packet_from_tx_msgq(void) {
     int ret = 0;
-    struct esb_payload tx_payload;
     payload_t payload;
     unsigned int write_cnt = 0;
 
@@ -232,7 +231,7 @@ static int pull_packet_from_tx_msgq(void) {
 
     if (tx_fail_count > CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT) {
         tx_fail_count = 0;
-        esb_pop_tx(); // workaround for fifo 1
+        esb_flush_tx();
     }
 
     if (m_mode == APP_ESB_MODE_PTX) {
@@ -241,12 +240,12 @@ static int pull_packet_from_tx_msgq(void) {
 
             goto exit_pull;
         }
+    }
 
-        if (tx_fail_count > 0) { // if last TX failed, try to push again
-            write_cnt++;
+    if (tx_fail_count > 0) { // if last TX failed, try to push again
+        write_cnt++;
 
-            goto exit_pull;
-        }
+        goto exit_pull;
     }
 
 #if RETRANSMIT_DELAY
@@ -277,7 +276,8 @@ static int pull_packet_from_tx_msgq(void) {
             goto exit_pull;
         }
 
-        if (k_uptime_delta(&payload.timestamp) > TIMEOUT_MS)
+        int64_t age = k_uptime_delta(&payload.timestamp);
+        if (age < 0 || age > TIMEOUT_MS)
         {
             LOG_DBG("event timeout expired, skip event");
             continue;
@@ -296,7 +296,7 @@ static int pull_packet_from_tx_msgq(void) {
             if (ret == -EMSGSIZE) {
                 // msg size too large, discard it
                 LOG_WRN("esb_tx_fifo: tx_payload size too large (%d) > CONFIG_ESB_MAX_PAYLOAD_LENGTH (%d)",
-                        tx_payload.length, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
+                        payload.payload.length, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
             }
             else {
                 LOG_DBG("other errors, retry later");
@@ -309,7 +309,11 @@ static int pull_packet_from_tx_msgq(void) {
 exit_pull:
     if (write_cnt)
     {
-        esb_start_tx();
+        ret = esb_start_tx();
+        if (ret == -ENODATA) {
+            LOG_DBG("fifo is empty");
+            tx_fail_count = 0;
+        }
     }
  
     return ret;
@@ -362,7 +366,6 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     payload.payload.pipe = ((struct esb_command_envelope*)tx_packet->data)->payload.source; // this should match tx FIFO pipe
-    // tx_payload.pipe = 0; // use pipe 0 for central role
 #else
     payload.payload.pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID; // use the peripheral_id as the ESB pipe number, offset by 1
 #endif
