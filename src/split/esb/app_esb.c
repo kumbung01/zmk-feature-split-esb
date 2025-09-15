@@ -99,7 +99,7 @@ static void reset_retransmit_delay(void)
 #endif
 
 static int tx_fail_count = 0;
-static int evt_type = APP_ESB_EVT_TX_SUCCESS;
+// static int evt_type = APP_ESB_EVT_TX_SUCCESS;
 static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
     switch (event->evt_id) {
@@ -107,8 +107,9 @@ static void event_handler(struct esb_evt const *event) {
    
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
-            evt_type = APP_ESB_EVT_TX_SUCCESS;
-            tx_fail_count = 0;
+            // evt_type = APP_ESB_EVT_TX_SUCCESS;
+            if (m_mode == APP_ESB_MODE_PTX)
+                tx_fail_count = 0;
 
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
@@ -116,8 +117,9 @@ static void event_handler(struct esb_evt const *event) {
         case ESB_EVENT_TX_FAILED:
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
-            evt_type = APP_ESB_EVT_TX_FAIL;
-            tx_fail_count++;
+            // evt_type = APP_ESB_EVT_TX_FAIL;
+            if (m_mode== APP_ESB_MODE_PTX)
+                tx_fail_count++;
             
             m_callback(&m_event);
             pull_packet_from_tx_msgq();
@@ -228,26 +230,25 @@ static int pull_packet_from_tx_msgq(void) {
     int ret = 0;
     payload_t payload;
     unsigned int write_cnt = 0;
-
     const int MAX_LOOP_COUNT = CONFIG_ESB_TX_FIFO_SIZE;
 
-    if (tx_fail_count > CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT) {
-        tx_fail_count = 0;
-        esb_flush_tx();
-    }
-
     if (m_mode == APP_ESB_MODE_PTX) {
+        if (tx_fail_count > CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT) {
+            tx_fail_count = 0;
+            esb_flush_tx();
+        }
+
         if (!esb_is_idle()) {
             LOG_DBG("ESB busy, skip pulling from msgq");
 
             goto exit_pull;
         }
-    }
 
-    if (tx_fail_count > 0) { // if last TX failed, try to push again
-        write_cnt++;
+        if (tx_fail_count > 0) { // if last TX failed, try to push again
+            write_cnt++;
 
-        goto exit_pull;
+            goto exit_pull;
+        }
     }
 
 #if RETRANSMIT_DELAY
