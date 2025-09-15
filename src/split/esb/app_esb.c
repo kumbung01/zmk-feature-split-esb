@@ -232,7 +232,7 @@ static int pull_packet_from_tx_msgq(void) {
 
     if (tx_fail_count > CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT) {
         tx_fail_count = 0;
-        esb_flush_tx();
+        esb_pop_tx(); // workaround for fifo 1
     }
 
     if (m_mode == APP_ESB_MODE_PTX) {
