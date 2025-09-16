@@ -50,7 +50,10 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
         case APP_ESB_EVT_TX_SUCCESS:
             // LOG_DBG("ESB TX sent");
             if (!ring_buf_is_empty(state->tx_buf)) {
-                k_sem_take(state->tx_sem, K_FOREVER);
+                if (k_sem_take(state->tx_sem, K_NO_WAIT) != 0) {
+                    LOG_WRN("semaphore already taken");
+                    break;
+                }
                 zmk_split_esb_async_tx(state);
                 k_sem_give(state->tx_sem);
             }
@@ -58,7 +61,10 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
         case APP_ESB_EVT_TX_FAIL:
             // LOG_WRN("ESB TX failed");
             if (!ring_buf_is_empty(state->tx_buf)) {
-                k_sem_take(state->tx_sem, K_FOREVER);
+                if (k_sem_take(state->tx_sem, K_NO_WAIT) != 0) {
+                    LOG_WRN("semaphore already taken");
+                    break;
+                }
                 zmk_split_esb_async_tx(state);
                 k_sem_give(state->tx_sem);
             }
