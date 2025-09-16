@@ -241,7 +241,7 @@ static int pull_packet_from_tx_msgq(void) {
         if (!esb_is_idle()) {
             LOG_DBG("ESB busy, skip pulling from msgq");
 
-            goto exit_pull;
+            return 0;
         }
 
         if (tx_fail_count > 0) { // if last TX failed, try to push again
@@ -258,17 +258,11 @@ static int pull_packet_from_tx_msgq(void) {
         inc_retransmit_delay();
 #endif
 
-    for (int i = 0; i < MAX_LOOP_COUNT; i++) {
-        if (esb_tx_full()) {
-            LOG_DBG("ESB TX full, stop pulling from msgq");
-
-            goto exit_pull;
-        }
-
+    while (!esb_tx_full()) {
         if (k_msgq_num_used_get(&m_msgq_tx_payloads) == 0) {
             LOG_DBG("No more packets in msgq");
 
-            goto exit_pull;
+            break;
         }
 
         ret = k_msgq_get(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
@@ -276,7 +270,7 @@ static int pull_packet_from_tx_msgq(void) {
         {
             LOG_WRN("Failed to get packet from msgq");
 
-            goto exit_pull;
+            break;
         }
 
         int64_t age = k_uptime_delta(&payload.timestamp);
@@ -304,7 +298,7 @@ static int pull_packet_from_tx_msgq(void) {
             else {
                 LOG_DBG("other errors, retry later");
                 
-                goto exit_pull;
+                break;
             }
         }
     }
