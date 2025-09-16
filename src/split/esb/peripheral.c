@@ -40,7 +40,8 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 RING_BUF_DECLARE(chosen_rx_buf, RX_BUFFER_SIZE);
 RING_BUF_DECLARE(chosen_tx_buf, TX_BUFFER_SIZE);
 
-static K_SEM_DEFINE(esb_send_evt_sem, 1, 1);
+static K_SEM_DEFINE(tx_buf_sem, 1, 1);
+static K_SEM_DEFINE(rx_buf_sem, 1, 1);
 
 static const uint8_t peripheral_id = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID;
 
@@ -59,7 +60,9 @@ static struct zmk_split_esb_async_state async_state = {
     .rx_size_process_trigger = sizeof(struct esb_command_envelope),
     .process_tx_callback = process_tx_cb,
     .rx_buf = &chosen_rx_buf,
+    .rx_sem = &rx_buf_sem,
     .tx_buf = &chosen_tx_buf,
+    .tx_sem = &tx_buf_sem,
 };
 
 static void begin_tx(void) {
@@ -94,7 +97,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     }
 
     // lock it for a safe result from ring_buf_space_get()
-    int ret = k_sem_take(&esb_send_evt_sem, K_FOREVER);
+    int ret = k_sem_take(&tx_buf_sem, K_FOREVER);
     if (ret) {
         LOG_WRN("FOREVER");
         return 0;
@@ -108,7 +111,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
         LOG_WRN("No room to send peripheral to the central (have %d but only space for %d/%d)",
                 ESB_MSG_EXTRA_SIZE + payload_size, ring_buf_space_get(&chosen_tx_buf),
                 ring_buf_capacity_get(&chosen_tx_buf));
-        k_sem_give(&esb_send_evt_sem);
+        k_sem_give(&tx_buf_sem);
         return -ENOSPC;
     }
 
@@ -137,9 +140,9 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     }
     // LOG_HEXDUMP_DBG(&postfix, sizeof(postfix), "postfix");
 
+    k_sem_give(&tx_buf_sem); 
+    
     begin_tx();
-
-    k_sem_give(&esb_send_evt_sem); 
 
     return 0;
 }

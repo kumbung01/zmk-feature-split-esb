@@ -55,7 +55,9 @@ struct zmk_split_esb_async_state {
     size_t rx_size_process_trigger;
 
     struct ring_buf *tx_buf;
+    struct k_sem    *tx_sem;
     struct ring_buf *rx_buf;
+    struct k_sem    *rx_sem;
 
     zmk_split_esb_process_tx_callback_t process_tx_callback;
 

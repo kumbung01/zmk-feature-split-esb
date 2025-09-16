@@ -15,9 +15,8 @@
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 
-static K_SEM_DEFINE(async_tx_sem, 1, 1);
 void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
-    int ret = k_sem_take(&async_tx_sem, K_NO_WAIT);
+    int ret = k_sem_take(state->tx_sem, K_NO_WAIT);
     if (ret) {
         LOG_WRN("semaphore taken");
         return;
@@ -27,7 +26,7 @@ void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
     // LOG_DBG("tx_buf_len %u, CONFIG_ESB_MAX_PAYLOAD_LENGTH %u", 
     //         tx_buf_len, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
     if (!tx_buf_len || tx_buf_len > CONFIG_ESB_MAX_PAYLOAD_LENGTH) {
-        k_sem_give(&async_tx_sem);
+        k_sem_give(state->tx_sem);
         return;
     }
     // LOG_DBG("tx_buf_len %d", tx_buf_len);
@@ -37,7 +36,7 @@ void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
     // LOG_HEXDUMP_DBG(buf, claim_len, "buf");
     uint32_t buf_len = ring_buf_get(state->tx_buf, buf, tx_buf_len);
 
-    k_sem_give(&async_tx_sem);
+    k_sem_give(state->tx_sem);
 
     if (buf_len != tx_buf_len)
     {
@@ -54,7 +53,7 @@ void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
     // LOG_DBG("ESB TX Buf finish %d", claim_len);
 }
 
-static K_SEM_DEFINE(esb_cb_sem, 1, 1);
+
 void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state) {
     switch(event->evt_type) {
         case APP_ESB_EVT_TX_SUCCESS:
@@ -73,7 +72,7 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
             // LOG_DBG("ESB RX received: %d", event->payload->length);
 
             // lock it for a safe result from ring_buf_space_get()
-            int ret = k_sem_take(&esb_cb_sem, K_NO_WAIT);
+            int ret = k_sem_take(&state->rx_sem, K_FOREVER);
             if (ret) {
                 LOG_WRN("semaphore taken");
                 break;
@@ -83,18 +82,18 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
                 LOG_WRN("No room to receive from peripheral (have %d but only space for %d/%d)",
                         event->payload->length, ring_buf_space_get(state->rx_buf), 
                         ring_buf_capacity_get(state->rx_buf));
-                k_sem_give(&esb_cb_sem);
+                k_sem_give(&state->rx_sem);
                 break;
             }
 
             size_t received = ring_buf_put(state->rx_buf, event->payload->data, event->payload->length);
             if (received < event->payload->length) {
                 LOG_ERR("RX overrun! %d < %d", received, event->payload->length);
-                k_sem_give(&esb_cb_sem);
+                k_sem_give(&state->rx_sem);
                 break;
             }
 
-            k_sem_give(&esb_cb_sem);
+            k_sem_give(&state->rx_sem);
 
             // LOG_DBG("RX + %3d and now buffer is %3d", received, ring_buf_size_get(state->rx_buf));
             if (state->process_tx_callback) {
@@ -110,11 +109,11 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
     }
 }
 
-static K_SEM_DEFINE(esb_get_item_sem, 1, 1);
-int zmk_split_esb_get_item(struct ring_buf *rx_buf, uint8_t *env, size_t env_size) {
-    int ret = k_sem_take(&esb_get_item_sem, K_FOREVER);
+
+int zmk_split_esb_get_item(struct ring_buf *rx_buf, uint8_t *env, struct k_sem *sem, size_t env_size) {
+    int ret = k_sem_take(sem, K_NO_WAIT);
     if (ret) {
-        LOG_WRN("Shouldn't be called FOREVER");
+        LOG_WRN("sempahore already taken");
         return 0;
     }
 
@@ -139,12 +138,12 @@ int zmk_split_esb_get_item(struct ring_buf *rx_buf, uint8_t *env, size_t env_siz
         if (payload_to_read > env_size) {
             LOG_WRN("Invalid message with payload %d bigger than expected max %d", payload_to_read,
                     env_size);
-            k_sem_give(&esb_get_item_sem);
+            k_sem_give(sem);
             return -EINVAL;
         }
 
         if (ring_buf_size_get(rx_buf) < payload_to_read + sizeof(struct esb_msg_postfix)) {
-            k_sem_give(&esb_get_item_sem);
+            k_sem_give(sem);
             return -EAGAIN;
         }
 
@@ -168,14 +167,14 @@ int zmk_split_esb_get_item(struct ring_buf *rx_buf, uint8_t *env, size_t env_siz
         if (crc != postfix.crc) {
             LOG_WRN("Data corruption in received peripheral event, ignoring %d vs %d", crc,
                     postfix.crc);
-            k_sem_give(&esb_get_item_sem);
+            k_sem_give(sem);
             return -EINVAL;
         }
 
-        k_sem_give(&esb_get_item_sem);
+        k_sem_give(sem);
         return 0;
     }
 
-    k_sem_give(&esb_get_item_sem);
+    k_sem_give(sem);
     return -EAGAIN;
 }

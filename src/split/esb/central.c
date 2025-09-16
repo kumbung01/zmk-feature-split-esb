@@ -40,7 +40,8 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 RING_BUF_DECLARE(rx_buf, RX_BUFFER_SIZE);
 RING_BUF_DECLARE(tx_buf, TX_BUFFER_SIZE);
 
-static K_SEM_DEFINE(esb_send_cmd_sem, 1, 1);
+static K_SEM_DEFINE(tx_buf_sem, 1, 1);
+static K_SEM_DEFINE(rx_buf_sem, 1, 1);
 
 static void publish_events_work(struct k_work *work);
 
@@ -54,7 +55,9 @@ static struct zmk_split_esb_async_state async_state = {
     .rx_bufs_len = RX_BUFFER_SIZE / 2,
     .rx_size_process_trigger = ESB_MSG_EXTRA_SIZE + 1,
     .rx_buf = &rx_buf,
+    .rx_sem = &rx_buf_sem,
     .tx_buf = &tx_buf,
+    .tx_sem = &tx_buf_sem,
 };
 
 static void begin_tx(void) {
@@ -86,7 +89,7 @@ static int split_central_esb_send_command(uint8_t source,
     }
 
     // lock it for a safe result from ring_buf_space_get()
-    int ret = k_sem_take(&esb_send_cmd_sem, K_FOREVER);
+    int ret = k_sem_take(&tx_buf_sem, K_FOREVER);
     if (ret) {
         LOG_WRN("Shouldn't be called FOREVER");
         return 0;
@@ -100,7 +103,7 @@ static int split_central_esb_send_command(uint8_t source,
         LOG_WRN("No room to send command to the peripheral %d (have %d but only space for %d/%d)", 
                 source, ESB_MSG_EXTRA_SIZE + payload_size, ring_buf_space_get(&tx_buf),
                 ring_buf_capacity_get(&tx_buf));
-        k_sem_give(&esb_send_cmd_sem);
+        k_sem_give(&tx_buf_sem);
         return -ENOSPC;
     }
 
@@ -128,10 +131,10 @@ static int split_central_esb_send_command(uint8_t source,
         LOG_WRN("Failed to put the postfix (%d vs %d)", put, sizeof(postfix));
     }
 
+    k_sem_give(&tx_buf_sem);
+
     begin_tx();
 
-    k_sem_give(&esb_send_cmd_sem);
-    
     return 0;
 }
 
@@ -203,7 +206,7 @@ static void publish_events_work(struct k_work *work) {
     while (ring_buf_size_get(&rx_buf) > ESB_MSG_EXTRA_SIZE) {
         struct esb_event_envelope env;
         int item_err =
-            zmk_split_esb_get_item(&rx_buf, (uint8_t *)&env, sizeof(struct esb_event_envelope));
+            zmk_split_esb_get_item(&rx_buf, (uint8_t *)&env, async_state.rx_sem, sizeof(struct esb_event_envelope));
         switch (item_err) {
         case 0:
             zmk_split_transport_central_peripheral_event_handler(&esb_central, env.payload.source,
