@@ -72,4 +72,4 @@ void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state);
 
 void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state);
 
-int zmk_split_esb_get_item(struct ring_buf *rx_buf, uint8_t *env, size_t env_size);
+int zmk_split_esb_get_item(struct ring_buf *rx_buf, uint8_t *env, struct k_sem *sem, size_t env_size);
