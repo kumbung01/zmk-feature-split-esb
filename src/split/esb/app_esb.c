@@ -229,7 +229,6 @@ static int esb_initialize(app_esb_mode_t mode) {
 static int pull_packet_from_tx_msgq(void) {
     int ret = 0;
     payload_t payload;
-    unsigned int write_cnt = 0;
     const int MAX_LOOP_COUNT = CONFIG_ESB_TX_FIFO_SIZE;
 
     if (m_mode == APP_ESB_MODE_PTX) {
@@ -245,9 +244,8 @@ static int pull_packet_from_tx_msgq(void) {
         }
 
         if (tx_fail_count > 0) { // if last TX failed, try to push again
-            write_cnt++;
 
-            goto exit_pull;
+            goto _start_tx;
         }
     }
 
@@ -258,7 +256,8 @@ static int pull_packet_from_tx_msgq(void) {
         inc_retransmit_delay();
 #endif
 
-    while (!esb_tx_full()) {
+    uint32_t cnt = 0;
+    while (!esb_tx_full() || cnt++ < CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS) {
         if (k_msgq_num_used_get(&m_msgq_tx_payloads) == 0) {
             LOG_DBG("No more packets in msgq");
 
@@ -283,7 +282,6 @@ static int pull_packet_from_tx_msgq(void) {
         ret = esb_write_payload(&payload.payload);
         if (ret == 0)
         {
-            write_cnt++;
             continue;
         }
 
@@ -303,16 +301,13 @@ static int pull_packet_from_tx_msgq(void) {
         }
     }
 
-exit_pull:
-    if (write_cnt)
-    {
-        ret = esb_start_tx();
-        if (ret == -ENODATA) {
-            LOG_DBG("fifo is empty");
-            tx_fail_count = 0;
-        }
+_start_tx:
+    ret = esb_start_tx();
+    if (ret == -ENODATA) {
+        LOG_DBG("fifo is empty");
+        tx_fail_count = 0;
     }
- 
+
     return ret;
 }
 
