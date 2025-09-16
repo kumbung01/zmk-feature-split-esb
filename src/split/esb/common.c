@@ -112,7 +112,7 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
 
 static K_SEM_DEFINE(esb_get_item_sem, 1, 1);
 int zmk_split_esb_get_item(struct ring_buf *rx_buf, uint8_t *env, size_t env_size) {
-    int ret = k_sem_take(&esb_get_item_sem, FOREVER);
+    int ret = k_sem_take(&esb_get_item_sem, K_FOREVER);
     if (ret) {
         LOG_WRN("Shouldn't be called FOREVER");
         return 0;
