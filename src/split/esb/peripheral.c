@@ -94,10 +94,10 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     }
 
     // lock it for a safe result from ring_buf_space_get()
-    int ret = k_sem_take(&esb_send_evt_sem, K_NO_WAIT);
+    int ret = k_sem_take(&esb_send_evt_sem, K_FOREVER);
     if (ret) {
-        LOG_WRN("semaphore taken");
-        return -EAGAIN;
+        LOG_WRN("FOREVER");
+        return 0;
     }
 
     // Data + type + source
