@@ -16,7 +16,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 
 void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
-    int ret = k_sem_take(state->tx_sem, K_NO_WAIT);
+    int ret = k_sem_take(state->tx_sem, K_FOREVER);
     if (ret) {
         LOG_WRN("semaphore taken");
         return;
