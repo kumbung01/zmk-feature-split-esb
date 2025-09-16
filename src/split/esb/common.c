@@ -72,7 +72,7 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
             // LOG_DBG("ESB RX received: %d", event->payload->length);
 
             // lock it for a safe result from ring_buf_space_get()
-            int ret = k_sem_take(&state->rx_sem, K_FOREVER);
+            int ret = k_sem_take(state->rx_sem, K_FOREVER);
             if (ret) {
                 LOG_WRN("semaphore taken");
                 break;
@@ -82,18 +82,18 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
                 LOG_WRN("No room to receive from peripheral (have %d but only space for %d/%d)",
                         event->payload->length, ring_buf_space_get(state->rx_buf), 
                         ring_buf_capacity_get(state->rx_buf));
-                k_sem_give(&state->rx_sem);
+                k_sem_give(state->rx_sem);
                 break;
             }
 
             size_t received = ring_buf_put(state->rx_buf, event->payload->data, event->payload->length);
             if (received < event->payload->length) {
                 LOG_ERR("RX overrun! %d < %d", received, event->payload->length);
-                k_sem_give(&state->rx_sem);
+                k_sem_give(state->rx_sem);
                 break;
             }
 
-            k_sem_give(&state->rx_sem);
+            k_sem_give(state->rx_sem);
 
             // LOG_DBG("RX + %3d and now buffer is %3d", received, ring_buf_size_get(state->rx_buf));
             if (state->process_tx_callback) {
