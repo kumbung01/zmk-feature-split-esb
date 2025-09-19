@@ -231,22 +231,23 @@ static int pull_packet_from_tx_msgq(void) {
     payload_t payload;
 
     if (m_mode == APP_ESB_MODE_PTX) {
+        if (tx_fail_count > CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT) {
+            esb_flush_tx();
+            tx_fail_count = 0;
+        }
+
         if (!esb_is_idle()) {
             LOG_DBG("ESB busy, skip pulling from msgq");
 
             return 0;
         }
+        
+        if (tx_fail_count > 0) { // if last TX failed, try to push again
+
+            goto _start_tx;
+        }
     }
 
-    if (tx_fail_count > CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT) {
-        esb_flush_tx();
-        tx_fail_count = 0;
-    }
-
-    if (tx_fail_count > 0) { // if last TX failed, try to push again
-
-        goto _start_tx;
-    }
 
 #if RETRANSMIT_DELAY
     if (evt_type == APP_ESB_EVT_TX_SUCCESS)
