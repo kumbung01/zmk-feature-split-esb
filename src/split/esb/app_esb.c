@@ -248,7 +248,6 @@ static int pull_packet_from_tx_msgq(void) {
         }
     }
 
-
 #if RETRANSMIT_DELAY
     if (evt_type == APP_ESB_EVT_TX_SUCCESS)
         reset_retransmit_delay();
@@ -256,7 +255,6 @@ static int pull_packet_from_tx_msgq(void) {
         inc_retransmit_delay();
 #endif
 
-    uint32_t write_cnt = 0;
     uint32_t cnt = 0;
     while (!esb_tx_full() || cnt++ < CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS) {
         if (k_msgq_num_used_get(&m_msgq_tx_payloads) == 0) {
@@ -283,8 +281,6 @@ static int pull_packet_from_tx_msgq(void) {
         ret = esb_write_payload(&payload.payload);
         if (ret == 0)
         {
-            write_cnt++;
-
             continue;
         }
 
@@ -302,11 +298,6 @@ static int pull_packet_from_tx_msgq(void) {
                 break;
             }
         }
-    }
-
-    if (write_cnt == 0)
-    {
-        return ret;
     }
 
 _start_tx:
