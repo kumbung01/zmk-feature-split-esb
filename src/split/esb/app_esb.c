@@ -98,7 +98,7 @@ static void reset_retransmit_delay(void)
 }
 #endif
 
-static int tx_fail_count = 0;
+static volatile int tx_fail_count = 0;
 // static int evt_type = APP_ESB_EVT_TX_SUCCESS;
 static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
@@ -229,24 +229,23 @@ static int esb_initialize(app_esb_mode_t mode) {
 static int pull_packet_from_tx_msgq(void) {
     int ret = 0;
     payload_t payload;
-    const int MAX_LOOP_COUNT = CONFIG_ESB_TX_FIFO_SIZE;
 
     if (m_mode == APP_ESB_MODE_PTX) {
-        if (tx_fail_count > CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT) {
-            tx_fail_count = 0;
-            esb_flush_tx();
-        }
-
         if (!esb_is_idle()) {
             LOG_DBG("ESB busy, skip pulling from msgq");
 
             return 0;
         }
+    }
 
-        if (tx_fail_count > 0) { // if last TX failed, try to push again
+    if (tx_fail_count > CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT) {
+        esb_flush_tx();
+        tx_fail_count = 0;
+    }
 
-            goto _start_tx;
-        }
+    if (tx_fail_count > 0) { // if last TX failed, try to push again
+
+        goto _start_tx;
     }
 
 #if RETRANSMIT_DELAY
@@ -256,6 +255,7 @@ static int pull_packet_from_tx_msgq(void) {
         inc_retransmit_delay();
 #endif
 
+    uint32_t write_cnt = 0;
     uint32_t cnt = 0;
     while (!esb_tx_full() || cnt++ < CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS) {
         if (k_msgq_num_used_get(&m_msgq_tx_payloads) == 0) {
@@ -282,6 +282,8 @@ static int pull_packet_from_tx_msgq(void) {
         ret = esb_write_payload(&payload.payload);
         if (ret == 0)
         {
+            write_cnt++;
+
             continue;
         }
 
@@ -299,6 +301,11 @@ static int pull_packet_from_tx_msgq(void) {
                 break;
             }
         }
+    }
+
+    if (write_cnt == 0)
+    {
+        return ret;
     }
 
 _start_tx:
