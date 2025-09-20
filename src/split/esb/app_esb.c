@@ -328,6 +328,8 @@ int zmk_split_esb_init(app_esb_mode_t mode, app_esb_callback_t callback) {
         LOG_ERR("esb_set_rf_channel failed: %d", ret);
     }
 
+    k_msleep(50);
+
     return 0;
 }
 
