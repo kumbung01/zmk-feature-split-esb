@@ -229,34 +229,9 @@ static int esb_initialize(app_esb_mode_t mode) {
 static int pull_packet_from_tx_msgq(void) {
     int ret = 0;
     payload_t payload;
-
-    if (m_mode == APP_ESB_MODE_PTX) {
-        if (tx_fail_count > CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT) {
-            esb_flush_tx();
-            tx_fail_count = 0;
-        }
-
-        if (!esb_is_idle()) {
-            LOG_DBG("ESB busy, skip pulling from msgq");
-
-            return 0;
-        }
-        
-        if (tx_fail_count > 0) { // if last TX failed, try to push again
-
-            goto _start_tx;
-        }
-    }
-
-#if RETRANSMIT_DELAY
-    if (evt_type == APP_ESB_EVT_TX_SUCCESS)
-        reset_retransmit_delay();
-    else if (evt_type == APP_ESB_EVT_TX_FAIL)
-        inc_retransmit_delay();
-#endif
-
     uint32_t cnt = 0;
-    while (!esb_tx_full() || cnt++ < CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS) {
+
+    while (!esb_tx_full() && cnt++ < CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS) {
         if (k_msgq_num_used_get(&m_msgq_tx_payloads) == 0) {
             LOG_DBG("No more packets in msgq");
 
@@ -268,7 +243,7 @@ static int pull_packet_from_tx_msgq(void) {
         {
             LOG_WRN("Failed to get packet from msgq");
 
-            break;
+            continue;
         }
 
         int64_t age = k_uptime_delta(&payload.timestamp);
@@ -291,6 +266,7 @@ static int pull_packet_from_tx_msgq(void) {
                 // msg size too large, discard it
                 LOG_WRN("esb_tx_fifo: tx_payload size too large (%d) > CONFIG_ESB_MAX_PAYLOAD_LENGTH (%d)",
                         payload.payload.length, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
+                continue;
             }
             else {
                 LOG_DBG("other errors, retry later");
@@ -300,11 +276,12 @@ static int pull_packet_from_tx_msgq(void) {
         }
     }
 
-_start_tx:
-    ret = esb_start_tx();
-    if (ret == -ENODATA) {
-        LOG_DBG("fifo is empty");
-        tx_fail_count = 0;
+    if (esb_is_idle())
+    {
+        ret = esb_start_tx();
+        if (ret == -ENODATA) {
+            LOG_DBG("fifo is empty");
+        }
     }
 
     return ret;
@@ -327,8 +304,6 @@ int zmk_split_esb_init(app_esb_mode_t mode, app_esb_callback_t callback) {
     if (ret < 0) {
         LOG_ERR("esb_set_rf_channel failed: %d", ret);
     }
-
-    k_msleep(50);
 
     return 0;
 }
@@ -379,7 +354,7 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     payload.payload.length = tx_packet->len;
     memcpy(payload.payload.data, tx_packet->data, tx_packet->len);
     
-    ret = k_msgq_put(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
+    ret = k_msgq_put(&m_msgq_tx_payloads, &payload, K_FOREVER);
 
     // *** deprecated pre-emptive queuing logic ***
     // if (ret == -EAGAIN || ret == -ENOMSG) {
