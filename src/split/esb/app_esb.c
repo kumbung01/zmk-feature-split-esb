@@ -98,7 +98,7 @@ static void reset_retransmit_delay(void)
 }
 #endif
 
-static volatile int tx_fail_count = 0;
+// static volatile int tx_fail_count = 0;
 // static int evt_type = APP_ESB_EVT_TX_SUCCESS;
 static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
@@ -108,8 +108,8 @@ static void event_handler(struct esb_evt const *event) {
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
             // evt_type = APP_ESB_EVT_TX_SUCCESS;
-            if (m_mode == APP_ESB_MODE_PTX)
-                tx_fail_count = 0;
+            // if (m_mode == APP_ESB_MODE_PTX)
+            //     tx_fail_count = 0;
 
             m_callback(&m_event);
             // pull_packet_from_tx_msgq();
@@ -118,8 +118,10 @@ static void event_handler(struct esb_evt const *event) {
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
             // evt_type = APP_ESB_EVT_TX_FAIL;
-            if (m_mode== APP_ESB_MODE_PTX)
-                tx_fail_count++;
+            // if (m_mode== APP_ESB_MODE_PTX)
+            //     tx_fail_count++;
+            if (m_mode == APP_ESB_MODE_PTX)
+                esb_pop_tx();
             
             m_callback(&m_event);
             // pull_packet_from_tx_msgq();
@@ -230,17 +232,6 @@ static int pull_packet_from_tx_msgq(void) {
     int ret = 0;
     payload_t payload;
     uint32_t cnt = 0;
-
-    if (m_mode == APP_ESB_MODE_PTX) {
-        if (tx_fail_count > 2) {
-            esb_flush_tx();
-            tx_fail_count = 0;
-        }
-
-        else if (tx_fail_count > 0) {
-            goto start_tx;
-        }
-    }
 
     while (!esb_tx_full() && cnt++ < CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS) {
         if (k_msgq_num_used_get(&m_msgq_tx_payloads) == 0) {
@@ -363,7 +354,7 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     payload.payload.length = tx_packet->len;
     memcpy(payload.payload.data, tx_packet->data, tx_packet->len);
     
-    ret = k_msgq_put(&m_msgq_tx_payloads, &payload, K_FOREVER);
+    ret = k_msgq_put(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
 
     // *** deprecated pre-emptive queuing logic ***
     // if (ret == -EAGAIN || ret == -ENOMSG) {

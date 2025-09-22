@@ -89,7 +89,7 @@ static int split_central_esb_send_command(uint8_t source,
     }
 
     // lock it for a safe result from ring_buf_space_get()
-    int ret = k_sem_take(&tx_buf_sem, K_FOREVER);
+    int ret = k_sem_take(&tx_buf_sem, K_NO_WAIT);
     if (ret) {
         LOG_WRN("Shouldn't be called FOREVER");
         return 0;
@@ -213,7 +213,7 @@ static void publish_events_work(struct k_work *work) {
                                                                  env.payload.event);
             break;
         case -EAGAIN:
-            return;
+            continue;
         default:
             LOG_WRN("Issue fetching an item from the RX buffer: %d", item_err);
             return;
