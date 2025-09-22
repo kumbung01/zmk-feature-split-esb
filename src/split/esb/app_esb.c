@@ -231,9 +231,19 @@ static int pull_packet_from_tx_msgq(void) {
     payload_t payload;
     uint32_t cnt = 0;
 
-    if (tx_fail_count >= 2) {
-        esb_flush_tx();
-        tx_fail_count = 0;
+    if (m_mode == APP_ESB_MODE_PTX) {
+        if (tx_fail_count > 2) {
+            esb_flush_tx();
+            tx_fail_count = 0;
+        }
+
+        else if (tx_fail_count > 0) {
+            goto start_tx;
+        }
+
+        if (!esb_is_idle()) {
+            return 0;
+        }
     }
 
     while (!esb_tx_full() && cnt++ < CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS) {
@@ -252,7 +262,7 @@ static int pull_packet_from_tx_msgq(void) {
         }
 
         int64_t age = k_uptime_delta(&payload.timestamp);
-        if (age < 0 || age > TIMEOUT_MS)
+        if (age > TIMEOUT_MS)
         {
             LOG_DBG("event timeout expired, skip event");
             continue;
@@ -281,6 +291,7 @@ static int pull_packet_from_tx_msgq(void) {
         }
     }
 
+start_tx:
     ret = esb_start_tx();
     if (ret == -ENODATA) {
         LOG_DBG("fifo is empty");
