@@ -119,7 +119,7 @@ static void event_handler(struct esb_evt const *event) {
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
             // evt_type = APP_ESB_EVT_TX_FAIL;
             // if (m_mode== APP_ESB_MODE_PTX)
-            if (m_mode == APP_ESB_MODE_PTX && tx_fail_count > 0) {
+            if (m_mode == APP_ESB_MODE_PTX && tx_fail_count > 1) {
                 esb_pop_tx();
                 tx_fail_count = 0;
             }
