@@ -231,6 +231,11 @@ static int pull_packet_from_tx_msgq(void) {
     payload_t payload;
     uint32_t cnt = 0;
 
+    if (tx_fail_count >= 2) {
+        esb_flush_tx();
+        tx_fail_cout = 0;
+    }
+
     while (!esb_tx_full() && cnt++ < CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS) {
         if (k_msgq_num_used_get(&m_msgq_tx_payloads) == 0) {
             LOG_DBG("No more packets in msgq");
