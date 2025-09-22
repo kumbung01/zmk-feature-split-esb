@@ -233,7 +233,7 @@ static int pull_packet_from_tx_msgq(void) {
 
     if (tx_fail_count >= 2) {
         esb_flush_tx();
-        tx_fail_cout = 0;
+        tx_fail_count = 0;
     }
 
     while (!esb_tx_full() && cnt++ < CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS) {
