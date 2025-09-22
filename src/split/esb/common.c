@@ -114,7 +114,7 @@ int zmk_split_esb_get_item(struct ring_buf *rx_buf, uint8_t *env, struct k_sem *
     int ret = k_sem_take(sem, K_FOREVER);
     if (ret) {
         LOG_WRN("sempahore already taken");
-        return 0;
+        return -EAGAIN;
     }
 
     while (ring_buf_size_get(rx_buf) > sizeof(struct esb_msg_prefix) + sizeof(struct esb_msg_postfix)) {

@@ -112,7 +112,7 @@ static void event_handler(struct esb_evt const *event) {
                 tx_fail_count = 0;
 
             m_callback(&m_event);
-            pull_packet_from_tx_msgq();
+            // pull_packet_from_tx_msgq();
             break;
         case ESB_EVENT_TX_FAILED:
             // Forward an event to the application
@@ -122,7 +122,7 @@ static void event_handler(struct esb_evt const *event) {
                 tx_fail_count++;
             
             m_callback(&m_event);
-            pull_packet_from_tx_msgq();
+            // pull_packet_from_tx_msgq();
             break;
         case ESB_EVENT_RX_RECEIVED:
             // LOG_DBG("RX SUCCESS");
