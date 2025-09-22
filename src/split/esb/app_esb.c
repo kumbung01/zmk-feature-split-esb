@@ -109,7 +109,7 @@ static void event_handler(struct esb_evt const *event) {
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
             // evt_type = APP_ESB_EVT_TX_SUCCESS;
             // if (m_mode == APP_ESB_MODE_PTX)
-            //     tx_fail_count = 0;
+            tx_fail_count = 0;
 
             m_callback(&m_event);
             // pull_packet_from_tx_msgq();
@@ -119,9 +119,11 @@ static void event_handler(struct esb_evt const *event) {
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
             // evt_type = APP_ESB_EVT_TX_FAIL;
             // if (m_mode== APP_ESB_MODE_PTX)
-            //     tx_fail_count++;
-            if (m_mode == APP_ESB_MODE_PTX)
+            if (m_mode == APP_ESB_MODE_PTX && tx_fail_count > 0) {
                 esb_pop_tx();
+                tx_fail_count = 0;
+            }
+            tx_fail_count++;
             
             m_callback(&m_event);
             // pull_packet_from_tx_msgq();
@@ -325,7 +327,7 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
 
     if (k_msgq_num_free_get(&m_msgq_tx_payloads) == 0) {
         LOG_WRN("esb tx_payload_q full, dropping oldest packet");
-        if (k_msgq_get(&m_msgq_tx_payloads, &payload, K_FOREVER) != 0) { // drop the oldest packet
+        if (k_msgq_get(&m_msgq_tx_payloads, &payload, K_NO_WAIT) != 0) { // drop the oldest packet
             LOG_WRN("msgq drop fail, early return");
 
             return 0;
