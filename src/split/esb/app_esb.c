@@ -98,7 +98,7 @@ static void reset_retransmit_delay(void)
 }
 #endif
 
-// static volatile int tx_fail_count = 0;
+static volatile uint32_t tx_fail_count = 0;
 // static int evt_type = APP_ESB_EVT_TX_SUCCESS;
 static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
