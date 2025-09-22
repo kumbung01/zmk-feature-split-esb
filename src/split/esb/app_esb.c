@@ -254,7 +254,7 @@ static int pull_packet_from_tx_msgq(void) {
         {
             LOG_WRN("Failed to get packet from msgq");
 
-            break;
+            continue;
         }
 
         int64_t age = k_uptime_delta(&payload.timestamp);
