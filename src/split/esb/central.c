@@ -213,8 +213,7 @@ static void publish_events_work(struct k_work *work) {
                                                                  env.payload.event);
             break;
         case -EAGAIN:
-            k_work_submit(&publish_events_work);
-            break;
+            continue;
         default:
             LOG_WRN("Issue fetching an item from the RX buffer: %d", item_err);
             return;
