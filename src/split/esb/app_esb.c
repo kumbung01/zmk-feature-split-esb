@@ -240,10 +240,6 @@ static int pull_packet_from_tx_msgq(void) {
         else if (tx_fail_count > 0) {
             goto start_tx;
         }
-
-        if (!esb_is_idle()) {
-            return 0;
-        }
     }
 
     while (!esb_tx_full() && cnt++ < CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS) {
@@ -258,7 +254,7 @@ static int pull_packet_from_tx_msgq(void) {
         {
             LOG_WRN("Failed to get packet from msgq");
 
-            continue;
+            break;
         }
 
         int64_t age = k_uptime_delta(&payload.timestamp);
@@ -338,7 +334,7 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
 
     if (k_msgq_num_free_get(&m_msgq_tx_payloads) == 0) {
         LOG_WRN("esb tx_payload_q full, dropping oldest packet");
-        if (k_msgq_get(&m_msgq_tx_payloads, NULL, K_NO_WAIT) != 0) { // drop the oldest packet
+        if (k_msgq_get(&m_msgq_tx_payloads, NULL, K_FOREVER) != 0) { // drop the oldest packet
             LOG_WRN("msgq drop fail, early return");
 
             return 0;
