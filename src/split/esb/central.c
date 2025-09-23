@@ -131,9 +131,9 @@ static int split_central_esb_send_command(uint8_t source,
         LOG_WRN("Failed to put the postfix (%d vs %d)", put, sizeof(postfix));
     }
 
-    // k_sem_give(&tx_buf_sem);
-
     begin_tx();
+
+    k_sem_give(&tx_buf_sem);
 
     return 0;
 }

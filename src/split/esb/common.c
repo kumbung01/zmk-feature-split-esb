@@ -20,7 +20,6 @@ void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
     // LOG_DBG("tx_buf_len %u, CONFIG_ESB_MAX_PAYLOAD_LENGTH %u", 
     //         tx_buf_len, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
     if (!tx_buf_len || tx_buf_len > CONFIG_ESB_MAX_PAYLOAD_LENGTH) {
-        k_sem_give(state->tx_sem);
 
         return;
     }
@@ -30,8 +29,6 @@ void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
     // LOG_DBG("tx_buf_len: %d, claim_len: %d", tx_buf_len, claim_len);
     // LOG_HEXDUMP_DBG(buf, claim_len, "buf");
     uint32_t buf_len = ring_buf_get(state->tx_buf, buf, tx_buf_len);
-
-    k_sem_give(state->tx_sem);
 
     if (buf_len != tx_buf_len)
     {
@@ -54,13 +51,19 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
         case APP_ESB_EVT_TX_SUCCESS:
             // LOG_DBG("ESB TX sent");
             if (!ring_buf_is_empty(state->tx_buf)) {
-                zmk_split_esb_async_tx(state);
+                if (k_sem_take(state->tx_sem, K_NO_WAIT) == 0) {
+                    zmk_split_esb_async_tx(state);
+                    k_sem_give(state->tx_sem);
+                }
             }
             break;
         case APP_ESB_EVT_TX_FAIL:
             // LOG_WRN("ESB TX failed");
             if (!ring_buf_is_empty(state->tx_buf)) {
-                zmk_split_esb_async_tx(state);
+                if (k_sem_take(state->tx_sem, K_NO_WAIT) == 0) {
+                    zmk_split_esb_async_tx(state);
+                    k_sem_give(state->tx_sem);
+                }
             }
             break;
         case APP_ESB_EVT_RX:

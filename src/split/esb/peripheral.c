@@ -139,10 +139,10 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
         LOG_WRN("Failed to put the postfix (%d vs %d)", put, sizeof(postfix));
     }
     // LOG_HEXDUMP_DBG(&postfix, sizeof(postfix), "postfix");
-
-    // k_sem_give(&tx_buf_sem); 
     
     begin_tx();
+
+    k_sem_give(&tx_buf_sem); 
 
     return 0;
 }
