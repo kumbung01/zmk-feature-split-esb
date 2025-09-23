@@ -16,7 +16,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 K_MSGQ_DEFINE(rx_msgq, sizeof(struct esb_event_envelope), CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
 
-void zmk_split_esb_cb(app_esb_event_t *event) {
+void zmk_split_esb_cb(app_esb_event_t *event, zmk_split_esb_async_state state) {
     switch(event->evt_type) {
         case APP_ESB_EVT_TX_SUCCESS:
             // LOG_DBG("ESB TX sent");
