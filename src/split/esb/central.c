@@ -40,33 +40,16 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
     ((sizeof(struct esb_command_envelope) + sizeof(struct esb_msg_postfix)) *                      \
      CONFIG_ZMK_SPLIT_ESB_CMD_BUFFER_ITEMS) + 4
 
-RING_BUF_DECLARE(rx_buf, RX_BUFFER_SIZE);
-RING_BUF_DECLARE(tx_buf, TX_BUFFER_SIZE);
-
-static K_SEM_DEFINE(tx_buf_sem, 1, 1);
-static K_SEM_DEFINE(rx_buf_sem, 1, 1);
-
 static void publish_events_work(struct k_work *work);
 
 K_WORK_DEFINE(publish_events, publish_events_work);
 
 extern struct k_msgq rx_msgq;
-uint8_t async_rx_buf[RX_BUFFER_SIZE / 2][2];
 
 static struct zmk_split_esb_async_state async_state = {
     .process_tx_work = &publish_events,
-    .rx_bufs = {async_rx_buf[0], async_rx_buf[1]},
-    .rx_bufs_len = RX_BUFFER_SIZE / 2,
     .rx_size_process_trigger = ESB_MSG_EXTRA_SIZE + 1,
-    .rx_buf = &rx_buf,
-    .rx_sem = &rx_buf_sem,
-    .tx_buf = &tx_buf,
-    .tx_sem = &tx_buf_sem,
 };
-
-static void begin_tx(void) {
-    zmk_split_esb_async_tx(&async_state);
-}
 
 static ssize_t get_payload_data_size(const struct zmk_split_transport_central_command *cmd) {
     switch (cmd->type) {

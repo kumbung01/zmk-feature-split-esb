@@ -37,12 +37,6 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
     ((sizeof(struct esb_command_envelope) + sizeof(struct esb_msg_postfix)) *                      \
      CONFIG_ZMK_SPLIT_ESB_CMD_BUFFER_ITEMS) + 4
 
-RING_BUF_DECLARE(chosen_rx_buf, RX_BUFFER_SIZE);
-RING_BUF_DECLARE(chosen_tx_buf, TX_BUFFER_SIZE);
-
-static K_SEM_DEFINE(tx_buf_sem, 1, 1);
-static K_SEM_DEFINE(rx_buf_sem, 1, 1);
-
 static const uint8_t peripheral_id = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID;
 
 static void publish_commands_work(struct k_work *work);
@@ -52,23 +46,10 @@ K_WORK_DEFINE(publish_commands, publish_commands_work);
 static void process_tx_cb(void);
 K_MSGQ_DEFINE(cmd_msg_queue, sizeof(struct zmk_split_transport_central_command), 3, 4);
 
-uint8_t async_rx_buf[RX_BUFFER_SIZE / 2][2];
-
 static struct zmk_split_esb_async_state async_state = {
-    .rx_bufs = {async_rx_buf[0], async_rx_buf[1]},
-    .rx_bufs_len = RX_BUFFER_SIZE / 2,
     .rx_size_process_trigger = sizeof(struct esb_command_envelope),
     .process_tx_callback = process_tx_cb,
-    .rx_buf = &chosen_rx_buf,
-    .rx_sem = &rx_buf_sem,
-    .tx_buf = &chosen_tx_buf,
-    .tx_sem = &tx_buf_sem,
 };
-
-
-static void begin_tx(void) {
-    zmk_split_esb_async_tx(&async_state);
-}
 
 void zmk_split_esb_on_ptx_esb_callback(app_esb_event_t *event) {
     zmk_split_esb_cb(event, &async_state);
