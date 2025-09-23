@@ -115,7 +115,7 @@ static void event_handler(struct esb_evt const *event) {
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
             if (m_mode == APP_ESB_MODE_PTX && tx_fail_count > 0) {
-                esb_pop_tx();
+                esb_flush_tx();
                 tx_fail_count = 0;
             }
             else
