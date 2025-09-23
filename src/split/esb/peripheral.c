@@ -124,10 +124,10 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
 
     struct esb_msg_postfix postfix = {.crc = crc32_ieee((void *)&env, pfx_len)};
 
-    memcpy(buf + pfx_len, &postfix, sizeof(esb_msg_postfix));
+    memcpy(buf + pfx_len, &postfix, sizeof(struct esb_msg_postfix));
 
     app_esb_data_t data;
-    data.len = payload_size + sizeof(esb_msg_postifx);
+    data.len = payload_size + sizeof(struct esb_msg_postifx);
     data.data = buf;
     zmk_split_esb_send(&data);
 
