@@ -87,7 +87,7 @@ static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd) {
     uint8_t buf[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
 
-    ssize_t data_size = get_payload_data_size(cmd);
+    ssize_t data_size = get_payload_data_size(&cmd);
     if (data_size < 0) {
         LOG_WRN("Failed to determine payload data size %d", data_size);
         return data_size;
