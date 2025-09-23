@@ -188,8 +188,8 @@ SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DE
 static void publish_events_work(struct k_work *work) {
     while (ring_buf_size_get(&rx_buf) > ESB_MSG_EXTRA_SIZE) {
         struct esb_event_envelope env;
-        int item_err =
-            zmk_split_esb_get_item(&rx_buf, (uint8_t *)&env, async_state.rx_sem, sizeof(struct esb_event_envelope));
+        int item_err = k_msgq_get(&rx_msgq, &env, K_NO_WAIT);
+            // zmk_split_esb_get_item(&rx_buf, (uint8_t *)&env, async_state.rx_sem, sizeof(struct esb_event_envelope));
         switch (item_err) {
         case 0:
             zmk_split_transport_central_peripheral_event_handler(&esb_central, env.payload.source,
@@ -203,20 +203,3 @@ static void publish_events_work(struct k_work *work) {
         }
     }
 }
-
-
-static void event_handle_thread(void) {
-    struct esb_event_envelope env;
-
-    while(1)
-    {
-        if (k_msgq_get(&rx_msgq, &env, K_FOREVER) == 0) {
-            zmk_split_transport_central_peripheral_event_handler(&esb_central, env.payload.source, env.payload.event);
-        } 
-    }
-
-}
-
-K_THREAD_DEFINE(event_handle_thread_id, STACKSIZE,
-        event_handle_thread, NULL, NULL, NULL,
-        1, 0, 0);
