@@ -280,7 +280,6 @@ static int pull_packet_from_tx_msgq(void) {
         }
     }
 
-start_tx:
     ret = esb_start_tx();
     if (ret == -ENODATA) {
         LOG_DBG("fifo is empty");
