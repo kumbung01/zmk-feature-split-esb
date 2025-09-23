@@ -41,6 +41,8 @@ static const uint8_t peripheral_id = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID;
 
 static void publish_commands_work(struct k_work *work);
 
+extern struct k_msgq rx_msgq;
+
 K_WORK_DEFINE(publish_commands, publish_commands_work);
 
 static void process_tx_cb(void);
@@ -165,14 +167,13 @@ static int zmk_split_esb_peripheral_init(void) {
 SYS_INIT(zmk_split_esb_peripheral_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 
 static void process_tx_cb(void) {
-    while (ring_buf_size_get(&chosen_rx_buf) > ESB_MSG_EXTRA_SIZE) {
+    while (k_msgq_num_used_get(&rx_msgq) > 0) {
         struct esb_command_envelope env;
-        int item_err = (&chosen_rx_buf, (uint8_t *)&env,
-                                                sizeof(struct esb_command_envelope));
+        int item_err = k_msgq_get(&rx_msgq, &env, K_NO_WAIT);
         switch (item_err) {
         case 0:
             if (env.payload.cmd.type == ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_POLL_EVENTS) {
-                begin_tx();
+                pull_packet_from_tx_msgq();
             } else {
                 int ret = k_msgq_put(&cmd_msg_queue, &env.payload.cmd, K_NO_WAIT);
                 if (ret < 0) {
