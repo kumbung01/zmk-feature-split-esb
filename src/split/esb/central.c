@@ -192,6 +192,8 @@ static void publish_events_work(struct k_work *work) {
 // static void publish_events_thread(void) {
 //     struct esb_event_envelope env;
 //     while (true) { 
+//         if (k_msgq_num_used_get(&rx_msgq) > 0)
+
 //         int err = k_msgq_get(&rx_msgq, &env, K_FOREVER);
 //         if (err) {
 //             LOG_WRN("k_msgq get fail(%d)", err);

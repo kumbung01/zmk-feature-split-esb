@@ -229,6 +229,7 @@ int pull_packet_from_tx_msgq(void) {
     int ret = 0;
     payload_t payload;
     uint32_t cnt = 0;
+    int64_t now = k_uptime_get();
 
     while (!esb_tx_full() && cnt++ < CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS) {
         if (k_msgq_num_used_get(&m_msgq_tx_payloads) == 0) {
@@ -246,7 +247,7 @@ int pull_packet_from_tx_msgq(void) {
         }
 
 
-        int64_t age = k_uptime_delta(&payload.timestamp);
+        int64_t age = now - payload.timestamp;
         if (age > TIMEOUT_MS)
         {
             LOG_DBG("event timeout expired, skip event");
