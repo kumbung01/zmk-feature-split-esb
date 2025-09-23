@@ -127,7 +127,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     memcpy(buf + pfx_len, &postfix, sizeof(struct esb_msg_postfix));
 
     app_esb_data_t data;
-    data.len = payload_size + sizeof(struct esb_msg_postfix);
+    data.len = pfx_len + sizeof(struct esb_msg_postfix);
     data.data = buf;
     zmk_split_esb_send(&data);
 
