@@ -14,8 +14,9 @@
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
-#if 0
+
 void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
+#if 0
     size_t tx_buf_len = 0;
     uint8_t buf[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
 
@@ -56,8 +57,9 @@ void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
     zmk_split_esb_send(&my_data); // callback > zmk_split_esb_cb()
 
     // LOG_DBG("ESB TX Buf finish %d", claim_len);
-}
 #endif
+}
+
 
 
 void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state) {
