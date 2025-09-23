@@ -111,8 +111,8 @@ static void event_handler(struct esb_evt const *event) {
             // if (m_mode == APP_ESB_MODE_PTX)
             tx_fail_count = 0;
 
-            // m_callback(&m_event);
-            pull_packet_from_tx_msgq();
+            m_callback(&m_event);
+            // pull_packet_from_tx_msgq();
             break;
         case ESB_EVENT_TX_FAILED:
             // Forward an event to the application
@@ -125,8 +125,8 @@ static void event_handler(struct esb_evt const *event) {
             }
             tx_fail_count++;
             
-            // m_callback(&m_event);
-            pull_packet_from_tx_msgq();
+            m_callback(&m_event);
+            // pull_packet_from_tx_msgq();
             break;
         case ESB_EVENT_RX_RECEIVED:
             // LOG_DBG("RX SUCCESS");
@@ -230,7 +230,7 @@ static int esb_initialize(app_esb_mode_t mode) {
                                * CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT)
 
 
-static int pull_packet_from_tx_msgq(void) {
+int pull_packet_from_tx_msgq(void) {
     int ret = 0;
     payload_t payload;
     uint32_t cnt = 0;
@@ -284,10 +284,6 @@ static int pull_packet_from_tx_msgq(void) {
     ret = esb_start_tx();
     if (ret == -ENODATA) {
         LOG_DBG("fifo is empty");
-    }
-    else if (ret == 0)
-    {
-        LOG_DBG("tx success");
     }
 
     return ret;

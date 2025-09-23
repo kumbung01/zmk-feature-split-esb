@@ -54,4 +54,6 @@ int zmk_split_esb_set_enable(bool enabled);
 
 int zmk_split_esb_send(app_esb_data_t *tx_packet);
 
+int pull_packet_from_tx_msgq(void);
+
 #endif
