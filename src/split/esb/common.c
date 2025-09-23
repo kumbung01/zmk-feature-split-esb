@@ -19,8 +19,9 @@ void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
     size_t tx_buf_len = 0;
     uint8_t buf[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
 
-    if (k_sem_take(state->tx_sem, K_NO_WAIT)) {
-        LOG_WRN("failed to get tx_sem");
+    int ret = k_sem_take(state->tx_sem, K_NO_WAIT);
+    if (ret) {
+        LOG_WRN("failed to get tx_sem(%d)", ret);
 
         return;
     }

@@ -106,8 +106,9 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     size_t payload_size =
         data_size + sizeof(peripheral_id) + sizeof(enum zmk_split_transport_peripheral_event_type);
 
-    if (k_msgq_put(&tx_buf_len, &payload_size, K_NO_WAIT) != 0) {
-        LOG_WRN("failed to put data");
+    int ret = k_msgq_put(&tx_buf_len, &payload_size, K_NO_WAIT);
+    if (ret) {
+        LOG_WRN("failed to put data(%d)", ret);
 
         return 0;
     }
