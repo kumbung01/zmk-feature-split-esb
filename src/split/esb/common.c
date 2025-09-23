@@ -14,7 +14,7 @@
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
-K_MSGQ_DEFINE(rx_msgq, sizeof(payload_t), CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
+K_MSGQ_DEFINE(rx_msgq, sizeof(struct esb_payload), CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
 
 void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
 #if 0

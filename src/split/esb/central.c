@@ -29,6 +29,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 #include "app_esb.h"
 #include "common.h"
+#include <esb.h>
 
 #define STACKSIZE                    CONFIG_MAIN_STACK_SIZE
 
@@ -226,12 +227,13 @@ static void publish_events_work(struct k_work *work) {
 
 
 static void event_handle_thread(void) {
-    struct esb_event_envelope env;
+    struct esb_payload payload;
 
     while(1)
     {
-        if (k_msgq_get(&rx_msgq, &env, K_FOREVER) == 0) {
-            zmk_split_transport_central_peripheral_event_handler(&esb_central, env.payload.source, env.payload.event);
+        if (k_msgq_get(&rx_msgq, &payload, K_FOREVER) == 0) {
+            struct esb_event_envelope env* = (struct esb_event_envelope*)(payload.data);
+            zmk_split_transport_central_peripheral_event_handler(&esb_central, env->payload.source, env->payload.event);
         } 
     }
 
