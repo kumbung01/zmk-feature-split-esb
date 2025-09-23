@@ -250,6 +250,7 @@ static int pull_packet_from_tx_msgq(void) {
             continue;
         }
 
+
         int64_t age = k_uptime_delta(&payload.timestamp);
         if (age > TIMEOUT_MS)
         {
@@ -283,6 +284,10 @@ static int pull_packet_from_tx_msgq(void) {
     ret = esb_start_tx();
     if (ret == -ENODATA) {
         LOG_DBG("fifo is empty");
+    }
+    else if (ret == 0)
+    {
+        LOG_DBG("tx success");
     }
 
     return ret;
