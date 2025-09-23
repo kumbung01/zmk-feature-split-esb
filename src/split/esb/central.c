@@ -31,6 +31,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #include "common.h"
 #include <esb.h>
 
+#define MPSL_THREAD_PRIO             CONFIG_MPSL_THREAD_COOP_PRIO
 #define STACKSIZE                    CONFIG_MAIN_STACK_SIZE
 
 #define RX_BUFFER_SIZE                                                                             \
@@ -204,4 +205,4 @@ static void publish_events_thread(void) {
 
 K_THREAD_DEFINE(publish_events_thread_id, STACKSIZE,
         publish_events_thread, NULL, NULL, NULL,
-        7, 0, 0);
+        K_PRIO_COOP(MPSL_THREAD_PRIO), 0, 0);

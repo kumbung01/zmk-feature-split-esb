@@ -37,10 +37,10 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
             if (state->process_tx_callback) {
                 state->process_tx_callback();
             } 
-            /*
+            
             else if (state->process_tx_work) {
                 k_work_submit(state->process_tx_work);
-            }*/
+            }
 
             break;
         default:
