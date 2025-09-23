@@ -103,7 +103,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     }
 
     // Data + type + source
-    size_t payload_size =
+    uint8_t payload_size =
         data_size + sizeof(peripheral_id) + sizeof(enum zmk_split_transport_peripheral_event_type);
 
     if (k_msgq_put(&tx_buf_len, &payload_size, K_NO_WAIT)) {
