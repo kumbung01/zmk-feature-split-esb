@@ -26,8 +26,9 @@ void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
         return;
     }
 
-    if (k_msgq_get(state->rx_len, &tx_buf_len, K_NO_WAIT) != 0) {
-        LOG_WRN("failed to get tx len");
+    ret = k_msgq_get(state->rx_len, &tx_buf_len, K_NO_WAIT);
+    if (ret) {
+        LOG_WRN("failed to get tx len(%d)", ret);
         k_sem_give(state->tx_sem);
 
         return;
