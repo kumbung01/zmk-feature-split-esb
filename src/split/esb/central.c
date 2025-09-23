@@ -232,7 +232,7 @@ static void event_handle_thread(void) {
     while(1)
     {
         if (k_msgq_get(&rx_msgq, &payload, K_FOREVER) == 0) {
-            struct esb_event_envelope env* = (struct esb_event_envelope*)(payload.data);
+            struct esb_event_envelope* env = (struct esb_event_envelope*)(payload.data);
             zmk_split_transport_central_peripheral_event_handler(&esb_central, env->payload.source, env->payload.event);
         } 
     }
