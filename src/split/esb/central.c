@@ -217,6 +217,6 @@ static void event_handle_thread(void) {
 
 }
 
-K_THREAD_DEFINE(event_handle_thread_id, STACK_SIZE,
+K_THREAD_DEFINE(event_handle_thread_id, STACKSIZE,
         event_handle_thread, NULL, NULL, NULL,
         1, 0, 0);
