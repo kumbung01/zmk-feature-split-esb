@@ -187,3 +187,21 @@ static void publish_events_work(struct k_work *work) {
         }
     }
 }
+
+static void publish_events_thread(void) {
+    struct esb_event_envelope env;
+    while (true) { 
+        int err = k_msgq_get(&rx_msgq, &env, K_NO_WAIT);
+        if (err) {
+            LOG_WRN("k_msgq get fail(%d)", item_err);
+        }
+        else {
+            zmk_split_transport_central_peripheral_event_handler(&esb_central, env.payload.source,
+                                                                 env.payload.event);
+        }
+    }
+}
+
+K_THREAD_DEFINE(publish_events_thread_id, STACKSIZE,
+        publish_events_thread, NULL, NULL, NULL,
+        1, 0, 0);
