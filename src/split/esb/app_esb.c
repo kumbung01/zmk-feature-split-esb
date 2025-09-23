@@ -118,7 +118,8 @@ static void event_handler(struct esb_evt const *event) {
                 esb_pop_tx();
                 tx_fail_count = 0;
             }
-            tx_fail_count++;
+            else
+                tx_fail_count++;
             
             m_callback(&m_event);
             break;
