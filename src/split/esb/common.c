@@ -14,7 +14,6 @@
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
-
 void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
 #if 0
     size_t tx_buf_len = 0;

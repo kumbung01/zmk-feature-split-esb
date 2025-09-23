@@ -63,6 +63,8 @@ static app_esb_callback_t m_callback;
 K_MSGQ_DEFINE(m_msgq_tx_payloads, sizeof(payload_t), 
               CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
 
+K_MSGQ_DEFINE(rx_msgq, sizeof(payload_t), CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
+
 static app_esb_mode_t m_mode;
 static bool m_active = false;
 static bool m_enabled = false;
@@ -107,18 +109,13 @@ static void event_handler(struct esb_evt const *event) {
    
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
-            // evt_type = APP_ESB_EVT_TX_SUCCESS;
-            // if (m_mode == APP_ESB_MODE_PTX)
             tx_fail_count = 0;
 
             m_callback(&m_event);
-            // pull_packet_from_tx_msgq();
             break;
         case ESB_EVENT_TX_FAILED:
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
-            // evt_type = APP_ESB_EVT_TX_FAIL;
-            // if (m_mode== APP_ESB_MODE_PTX)
             if (m_mode == APP_ESB_MODE_PTX && tx_fail_count > 1) {
                 esb_pop_tx();
                 tx_fail_count = 0;
@@ -126,7 +123,6 @@ static void event_handler(struct esb_evt const *event) {
             tx_fail_count++;
             
             m_callback(&m_event);
-            // pull_packet_from_tx_msgq();
             break;
         case ESB_EVENT_RX_RECEIVED:
             // LOG_DBG("RX SUCCESS");
@@ -423,12 +419,6 @@ static int app_esb_resume(void) {
         m_active = true;
         pull_packet_from_tx_msgq();
     }
-
-    // uint32_t channel = 0;
-    // if (!esb_get_rf_channel(&channel))    
-    //     LOG_WRN("channel: %d", channel);
-    // else
-    //     LOG_WRN("get_rf_channel_failed");
 
     return err;
 }

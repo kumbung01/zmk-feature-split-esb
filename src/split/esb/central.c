@@ -48,8 +48,8 @@ static K_SEM_DEFINE(rx_buf_sem, 1, 1);
 static void publish_events_work(struct k_work *work);
 
 K_WORK_DEFINE(publish_events, publish_events_work);
-K_MSGQ_DEFINE(rx_msgq, sizeof(payload_t), CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
 
+extern struct rx_msgq;
 uint8_t async_rx_buf[RX_BUFFER_SIZE / 2][2];
 
 static struct zmk_split_esb_async_state async_state = {
