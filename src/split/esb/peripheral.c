@@ -94,8 +94,12 @@ static ssize_t get_payload_data_size(const struct zmk_split_transport_peripheral
     }
 }
 
+struct k_msgq m_msgq_tx_payloads;
+
 static int
 split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event) {
+    uint8_t buf[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
+
     ssize_t data_size = get_payload_data_size(event);
     if (data_size < 0) {
         LOG_WRN("Failed to determine payload data size %d", data_size);
@@ -105,28 +109,6 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     // Data + type + source
     size_t payload_size =
         data_size + sizeof(peripheral_id) + sizeof(enum zmk_split_transport_peripheral_event_type);
-
-    int ret = k_msgq_put(&tx_buf_len, &payload_size, K_NO_WAIT);
-    if (ret) {
-        LOG_WRN("failed to put data(%d)", ret);
-
-        return 0;
-    }
-
-        // lock it for a safe result from ring_buf_space_get()
-    ret = k_sem_take(&tx_buf_sem, K_FOREVER);
-    if (ret) {
-        LOG_WRN("FOREVER");
-        return 0;
-    }
-
-    if (ring_buf_space_get(&chosen_tx_buf) < ESB_MSG_EXTRA_SIZE + payload_size) {
-        LOG_WRN("No room to send peripheral to the central (have %d but only space for %d/%d)",
-                ESB_MSG_EXTRA_SIZE + payload_size, ring_buf_space_get(&chosen_tx_buf),
-                ring_buf_capacity_get(&chosen_tx_buf));
-        k_sem_give(&tx_buf_sem);
-        return -ENOSPC;
-    }
 
     struct esb_event_envelope env = {.prefix = {
                                         .magic_prefix = ZMK_SPLIT_ESB_ENVELOPE_MAGIC_PREFIX,
@@ -138,25 +120,16 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
                                     }};
 
     size_t pfx_len = sizeof(env.prefix) + payload_size;
-    // LOG_HEXDUMP_DBG(&env, pfx_len, "Payload");
-
-    size_t put = ring_buf_put(&chosen_tx_buf, (uint8_t *)&env, pfx_len);
-    if (put != pfx_len) {
-        LOG_WRN("Failed to put the whole message (%d vs %d)", put, pfx_len);
-    }
+    memcpy(buf, &env, pfx_len);
 
     struct esb_msg_postfix postfix = {.crc = crc32_ieee((void *)&env, pfx_len)};
 
-    put = ring_buf_put(&chosen_tx_buf, (uint8_t *)&postfix, sizeof(postfix));
-    if (put != sizeof(postfix)) {
-        LOG_WRN("Failed to put the postfix (%d vs %d)", put, sizeof(postfix));
-    }
-    // LOG_HEXDUMP_DBG(&postfix, sizeof(postfix), "postfix");
-    
-    k_sem_give(&tx_buf_sem); 
-    
-    begin_tx();
+    memcpy(buf + pfx_len, &postfix, sizeof(esb_msg_postfix));
 
+    app_esb_data_t data;
+    data.len = payload_size + sizeof(esb_msg_postifx);
+    data.data = buf;
+    zmk_split_esb_send(&data);
 
     return 0;
 }
