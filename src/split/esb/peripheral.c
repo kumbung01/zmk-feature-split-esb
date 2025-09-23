@@ -52,8 +52,8 @@ K_WORK_DEFINE(publish_commands, publish_commands_work);
 static void process_tx_cb(void);
 K_MSGQ_DEFINE(cmd_msg_queue, sizeof(struct zmk_split_transport_central_command), 3, 4);
 
-K_MSGQ_DEFINE(rx_buf_len, sizeof(uint8_t), CONFIG_ZMK_SPLIT_ESB_CMD_BUFFER_ITEMS, 4);
-K_MSGQ_DEFINE(tx_buf_len, sizeof(uint8_t), CONFIG_ZMK_SPLIT_ESB_EVENT_BUFFER_ITEMS, 4);
+K_MSGQ_DEFINE(rx_buf_len, sizeof(size_t), CONFIG_ZMK_SPLIT_ESB_CMD_BUFFER_ITEMS, 4);
+K_MSGQ_DEFINE(tx_buf_len, sizeof(size_t), CONFIG_ZMK_SPLIT_ESB_EVENT_BUFFER_ITEMS, 4);
 
 uint8_t async_rx_buf[RX_BUFFER_SIZE / 2][2];
 
@@ -103,10 +103,10 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     }
 
     // Data + type + source
-    uint8_t payload_size =
+    size_t payload_size =
         data_size + sizeof(peripheral_id) + sizeof(enum zmk_split_transport_peripheral_event_type);
 
-    if (k_msgq_put(&tx_buf_len, &payload_size, K_NO_WAIT)) {
+    if (k_msgq_put(&tx_buf_len, &payload_size, K_NO_WAIT) != 0) {
         LOG_WRN("failed to put data");
 
         return 0;
