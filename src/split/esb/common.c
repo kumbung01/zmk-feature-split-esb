@@ -60,7 +60,7 @@ void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
 #endif
 }
 
-
+extern k_msgq rx_msgq;
 
 void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state) {
     switch(event->evt_type) {
@@ -73,6 +73,11 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
             pull_packet_from_tx_msgq();
             break;
         case APP_ESB_EVT_RX:
+            if (k_msgq_put(&rx_msgq, event->payload, K_NO_WAIT) != 0) {
+                LOG_WRN("rx msgq put fail");
+                break;
+            }
+#if 0
             // LOG_DBG("ESB RX received: %d", event->payload->length);
 
             // lock it for a safe result from ring_buf_space_get()
@@ -105,7 +110,7 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
             } else if (state->process_tx_work) {
                 k_work_submit(state->process_tx_work);
             }
-
+#endif
             break;
         default:
             LOG_ERR("Unknown APP ESB event!");

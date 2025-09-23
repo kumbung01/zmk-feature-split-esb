@@ -30,6 +30,8 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #include "app_esb.h"
 #include "common.h"
 
+#define STACKSIZE                    CONFIG_MAIN_STACK_SIZE
+
 #define RX_BUFFER_SIZE                                                                             \
     ((sizeof(struct esb_event_envelope) + sizeof(struct esb_msg_postfix)) *                        \
      CONFIG_ZMK_SPLIT_ESB_EVENT_BUFFER_ITEMS) * 2 + 4
@@ -46,6 +48,7 @@ static K_SEM_DEFINE(rx_buf_sem, 1, 1);
 static void publish_events_work(struct k_work *work);
 
 K_WORK_DEFINE(publish_events, publish_events_work);
+K_MSGQ_DEFINE(rx_msgq, sizeof(payload_t), CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
 
 uint8_t async_rx_buf[RX_BUFFER_SIZE / 2][2];
 
@@ -220,3 +223,20 @@ static void publish_events_work(struct k_work *work) {
         }
     }
 }
+
+
+static void event_handle_thread(void) {
+    struct esb_event_envelope env;
+
+    while(1)
+    {
+        if (k_msgq_get(&rx_msgq, &env, K_FOREVER) == 0) {
+            zmk_split_transport_central_peripheral_event_handler(&esb_central, env.payload.source, env.payload.event);
+        } 
+    }
+
+}
+
+K_THREAD_DEFINE(event_handle_thread_id, STACKSIZE,
+        event_handle_thread, NULL, NULL, NULL,
+        -1, 0, 0);
