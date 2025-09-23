@@ -114,13 +114,17 @@ static void event_handler(struct esb_evt const *event) {
         case ESB_EVENT_TX_FAILED:
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
-            if (m_mode == APP_ESB_MODE_PTX && tx_fail_count > 0) {
-                esb_flush_tx();
-                tx_fail_count = 0;
+            if (m_mode == APP_ESB_MODE_PTX) {
+                if (tx_fail_count > 0) {
+                    esb_pop_tx();
+                    tx_fail_count = 0;
+                }
+                else {
+                    tx_fail_count++;
+                }
+
             }
-            else
-                tx_fail_count++;
-            
+             
             m_callback(&m_event);
             break;
         case ESB_EVENT_RX_RECEIVED:
