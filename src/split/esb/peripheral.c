@@ -52,6 +52,9 @@ K_WORK_DEFINE(publish_commands, publish_commands_work);
 static void process_tx_cb(void);
 K_MSGQ_DEFINE(cmd_msg_queue, sizeof(struct zmk_split_transport_central_command), 3, 4);
 
+K_MSGQ_DEFINE(rx_buf_len, sizeof(uint8_t), CONFIG_ZMK_SPLIT_ESB_CMD_BUFFER_ITEMS, 4);
+K_MSGQ_DEFINE(tx_buf_len, sizeof(uint8_t), CONFIG_ZMK_SPLIT_ESB_EVENT_BUFFER_ITEMS, 4);
+
 uint8_t async_rx_buf[RX_BUFFER_SIZE / 2][2];
 
 static struct zmk_split_esb_async_state async_state = {
@@ -61,9 +64,12 @@ static struct zmk_split_esb_async_state async_state = {
     .process_tx_callback = process_tx_cb,
     .rx_buf = &chosen_rx_buf,
     .rx_sem = &rx_buf_sem,
+    .rx_len = &rx_buf_len,
     .tx_buf = &chosen_tx_buf,
     .tx_sem = &tx_buf_sem,
+    .tx_len = &tx_buf_len,
 };
+
 
 static void begin_tx(void) {
     zmk_split_esb_async_tx(&async_state);
@@ -96,16 +102,22 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
         return data_size;
     }
 
-    // lock it for a safe result from ring_buf_space_get()
+    // Data + type + source
+    size_t payload_size =
+        data_size + sizeof(peripheral_id) + sizeof(enum zmk_split_transport_peripheral_event_type);
+
+    if (k_msgq_put(&tx_buf_len, &payload_size, K_NO_WAIT)) {
+        LOG_WRN("failed to put data");
+
+        return 0;
+    }
+
+        // lock it for a safe result from ring_buf_space_get()
     int ret = k_sem_take(&tx_buf_sem, K_FOREVER);
     if (ret) {
         LOG_WRN("FOREVER");
         return 0;
     }
-
-    // Data + type + source
-    size_t payload_size =
-        data_size + sizeof(peripheral_id) + sizeof(enum zmk_split_transport_peripheral_event_type);
 
     if (ring_buf_space_get(&chosen_tx_buf) < ESB_MSG_EXTRA_SIZE + payload_size) {
         LOG_WRN("No room to send peripheral to the central (have %d but only space for %d/%d)",
@@ -140,9 +152,10 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     }
     // LOG_HEXDUMP_DBG(&postfix, sizeof(postfix), "postfix");
     
+    k_sem_give(&tx_buf_sem); 
+    
     begin_tx();
 
-    k_sem_give(&tx_buf_sem); 
 
     return 0;
 }
