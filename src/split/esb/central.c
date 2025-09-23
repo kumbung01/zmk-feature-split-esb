@@ -85,31 +85,17 @@ static ssize_t get_payload_data_size(const struct zmk_split_transport_central_co
 
 static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd) {
+    uint8_t buf[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
 
-    ssize_t data_size = get_payload_data_size(&cmd);
+    ssize_t data_size = get_payload_data_size(event);
     if (data_size < 0) {
         LOG_WRN("Failed to determine payload data size %d", data_size);
         return data_size;
     }
 
-    // lock it for a safe result from ring_buf_space_get()
-    int ret = k_sem_take(&tx_buf_sem, K_FOREVER);
-    if (ret) {
-        LOG_WRN("Shouldn't be called FOREVER");
-        return 0;
-    }
-
     // Data + type + source
     size_t payload_size =
         data_size + sizeof(source) + sizeof(enum zmk_split_transport_central_command_type);
-
-    if (ring_buf_space_get(&tx_buf) < ESB_MSG_EXTRA_SIZE + payload_size) {
-        LOG_WRN("No room to send command to the peripheral %d (have %d but only space for %d/%d)", 
-                source, ESB_MSG_EXTRA_SIZE + payload_size, ring_buf_space_get(&tx_buf),
-                ring_buf_capacity_get(&tx_buf));
-        k_sem_give(&tx_buf_sem);
-        return -ENOSPC;
-    }
 
     struct esb_command_envelope env = {.prefix = {
                                             .magic_prefix = ZMK_SPLIT_ESB_ENVELOPE_MAGIC_PREFIX,
@@ -120,24 +106,17 @@ static int split_central_esb_send_command(uint8_t source,
                                             .cmd = cmd,
                                         }};
 
-    size_t pfx_len = sizeof(env.prefix) + payload_size;
-    // LOG_HEXDUMP_DBG(&env, pfx_len, "Payload");
-
-    size_t put = ring_buf_put(&tx_buf, (uint8_t *)&env, pfx_len);
-    if (put != pfx_len) {
-        LOG_WRN("Failed to put the whole message (%d vs %d)", put, pfx_len);
-    }
+   size_t pfx_len = sizeof(env.prefix) + payload_size;
+    memcpy(buf, &env, pfx_len);
 
     struct esb_msg_postfix postfix = {.crc = crc32_ieee((void *)&env, pfx_len)};
 
-    put = ring_buf_put(&tx_buf, (uint8_t *)&postfix, sizeof(postfix));
-    if (put != sizeof(postfix)) {
-        LOG_WRN("Failed to put the postfix (%d vs %d)", put, sizeof(postfix));
-    }
+    memcpy(buf + pfx_len, &postfix, sizeof(struct esb_msg_postfix));
 
-    begin_tx();
-
-    k_sem_give(&tx_buf_sem);
+    app_esb_data_t data;
+    data.len = pfx_len + sizeof(struct esb_msg_postfix);
+    data.data = buf;
+    zmk_split_esb_send(&data);
 
     return 0;
 }
@@ -238,6 +217,6 @@ static void event_handle_thread(void) {
 
 }
 
-K_THREAD_DEFINE(event_handle_thread_id, STACKSIZE,
+K_THREAD_DEFINE(event_handle_thread_id, 1024,
         event_handle_thread, NULL, NULL, NULL,
         -1, 0, 0);
