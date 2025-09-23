@@ -193,7 +193,7 @@ static void publish_events_thread(void) {
     while (true) { 
         int err = k_msgq_get(&rx_msgq, &env, K_NO_WAIT);
         if (err) {
-            LOG_WRN("k_msgq get fail(%d)", item_err);
+            LOG_WRN("k_msgq get fail(%d)", err);
         }
         else {
             zmk_split_transport_central_peripheral_event_handler(&esb_central, env.payload.source,
