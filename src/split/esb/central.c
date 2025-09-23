@@ -186,7 +186,7 @@ static int zmk_split_esb_central_init(void) {
 SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 
 static void publish_events_work(struct k_work *work) {
-    while (ring_buf_size_get(&rx_buf) > ESB_MSG_EXTRA_SIZE) {
+    while (k_msgq_num_used_get(&rx_msgq) > 0) {
         struct esb_event_envelope env;
         int item_err = k_msgq_get(&rx_msgq, &env, K_NO_WAIT);
             // zmk_split_esb_get_item(&rx_buf, (uint8_t *)&env, async_state.rx_sem, sizeof(struct esb_event_envelope));
@@ -196,6 +196,7 @@ static void publish_events_work(struct k_work *work) {
                                                                  env.payload.event);
             break;
         case -EAGAIN:
+            LOG_WRN("k_msgq get fail(%d)", item_err);
             return;
         default:
             LOG_WRN("Issue fetching an item from the RX buffer: %d", item_err);
