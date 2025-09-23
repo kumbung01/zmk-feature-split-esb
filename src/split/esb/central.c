@@ -227,13 +227,12 @@ static void publish_events_work(struct k_work *work) {
 
 
 static void event_handle_thread(void) {
-    struct esb_payload payload;
+    struct esb_event_envelope env;
 
     while(1)
     {
-        if (k_msgq_get(&rx_msgq, &payload, K_FOREVER) == 0) {
-            struct esb_event_envelope* env = (struct esb_event_envelope*)(payload.data);
-            zmk_split_transport_central_peripheral_event_handler(&esb_central, env->payload.source, env->payload.event);
+        if (k_msgq_get(&rx_msgq, &env, K_FOREVER) == 0) {
+            zmk_split_transport_central_peripheral_event_handler(&esb_central, env.payload.source, env.payload.event);
         } 
     }
 

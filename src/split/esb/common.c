@@ -14,7 +14,7 @@
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
-K_MSGQ_DEFINE(rx_msgq, sizeof(struct esb_payload), CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
+K_MSGQ_DEFINE(rx_msgq, sizeof(struct esb_event_envelope), CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
 
 void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
 #if 0
@@ -72,7 +72,7 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
             pull_packet_from_tx_msgq();
             break;
         case APP_ESB_EVT_RX:
-            if (k_msgq_put(&rx_msgq, event->payload, K_NO_WAIT) != 0) {
+            if (k_msgq_put(&rx_msgq, event->payload->data, K_NO_WAIT) != 0) {
                 LOG_WRN("rx msgq put fail");
                 break;
             }
