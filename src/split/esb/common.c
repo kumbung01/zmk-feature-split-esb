@@ -60,7 +60,7 @@ void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
 #endif
 }
 
-extern k_msgq rx_msgq;
+extern struct k_msgq rx_msgq;
 
 void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state) {
     switch(event->evt_type) {
