@@ -63,8 +63,6 @@ static app_esb_callback_t m_callback;
 K_MSGQ_DEFINE(m_msgq_tx_payloads, sizeof(payload_t), 
               CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
 
-K_MSGQ_DEFINE(rx_msgq, sizeof(payload_t), CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
-
 static app_esb_mode_t m_mode;
 static bool m_active = false;
 static bool m_enabled = false;

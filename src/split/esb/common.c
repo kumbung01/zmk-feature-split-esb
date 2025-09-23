@@ -14,6 +14,8 @@
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
+K_MSGQ_DEFINE(rx_msgq, sizeof(payload_t), CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
+
 void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
 #if 0
     size_t tx_buf_len = 0;
@@ -58,8 +60,6 @@ void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state) {
     // LOG_DBG("ESB TX Buf finish %d", claim_len);
 #endif
 }
-
-extern struct k_msgq rx_msgq;
 
 void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state) {
     switch(event->evt_type) {
