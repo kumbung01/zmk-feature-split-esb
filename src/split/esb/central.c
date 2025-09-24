@@ -163,10 +163,12 @@ SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DE
 
 static void publish_events_work(struct k_work *work) {
     struct esb_data_envelope env;
-    while (k_msgq_get(&rx_msgq, &env, K_NO_WAIT) == 0) {
-        zmk_split_transport_central_peripheral_event_handler(&esb_central, 
-                                                            env.event.source,
-                                                            env.event.event);
+    while (k_msgq_num_used_get(&rx_msgq) > 0) {
+        if (k_msgq_get(&rx_msgq, &env, K_NO_WAIT) == 0) {
+            zmk_split_transport_central_peripheral_event_handler(&esb_central, 
+                                                                env.event.source,
+                                                                env.event.event);
+        }
     }
 }
 

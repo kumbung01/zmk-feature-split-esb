@@ -141,7 +141,8 @@ void tx_thread() {
                     continue;
                 }
                 else {
-                    k_msgq_put(&m_msgq_tx_payloads, &payload, K_FOREVER);
+                    k_msgq_put(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
+                    k_msleep(1);
                     LOG_DBG("other errors, retry later");
                 }
             }
@@ -151,7 +152,7 @@ void tx_thread() {
 
 K_THREAD_DEFINE(tx_thread_id, 2048,
         tx_thread, NULL, NULL, NULL,
-        0, 0, 0);
+        3, 0, 0);
 
 static int clocks_start(void) {
     int err;
@@ -376,9 +377,9 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
         LOG_WRN("Failed to queue esb tx_payload_q (%d)", ret);
     }
 
-    // if (m_active) {
-    //     k_wakeup(tx_thread_id);
-    // }
+    if (m_active) {
+        k_wakeup(tx_thread_id);
+    }
 
     return ret;
 }
