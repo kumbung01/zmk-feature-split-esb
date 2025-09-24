@@ -154,7 +154,14 @@ void tx_thread() {
             }
 
             ret = esb_write_payload(&payload.payload);
-            if (ret != 0){
+
+            if (ret == 0) {
+                ret = esb_start_tx();
+                if (ret == -ENODATA) {
+                    LOG_DBG("fifo is empty");
+                }
+            }
+            else {
                 LOG_DBG("esb_write_payload returned %d", ret);
                 if (ret == -EMSGSIZE) {
                     // msg size too large, discard it
@@ -167,11 +174,6 @@ void tx_thread() {
                     k_msleep(1);
                     LOG_DBG("other errors, retry later");
                 }
-            }
-
-            ret = esb_start_tx();
-            if (ret == -ENODATA) {
-                LOG_DBG("fifo is empty");
             }
         }
     }
