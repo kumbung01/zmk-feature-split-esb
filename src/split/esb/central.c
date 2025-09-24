@@ -81,11 +81,11 @@ static int split_central_esb_send_command(uint8_t source,
     size_t payload_size =
         data_size + sizeof(source) + sizeof(enum zmk_split_transport_central_command_type);
 
-    struct esb_command_envelope env = {.prefix = {
+    struct esb_data_envelope env = {.prefix = {
                                             .magic_prefix = ZMK_SPLIT_ESB_ENVELOPE_MAGIC_PREFIX,
                                             .payload_size = payload_size,
                                         },
-                                        .payload = {
+                                        .command = {
                                             .source = source,
                                             .cmd = cmd,
                                         }};
@@ -166,14 +166,14 @@ static int zmk_split_esb_central_init(void) {
 SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 
 static void publish_events_work(struct k_work *work) {
+    struct esb_data_envelope env;
     while (k_msgq_num_used_get(&rx_msgq) > 0) {
-        struct esb_event_envelope env;
         int item_err = k_msgq_get(&rx_msgq, &env, K_NO_WAIT);
             // zmk_split_esb_get_item(&rx_buf, (uint8_t *)&env, async_state.rx_sem, sizeof(struct esb_event_envelope));
         switch (item_err) {
         case 0:
-            zmk_split_transport_central_peripheral_event_handler(&esb_central, env.payload.source,
-                                                                 env.payload.event);
+            zmk_split_transport_central_peripheral_event_handler(&esb_central, env.event.source,
+                                                                 env.event.event);
             break;
         case -EAGAIN:
             LOG_WRN("k_msgq get fail(%d)", item_err);

@@ -88,11 +88,11 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     size_t payload_size =
         data_size + sizeof(peripheral_id) + sizeof(enum zmk_split_transport_peripheral_event_type);
 
-    struct esb_event_envelope env = {.prefix = {
+    struct esb_data_envelope env = {.prefix = {
                                         .magic_prefix = ZMK_SPLIT_ESB_ENVELOPE_MAGIC_PREFIX,
                                         .payload_size = payload_size,
                                     },
-                                    .payload = {
+                                    .event = {
                                         .source = peripheral_id,
                                         .event = *event,
                                     }};

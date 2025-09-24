@@ -39,6 +39,14 @@ struct esb_event_envelope {
     struct esb_event_payload payload;
 } __packed;
 
+struct esb_data_envelope {
+    struct esb_msg_prefix prefix;
+    union {
+        struct esb_event_payload event;
+        struct esb_command_payload command;
+    }
+} __packed;
+
 struct esb_msg_postfix {
     uint32_t crc;
 } __packed;
