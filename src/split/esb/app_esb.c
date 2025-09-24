@@ -476,10 +476,12 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) 
         case APP_TS_STARTED:
             app_esb_resume();
             k_thread_resume(tx_thread_id);
+            k_thread_resume(publish_events_thread_id);
             break;
         case APP_TS_STOPPED:
             app_esb_suspend();
             k_thread_suspend(tx_thread_id);
+            k_thread_suspend(publish_events_thread_id);
             break;
     }
 }
