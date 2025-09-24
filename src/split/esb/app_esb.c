@@ -140,6 +140,45 @@ static void event_handler(struct esb_evt const *event) {
     }
 }
 
+void tx_thread() {
+    payload_t payload;
+
+    while (true)
+    {
+        if (k_msgq_get(&m_msgq_tx_payloads, &payload, K_FOREVER) == 0) {
+            int64_t delta = k_uptime_delta(&payload.timestamp);
+            if (delta < 0 || delta > TIMEOUT_MS) {
+                LOG_DBG("event timeout expired, skip event");
+                continue;
+            }
+
+            if (esb_write_payload(&payload.payload) == 0) {
+                continue;
+            }
+            else {
+                LOG_DBG("esb_write_payload returned %d", ret);
+                if (ret == -EMSGSIZE) {
+                    // msg size too large, discard it
+                    LOG_WRN("esb_tx_fifo: tx_payload size too large (%d) > CONFIG_ESB_MAX_PAYLOAD_LENGTH (%d)",
+                            payload.payload.length, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
+                }
+                else {
+                    LOG_DBG("other errors, retry later");
+                }
+            }
+
+            ret = esb_start_tx();
+            if (ret == -ENODATA) {
+                LOG_DBG("fifo is empty");
+            }
+        }
+    }
+}
+
+K_THREAD_DEFINE(tx_thread_id, STACKSIZE,
+        tx_thread, NULL, NULL, NULL,
+        1, 0, 0);
+
 static int clocks_start(void) {
     int err;
     int res;
@@ -169,6 +208,8 @@ static int clocks_start(void) {
     } while (err);
 
     LOG_DBG("HF clock started");
+
+    k_thread_suspend(tx_thread_id);
     return 0;
 }
 
@@ -217,7 +258,7 @@ static int esb_initialize(app_esb_mode_t mode) {
         esb_start_rx();
     }
 
-    // tx_fail_count = 0;
+    tx_fail_count = 0;
 
     return 0;
 }
@@ -429,9 +470,11 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) 
     switch (type) {
         case APP_TS_STARTED:
             app_esb_resume();
+            k_thread_resume(tx_thread_id);
             break;
         case APP_TS_STOPPED:
             app_esb_suspend();
+            k_thread_suspend(tx_thread_id);
             break;
     }
 }

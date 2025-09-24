@@ -20,11 +20,11 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
     switch(event->evt_type) {
         case APP_ESB_EVT_TX_SUCCESS:
             // LOG_DBG("ESB TX sent");
-            pull_packet_from_tx_msgq();
+            // pull_packet_from_tx_msgq();
             break;
         case APP_ESB_EVT_TX_FAIL:
             // LOG_WRN("ESB TX failed");
-            pull_packet_from_tx_msgq();
+            // pull_packet_from_tx_msgq();
             break;
         case APP_ESB_EVT_RX:
             int ret = k_msgq_put(&rx_msgq, event->payload->data, K_NO_WAIT);
