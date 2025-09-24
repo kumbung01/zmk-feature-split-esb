@@ -56,7 +56,7 @@ uint8_t esb_addr_prefix[8] = DT_INST_PROP(0, addr_prefix);
 
 static app_esb_callback_t m_callback;
 
-extern struct k_work_q esb_work_q;
+// extern struct k_work_q esb_work_q;
 
 // Define a buffer of payloads to store TX payloads in between timeslots
 K_MSGQ_DEFINE(m_msgq_tx_payloads, sizeof(payload_t), 
@@ -86,7 +86,7 @@ static void event_handler(struct esb_evt const *event) {
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
             if (m_mode == APP_ESB_MODE_PTX) {
                 if (tx_fail_count > 0) {
-                    esb_flush_tx();
+                    esb_pop_tx();
                     tx_fail_count = 0;
                 }
                 else {
@@ -111,91 +111,92 @@ static void event_handler(struct esb_evt const *event) {
     }
 }
 
-void pull_tx_queue(struct k_work *_work) {
-    payload_t payload = {0};
-    int ret = 0;
-    int64_t now = k_uptime_get();
-    while (k_msgq_num_used_get(&m_msgq_tx_payloads) > 0) {
-        if (esb_tx_full()) {
-            continue;
-        }
-
-        ret = k_msgq_get(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
-        if (ret) {
-            continue;
-        }
-
-        int64_t age = now - payload.timestamp;
-        if (age < 0 || age > TIMEOUT_MS) {
-            continue;
-        }
-
-        ret = esb_write_payload(&payload.payload);
-        if (ret == 0) {
-            if (m_mode == APP_ESB_MODE_PTX) {
-                ret = esb_start_tx();
-                if (ret == -ENODATA) {
-                    LOG_DBG("fifo is empty");
-                }
-            }
-        }
-        else {
-            LOG_DBG("esb_write_payload returned %d", ret);
-            if (ret == -EMSGSIZE) {
-                // msg size too large, discard it
-                continue;
-            }
-            else {
-                LOG_DBG("other errors, retry later");
-                k_msgq_put(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
-                break;
-            }
-        }    
-    }
-}
-
-static K_WORK_DEFINE(pull_tx_queue_work, pull_tx_queue);
-
-// void tx_thread() {
+// void pull_tx_queue(struct k_work *_work) {
 //     payload_t payload = {0};
 //     int ret = 0;
-//     while (true)
-//     {
-//         if (k_msgq_get(&m_msgq_tx_payloads, &payload, K_FOREVER) == 0) {
-//             int64_t delta = k_uptime_delta(&payload.timestamp); // <<< 수정필요, 자꾸 최신화됨
-//             if (delta < 0 || delta > TIMEOUT_MS) {
-//                 LOG_DBG("event timeout expired, skip event");
-//                 continue;
-//             }
+//     int64_t now = k_uptime_get();
+//     while (k_msgq_num_used_get(&m_msgq_tx_payloads) > 0) {
+//         if (esb_tx_full()) {
+//             continue;
+//         }
 
-//             ret = esb_write_payload(&payload.payload);
-//             if (ret == 0) {
-//                 if (m_mode == APP_ESB_MODE_PTX) {
-//                     ret = esb_start_tx();
-//                     if (ret == -ENODATA) {
-//                         LOG_DBG("fifo is empty");
-//                     }
-//                 }
-//             }
-//             else {
-//                 LOG_DBG("esb_write_payload returned %d", ret);
-//                 if (ret == -EMSGSIZE) {
-//                     // msg size too large, discard it
-//                     LOG_WRN("esb_tx_fifo: tx_payload size too large (%d) > CONFIG_ESB_MAX_PAYLOAD_LENGTH (%d)",
-//                             payload.payload.length, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
-//                     continue;
-//                 }
-//                 else {
-//                     LOG_DBG("other errors, retry later");
+//         ret = k_msgq_get(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
+//         if (ret) {
+//             continue;
+//         }
+
+//         int64_t age = now - payload.timestamp;
+//         if (age < 0 || age > TIMEOUT_MS) {
+//             continue;
+//         }
+
+//         ret = esb_write_payload(&payload.payload);
+//         if (ret == 0) {
+//             if (m_mode == APP_ESB_MODE_PTX) {
+//                 ret = esb_start_tx();
+//                 if (ret == -ENODATA) {
+//                     LOG_DBG("fifo is empty");
 //                 }
 //             }
 //         }
+//         else {
+//             LOG_DBG("esb_write_payload returned %d", ret);
+//             if (ret == -EMSGSIZE) {
+//                 // msg size too large, discard it
+//                 continue;
+//             }
+//             else {
+//                 LOG_DBG("other errors, retry later");
+//                 k_msgq_put(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
+//                 break;
+//             }
+//         }    
 //     }
 // }
 
-// K_THREAD_DEFINE(tx_thread_id, 1300,
-//         tx_thread, NULL, NULL, NULL,
-//         5, 0, 0);
+// static K_WORK_DEFINE(pull_tx_queue_work, pull_tx_queue);
+
+void tx_thread() {
+    payload_t payload = {0};
+    int ret = 0;
+    while (true)
+    {
+        if (k_msgq_get(&m_msgq_tx_payloads, &payload, K_FOREVER) == 0) {
+            int64_t delta = k_uptime_get() - payload.timestamp;
+            if (delta < 0 || delta > TIMEOUT_MS) {
+                LOG_DBG("event timeout expired, skip event");
+                continue;
+            }
+
+            ret = esb_write_payload(&payload.payload);
+            if (ret == 0) {
+                if (m_mode == APP_ESB_MODE_PTX) {
+                    ret = esb_start_tx();
+                    if (ret == -ENODATA) {
+                        LOG_DBG("fifo is empty");
+                    }
+                }
+            }
+            else {
+                LOG_DBG("esb_write_payload returned %d", ret);
+                if (ret == -EMSGSIZE) {
+                    // msg size too large, discard it
+                    LOG_WRN("esb_tx_fifo: tx_payload size too large (%d) > CONFIG_ESB_MAX_PAYLOAD_LENGTH (%d)",
+                            payload.payload.length, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
+                    continue;
+                }
+                else {
+                    k_msgq_put(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
+                    LOG_DBG("other errors, retry later");
+                }
+            }
+        }
+    }
+}
+
+K_THREAD_DEFINE(tx_thread_id, 1300,
+        tx_thread, NULL, NULL, NULL,
+        3, 0, 0);
 
 
 static int clocks_start(void) {
@@ -421,10 +422,10 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
         LOG_WRN("Failed to queue esb tx_payload_q (%d)", ret);
     }
 
-    if (m_active) {
-        // k_wakeup(tx_thread_id);
-        k_work_submit_to_queue(&esb_work_q, &pull_tx_queue_work);
-    }
+    // if (m_active) {
+    //     // k_wakeup(tx_thread_id);
+    //     k_work_submit_to_queue(&esb_work_q, &pull_tx_queue_work);
+    // }
 
     return ret;
 }
@@ -498,11 +499,11 @@ static int on_activity_state(const zmk_event_t *eh) {
     if (m_mode == APP_ESB_MODE_PTX) {
         if (state_ev->state != ZMK_ACTIVITY_ACTIVE && m_enabled) {
             zmk_split_esb_set_enable(false);
-            // k_thread_suspend(tx_thread_id);
+            k_thread_suspend(tx_thread_id);
         }
         else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !m_enabled) {
             zmk_split_esb_set_enable(true);
-            // k_thread_resume(tx_thread_id);
+            k_thread_resume(tx_thread_id);
         }
     }
 
