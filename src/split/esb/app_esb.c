@@ -111,7 +111,7 @@ static void event_handler(struct esb_evt const *event) {
     }
 }
 
-void pull_tx_queue(struct work *work) {
+void pull_tx_queue(struct k_work *_work) {
     payload_t payload = {0};
     int ret = 0;
     int64_t now = k_uptime_get();
