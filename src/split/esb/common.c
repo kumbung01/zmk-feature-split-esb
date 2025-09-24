@@ -16,7 +16,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 
 struct k_work_q rx_work_q;
-K_THREAD_STACK_DEFINE(rx_work_q_stack, CONFIG_ZMK_SPLIT_BLE_PERIPHERAL_STACK_SIZE);
+K_THREAD_STACK_DEFINE(rx_work_q_stack, 1300);
 K_MSGQ_DEFINE(rx_msgq, sizeof(struct esb_data_envelope), CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
 
 void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state) {
