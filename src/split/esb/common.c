@@ -30,12 +30,6 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
             // pull_packet_from_tx_msgq();
             break;
         case APP_ESB_EVT_RX:
-            int ret = k_msgq_put(&rx_msgq, event->payload->data, K_NO_WAIT);
-            if (ret) {
-                LOG_WRN("rx msgq put fail(%d)", ret);
-                break;
-            }
-
             // LOG_DBG("RX + %3d and now buffer is %3d", received, ring_buf_size_get(state->rx_buf));
             if (state->process_tx_callback) {
                 state->process_tx_callback();

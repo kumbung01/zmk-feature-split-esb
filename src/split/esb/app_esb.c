@@ -68,7 +68,7 @@ static bool m_enabled = false;
 
 
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
-
+extern struct k_msgq rx_msgq;
 static volatile uint32_t tx_fail_count = 0;
 static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
@@ -103,6 +103,7 @@ static void event_handler(struct esb_evt const *event) {
             if (esb_read_rx_payload(&rx_payload) == 0) {
                 // LOG_DBG("Chunk %d, len: %d", rx_payload.pid, rx_payload.length);
                 // LOG_DBG("Packet len: %d", rx_payload.length);
+                k_msgq_put(&rx_msgq, payload->data, K_NO_WAIT);
                 m_event.evt_type = APP_ESB_EVT_RX;
                 m_event.payload = &rx_payload;
                 m_callback(&m_event);
