@@ -64,7 +64,7 @@ K_MSGQ_DEFINE(m_msgq_tx_payloads, sizeof(payload_t),
 
 static app_esb_mode_t m_mode;
 static bool m_active = false;
-bool m_enabled = false;
+static bool m_enabled = false;
 
 
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
