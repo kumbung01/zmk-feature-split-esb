@@ -369,7 +369,7 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
 
     if (k_msgq_num_free_get(&m_msgq_tx_payloads) == 0) {
         LOG_WRN("esb tx_payload_q full, dropping oldest packet");
-        if (k_msgq_get(&m_msgq_tx_payloads, &payload, K_NO_WAIT) != 0) { // drop the oldest packet
+        if (k_msgq_get(&m_msgq_tx_payloads, &payload, K_FOREVER) != 0) { // drop the oldest packet
             LOG_WRN("msgq drop fail, early return");
 
             return 0;
@@ -398,7 +398,7 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     payload.payload.length = tx_packet->len;
     memcpy(payload.payload.data, tx_packet->data, tx_packet->len);
     
-    ret = k_msgq_put(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
+    ret = k_msgq_put(&m_msgq_tx_payloads, &payload, K_FOREVER);
 
     // *** deprecated pre-emptive queuing logic ***
     // if (ret == -EAGAIN || ret == -ENOMSG) {
