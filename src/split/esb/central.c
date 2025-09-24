@@ -93,10 +93,6 @@ static int split_central_esb_send_command(uint8_t source,
     size_t pfx_len = sizeof(env.prefix) + payload_size;
     memcpy(buf, &env, pfx_len);
 
-    struct esb_msg_postfix postfix = {.crc = crc32_ieee((void *)&env, pfx_len)};
-
-    memcpy(buf + pfx_len, &postfix, sizeof(struct esb_msg_postfix));
-
     app_esb_data_t data;
     data.len = pfx_len + sizeof(struct esb_msg_postfix);
     data.data = buf;
