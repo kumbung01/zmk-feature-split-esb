@@ -81,11 +81,7 @@ static int split_central_esb_send_command(uint8_t source,
     size_t payload_size =
         data_size + sizeof(source) + sizeof(enum zmk_split_transport_central_command_type);
 
-    struct esb_data_envelope env = {.prefix = {
-                                            .magic_prefix = ZMK_SPLIT_ESB_ENVELOPE_MAGIC_PREFIX,
-                                            .payload_size = payload_size,
-                                        },
-                                        .command = {
+    struct esb_data_envelope env = {    .command = {
                                             .source = source,
                                             .cmd = cmd,
                                         }};
@@ -188,8 +184,6 @@ static void publish_events_work(struct k_work *work) {
 // static void publish_events_thread(void) {
 //     struct esb_event_envelope env;
 //     while (true) { 
-//         if (k_msgq_num_used_get(&rx_msgq) > 0)
-
 //         int err = k_msgq_get(&rx_msgq, &env, K_FOREVER);
 //         if (err) {
 //             LOG_WRN("k_msgq get fail(%d)", err);

@@ -170,7 +170,7 @@ void tx_thread() {
                     continue;
                 }
                 else {
-                    k_msgq_put(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
+                    k_msgq_put(&m_msgq_tx_payloads, &payload, K_FOREVER);
                     k_msleep(1);
                     LOG_DBG("other errors, retry later");
                 }
@@ -181,7 +181,7 @@ void tx_thread() {
 
 K_THREAD_DEFINE(tx_thread_id, 2048,
         tx_thread, NULL, NULL, NULL,
-        1, 0, 0);
+        0, 0, 0);
 
 static int clocks_start(void) {
     int err;
@@ -459,12 +459,12 @@ static int app_esb_resume(void) {
     if(m_mode == APP_ESB_MODE_PTX) {
         err = esb_initialize(m_mode);
         m_active = true;
-        pull_packet_from_tx_msgq();
+        // pull_packet_from_tx_msgq();
     }
     else {
         err = esb_initialize(m_mode);
         m_active = true;
-        pull_packet_from_tx_msgq();
+        // pull_packet_from_tx_msgq();
     }
 
     return err;
