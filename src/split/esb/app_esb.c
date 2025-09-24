@@ -19,7 +19,6 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(app_esb, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
-
 #define DT_DRV_COMPAT zmk_esb_split
 #if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
 
@@ -476,12 +475,10 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) 
         case APP_TS_STARTED:
             app_esb_resume();
             k_thread_resume(tx_thread_id);
-            k_thread_resume(publish_events_thread_id);
             break;
         case APP_TS_STOPPED:
             app_esb_suspend();
             k_thread_suspend(tx_thread_id);
-            k_thread_suspend(publish_events_thread_id);
             break;
     }
 }
