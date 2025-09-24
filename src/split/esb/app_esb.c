@@ -124,11 +124,12 @@ void tx_thread() {
             }
 
             ret = esb_write_payload(&payload.payload);
-
             if (ret == 0) {
-                ret = esb_start_tx();
-                if (ret == -ENODATA) {
-                    LOG_DBG("fifo is empty");
+                if (m_mode == APP_ESB_MODE_PTX) {
+                    ret = esb_start_tx();
+                    if (ret == -ENODATA) {
+                        LOG_DBG("fifo is empty");
+                    }
                 }
             }
             else {
@@ -141,7 +142,6 @@ void tx_thread() {
                 }
                 else {
                     k_msgq_put(&m_msgq_tx_payloads, &payload, K_FOREVER);
-                    k_msleep(1);
                     LOG_DBG("other errors, retry later");
                 }
             }
@@ -376,9 +376,9 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
         LOG_WRN("Failed to queue esb tx_payload_q (%d)", ret);
     }
 
-    if (m_active) {
-        k_wakeup(tx_thread_id);
-    }
+    // if (m_active) {
+    //     k_wakeup(tx_thread_id);
+    // }
 
     return ret;
 }
