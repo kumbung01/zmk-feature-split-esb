@@ -73,7 +73,7 @@ static ssize_t get_payload_data_size(const struct zmk_split_transport_peripheral
 }
 
 extern struct k_msgq m_msgq_tx_payloads;
-extern struct k_work_q rx_work_q;
+extern struct k_work_q esb_work_q;
 
 static int
 split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event) {
@@ -153,7 +153,9 @@ static int zmk_split_esb_peripheral_init(void) {
         LOG_ERR("zmk_split_esb_init failed (ret %d)", ret);
         return ret;
     }
-    k_work_submit_to_queue(&rx_work_q, &notify_status_work);
+    service_init();
+
+    k_work_submit_to_queue(&esb_work_q, &notify_status_work);
     return 0;
 }
 
@@ -174,7 +176,7 @@ static void process_tx_cb(void) {
                     return;
                 }
 
-                k_work_submit_to_queue(&rx_work_q, &publish_commands);
+                k_work_submit_to_queue(&esb_work_q, &publish_commands);
             }
             break;
         case -EAGAIN:
