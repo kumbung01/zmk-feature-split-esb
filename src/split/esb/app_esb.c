@@ -115,7 +115,7 @@ void pull_tx_queue(struct k_work *_work) {
     payload_t payload = {0};
     int ret = 0;
     int64_t now = k_uptime_get();
-    while (k_msgq_num_used_get(&m_msgq_tx_payloads, &payload) > 0) {
+    while (k_msgq_num_used_get(&m_msgq_tx_payloads) > 0) {
         if (esb_tx_full()) {
             continue;
         }
