@@ -147,7 +147,7 @@ void pull_tx_queue(struct k_work *_work) {
             }
             else {
                 LOG_DBG("other errors, retry later");
-
+                k_msgq_put(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
                 break;
             }
         }    
