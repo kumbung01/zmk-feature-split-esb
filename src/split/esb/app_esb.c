@@ -164,7 +164,7 @@ void tx_thread() {
                 }
                 else {
                     k_msgq_put(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
-                    k_msleep(1000);
+                    k_msleep(1);
                     LOG_DBG("other errors, retry later");
                 }
             }
