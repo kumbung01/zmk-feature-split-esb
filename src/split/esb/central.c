@@ -112,7 +112,7 @@ static bool is_enabled;
 
 static int split_central_esb_set_enabled(bool enabled) {
     is_enabled = enabled;
-    
+
     return zmk_split_esb_set_enable(enabled);
 }
 
@@ -157,7 +157,6 @@ static int zmk_split_esb_central_init(void) {
         return ret;
     }
     k_work_submit(&notify_status_work);
-    k_thread_suspend(publish_events_thread_id);
     return 0;
 }
 
