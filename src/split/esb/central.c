@@ -22,6 +22,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #include <zmk/split/transport/types.h>
 #include <zmk/event_manager.h>
 #include <zmk/events/position_state_changed.h>
+#include <zmk/events/activity_state_changed.h>
 #include <zmk/events/sensor_event.h>
 #include <zmk/pointing/input_split.h>
 #include <zmk/hid_indicators_types.h>
@@ -198,15 +199,13 @@ static int on_activity_state(const zmk_event_t *eh) {
         return 0;
     }
 
-    if (m_mode == APP_ESB_MODE_PTX) {
-        if (state_ev->state != ZMK_ACTIVITY_ACTIVE && m_enabled) {
-            m_enabled = true;
-            k_thread_suspend(publish_events_thread_id);
-        }
-        else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !m_enabled) {
-            m_enabled = false;
-            k_thread_resume(publish_events_thread_id);
-        }
+    if (state_ev->state != ZMK_ACTIVITY_ACTIVE && m_enabled) {
+        m_enabled = true;
+        k_thread_suspend(publish_events_thread_id);
+    }
+    else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !m_enabled) {
+        m_enabled = false;
+        k_thread_resume(publish_events_thread_id);
     }
 
     return 0;
