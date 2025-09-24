@@ -86,7 +86,7 @@ static int split_central_esb_send_command(uint8_t source,
                                             .cmd = cmd,
                                         }};
 
-    size_t pfx_len = sizeof(env.prefix) + payload_size;
+    size_t pfx_len = payload_size;
     memcpy(buf, &env, pfx_len);
 
     app_esb_data_t data;
