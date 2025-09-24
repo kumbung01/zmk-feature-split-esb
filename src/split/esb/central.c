@@ -41,11 +41,6 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
     ((sizeof(struct esb_command_envelope) + sizeof(struct esb_msg_postfix)) *                      \
      CONFIG_ZMK_SPLIT_ESB_CMD_BUFFER_ITEMS) + 4
 
-
-K_THREAD_DEFINE(publish_events_thread_id, STACKSIZE,
-        publish_events_thread, NULL, NULL, NULL,
-        0, 0, 0);
-
 static void publish_events_work(struct k_work *work);
 
 K_WORK_DEFINE(publish_events, publish_events_work);
@@ -206,3 +201,7 @@ static void publish_events_thread(void) {
         }
     }
 }
+
+K_THREAD_DEFINE(publish_events_thread_id, STACKSIZE,
+        publish_events_thread, NULL, NULL, NULL,
+        0, 0, 0);

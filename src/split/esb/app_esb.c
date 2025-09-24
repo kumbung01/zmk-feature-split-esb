@@ -114,7 +114,7 @@ static void event_handler(struct esb_evt const *event) {
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
             if (m_mode == APP_ESB_MODE_PTX) {
-                if (tx_fail_count > 0) {
+                if (tx_fail_count > 1) {
                     esb_flush_tx();
                     tx_fail_count = 0;
                 }
@@ -175,6 +175,10 @@ void tx_thread() {
                 }
             }
         }
+
+        if (!m_active) {
+            k_msleep(10000);
+        }
     }
 }
 
@@ -211,8 +215,7 @@ static int clocks_start(void) {
     } while (err);
 
     LOG_DBG("HF clock started");
-
-    k_thread_suspend(tx_thread_id);
+    
     return 0;
 }
 
@@ -474,11 +477,9 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) 
     switch (type) {
         case APP_TS_STARTED:
             app_esb_resume();
-            k_thread_resume(tx_thread_id);
             break;
         case APP_TS_STOPPED:
             app_esb_suspend();
-            k_thread_suspend(tx_thread_id);
             break;
     }
 }
