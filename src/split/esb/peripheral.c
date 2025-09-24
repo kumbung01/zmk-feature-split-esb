@@ -166,7 +166,7 @@ static void process_tx_cb(void) {
         switch (item_err) {
         case 0:
             if (env.payload.cmd.type == ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_POLL_EVENTS) {
-                pull_packet_from_tx_msgq();
+                // pull_packet_from_tx_msgq();
             } else {
                 int ret = k_msgq_put(&cmd_msg_queue, &env.payload.cmd, K_NO_WAIT);
                 if (ret < 0) {
