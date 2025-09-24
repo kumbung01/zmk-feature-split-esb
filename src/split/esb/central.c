@@ -44,7 +44,6 @@ extern struct k_msgq rx_msgq;
 
 static struct zmk_split_esb_async_state async_state = {
     .process_tx_work = &publish_events,
-    .process_rx_work_q = rx_work_q;
     .rx_size_process_trigger = ESB_MSG_EXTRA_SIZE + 1,
 };
 
@@ -146,14 +145,6 @@ static void notify_status_work_cb(struct k_work *_work) { notify_transport_statu
 
 static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
-static int service_init(void) {
-    static const struct k_work_queue_config queue_config = {
-        .name = "Split Peripheral Notification Queue"};
-    k_work_queue_start(&rx_work_q, rx_work_q_stack, K_THREAD_STACK_SIZEOF(rx_work_q_stack),
-                       CONFIG_ZMK_SPLIT_BLE_PERIPHERAL_PRIORITY, &queue_config);
-
-    return 0;
-}
 
 static int zmk_split_esb_central_init(void) {
     int ret = zmk_split_esb_init(APP_ESB_MODE_PRX, zmk_split_esb_on_prx_esb_callback);

@@ -71,7 +71,6 @@ struct zmk_split_esb_async_state {
 
     struct k_work_delayable restart_rx_work;
     struct k_work *process_tx_work;
-    struct k_work_q *process_tx_work_q;
     const struct gpio_dt_spec *dir_gpio;
 
 };
