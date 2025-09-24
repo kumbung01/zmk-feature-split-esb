@@ -63,9 +63,7 @@ struct zmk_split_esb_async_state {
     size_t rx_size_process_trigger;
 
     struct ring_buf *tx_buf;
-    struct k_sem    *tx_sem;
     struct ring_buf *rx_buf;
-    struct k_sem    *rx_sem;
 
     zmk_split_esb_process_tx_callback_t process_tx_callback;
 
@@ -73,7 +71,9 @@ struct zmk_split_esb_async_state {
 
     struct k_work_delayable restart_rx_work;
     struct k_work *process_tx_work;
+    struct k_work_q *process_tx_work_q;
     const struct gpio_dt_spec *dir_gpio;
+
 };
 
 void zmk_split_esb_async_tx(struct zmk_split_esb_async_state *state);

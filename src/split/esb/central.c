@@ -34,12 +34,9 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #define MPSL_THREAD_PRIO             CONFIG_MPSL_THREAD_COOP_PRIO
 #define STACKSIZE                    CONFIG_MAIN_STACK_SIZE
 
-#define RX_BUFFER_SIZE                                                                             \
-    ((sizeof(struct esb_event_envelope) + sizeof(struct esb_msg_postfix)) *                        \
-     CONFIG_ZMK_SPLIT_ESB_EVENT_BUFFER_ITEMS) * 2 + 4
-#define TX_BUFFER_SIZE                                                                             \
-    ((sizeof(struct esb_command_envelope) + sizeof(struct esb_msg_postfix)) *                      \
-     CONFIG_ZMK_SPLIT_ESB_CMD_BUFFER_ITEMS) + 4
+K_THREAD_STACK_DEFINE(rx_work_q_stack, CONFIG_ZMK_SPLIT_BLE_PERIPHERAL_STACK_SIZE);
+
+struct k_work_q rx_work_q;
 
 static void publish_events_work(struct k_work *work);
 
@@ -49,6 +46,7 @@ extern struct k_msgq rx_msgq;
 
 static struct zmk_split_esb_async_state async_state = {
     .process_tx_work = &publish_events,
+    .process_rx_work_q = rx_work_q;
     .rx_size_process_trigger = ESB_MSG_EXTRA_SIZE + 1,
 };
 
@@ -150,13 +148,25 @@ static void notify_status_work_cb(struct k_work *_work) { notify_transport_statu
 
 static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
+static int service_init(void) {
+    static const struct k_work_queue_config queue_config = {
+        .name = "Split Peripheral Notification Queue"};
+    k_work_queue_start(&rx_work_q, rx_work_q_stack, K_THREAD_STACK_SIZEOF(rx_work_q_stack),
+                       CONFIG_ZMK_SPLIT_BLE_PERIPHERAL_PRIORITY, &queue_config);
+
+    return 0;
+}
+
 static int zmk_split_esb_central_init(void) {
     int ret = zmk_split_esb_init(APP_ESB_MODE_PRX, zmk_split_esb_on_prx_esb_callback);
     if (ret) {
         LOG_ERR("zmk_split_esb_init failed (err %d)", ret);
         return ret;
     }
-    k_work_submit(&notify_status_work);
+
+    service_init();
+
+    k_work_submit_to_queue(&rx_work_q, &notify_status_work);
     return 0;
 }
 
@@ -165,7 +175,7 @@ SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DE
 static void publish_events_work(struct k_work *work) {
     struct esb_data_envelope env;
     while (k_msgq_num_used_get(&rx_msgq) > 0) {
-        int item_err = k_msgq_get(&rx_msgq, &env, K_NO_WAIT);
+        int item_err = k_msgq_get(&rx_msgq, &env, K_MSEC(10));
             // zmk_split_esb_get_item(&rx_buf, (uint8_t *)&env, async_state.rx_sem, sizeof(struct esb_event_envelope));
         switch (item_err) {
         case 0:
@@ -180,22 +190,9 @@ static void publish_events_work(struct k_work *work) {
             return;
         }
     }
-}
 
-static void publish_events_thread(void) {
-    struct esb_data_envelope env;
-    while (true) { 
-        int err = k_msgq_get(&rx_msgq, &env, K_FOREVER);
-        if (err) {
-            LOG_WRN("k_msgq get fail(%d)", err);
-        }
-        else {
-            zmk_split_transport_central_peripheral_event_handler(&esb_central, env.event.source,
-                                                                 env.event.event);
-        }
+    if (k_msgq_num_used_get(&rx_msgq) > 0) {
+        k_work_submit_to_queue(&rx_work_q, &publish_events);
     }
 }
 
-K_THREAD_DEFINE(publish_events_thread_id, STACKSIZE,
-        publish_events_thread, NULL, NULL, NULL,
-        5, 0, 0);
