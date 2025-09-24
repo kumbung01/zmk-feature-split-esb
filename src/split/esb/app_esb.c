@@ -175,7 +175,7 @@ void tx_thread() {
     }
 }
 
-K_THREAD_DEFINE(tx_thread_id, STACKSIZE,
+K_THREAD_DEFINE(tx_thread_id, 2048,
         tx_thread, NULL, NULL, NULL,
         1, 0, 0);
 
