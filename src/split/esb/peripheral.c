@@ -41,8 +41,6 @@ static const uint8_t peripheral_id = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID;
 
 static void publish_commands_work(struct k_work *work);
 
-extern struct k_msgq esb_work_q;
-
 K_WORK_DEFINE(publish_commands, publish_commands_work);
 
 static void process_tx_cb(void);
