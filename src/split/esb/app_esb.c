@@ -116,13 +116,12 @@ static void event_handler(struct esb_evt const *event) {
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
             if (m_mode == APP_ESB_MODE_PTX) {
                 if (tx_fail_count > 0) {
-                    esb_pop_tx();
+                    esb_flush_tx();
                     tx_fail_count = 0;
                 }
                 else {
                     tx_fail_count++;
                 }
-
             }
              
             m_callback(&m_event);
@@ -132,8 +131,6 @@ static void event_handler(struct esb_evt const *event) {
             struct esb_payload rx_payload = {0};
             if (esb_read_rx_payload(&rx_payload) == 0) {
                 // LOG_DBG("Chunk %d, len: %d", rx_payload.pid, rx_payload.length);
-                LOG_DBG("RX pipe: %d", rx_payload.pipe);
-                LOG_DBG("RX rssi: %d", rx_payload.rssi);
                 // LOG_DBG("Packet len: %d", rx_payload.length);
                 m_event.evt_type = APP_ESB_EVT_RX;
                 m_event.payload = &rx_payload;
@@ -231,7 +228,7 @@ static int esb_initialize(app_esb_mode_t mode) {
 
 int pull_packet_from_tx_msgq(void) {
     int ret = 0;
-    payload_t payload;
+    static payload_t payload;
     uint32_t cnt = 0;
     int64_t now = k_uptime_get();
 
@@ -252,7 +249,7 @@ int pull_packet_from_tx_msgq(void) {
 
 
         int64_t age = now - payload.timestamp;
-        if (age > TIMEOUT_MS)
+        if (age > TIMEOUT_MS || age < 0)
         {
             LOG_DBG("event timeout expired, skip event");
             continue;
@@ -335,7 +332,7 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     }
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-    payload.payload.pipe = ((struct esb_command_envelope*)tx_packet->data)->payload.source; // this should match tx FIFO pipe
+    payload.payload.pipe = ((struct esb_data_envelope*)tx_packet->data)->event.source; // this should match tx FIFO pipe
 #else
     payload.payload.pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID; // use the peripheral_id as the ESB pipe number, offset by 1
 #endif
