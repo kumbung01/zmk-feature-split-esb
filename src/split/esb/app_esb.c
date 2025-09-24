@@ -141,8 +141,8 @@ static void event_handler(struct esb_evt const *event) {
 }
 
 void tx_thread() {
-    payload_t payload;
-
+    payload_t payload = {0};
+    int ret = 0;
     while (true)
     {
         if (k_msgq_get(&m_msgq_tx_payloads, &payload, K_FOREVER) == 0) {
@@ -152,15 +152,14 @@ void tx_thread() {
                 continue;
             }
 
-            if (esb_write_payload(&payload.payload) == 0) {
-                continue;
-            }
-            else {
+            ret = esb_write_payload(&payload.payload);
+            if (ret != 0){
                 LOG_DBG("esb_write_payload returned %d", ret);
                 if (ret == -EMSGSIZE) {
                     // msg size too large, discard it
                     LOG_WRN("esb_tx_fifo: tx_payload size too large (%d) > CONFIG_ESB_MAX_PAYLOAD_LENGTH (%d)",
                             payload.payload.length, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
+                    continue;
                 }
                 else {
                     LOG_DBG("other errors, retry later");
