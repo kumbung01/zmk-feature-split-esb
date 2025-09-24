@@ -35,7 +35,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #define STACKSIZE                    CONFIG_MAIN_STACK_SIZE
 
 
-extern struct k_work_q rx_work_q;
+extern struct k_work_q esb_work_q;
 
 static void publish_events_work(struct k_work *work);
 K_WORK_DEFINE(publish_events, publish_events_work);
@@ -155,7 +155,7 @@ static int zmk_split_esb_central_init(void) {
 
     service_init();
 
-    k_work_submit_to_queue(&rx_work_q, &notify_status_work);
+    k_work_submit_to_queue(&esb_work_q, &notify_status_work);
     return 0;
 }
 
@@ -164,7 +164,7 @@ SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DE
 static void publish_events_work(struct k_work *work) {
     struct esb_data_envelope env;
     while (k_msgq_num_used_get(&rx_msgq) > 0) {
-        if (k_msgq_get(&rx_msgq, &env, K_NO_WAIT) == 0) {
+        if (k_msgq_get(&rx_msgq, &env, K_FOREVER) == 0) {
             zmk_split_transport_central_peripheral_event_handler(&esb_central, 
                                                                 env.event.source,
                                                                 env.event.event);

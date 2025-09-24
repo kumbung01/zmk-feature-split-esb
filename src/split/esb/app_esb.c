@@ -141,8 +141,7 @@ void tx_thread() {
                     continue;
                 }
                 else {
-                    k_msgq_put(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
-                    k_msleep(1);
+                    k_msgq_put(&m_msgq_tx_payloads, &payload, K_FOREVER);
                     LOG_DBG("other errors, retry later");
                 }
             }
@@ -152,7 +151,7 @@ void tx_thread() {
 
 K_THREAD_DEFINE(tx_thread_id, 2048,
         tx_thread, NULL, NULL, NULL,
-        3, 0, 0);
+        5, 0, 0);
 
 static int clocks_start(void) {
     int err;
