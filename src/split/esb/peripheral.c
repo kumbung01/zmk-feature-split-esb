@@ -72,6 +72,7 @@ static ssize_t get_payload_data_size(const struct zmk_split_transport_peripheral
 
 extern struct k_msgq m_msgq_tx_payloads;
 extern struct k_work_q esb_work_q;
+extern struct k_msgq rx_msgq;
 
 static int
 split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event) {
