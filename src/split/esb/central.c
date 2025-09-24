@@ -180,7 +180,7 @@ static void publish_events_thread() {
             zmk_split_transport_central_peripheral_event_handler(&esb_central, 
                                                             env.event.source,
                                                             env.event.event);
-            k_yield();
+            // k_yield();
         }
         
     }
@@ -188,5 +188,5 @@ static void publish_events_thread() {
 
 K_THREAD_DEFINE(publish_events_thread_id, STACKSIZE,
         publish_events_thread, NULL, NULL, NULL,
-        K_PRIO_COOP(MPSL_THREAD_PRIO), 0, 0);
+        3, 0, 0);
 
