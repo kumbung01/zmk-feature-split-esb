@@ -121,6 +121,7 @@ static void event_handler(struct esb_evt const *event) {
                 }
                 else {
                     tx_fail_count++;
+                    esb_start_tx();
                 }
             }
              
@@ -162,6 +163,8 @@ void tx_thread() {
                     continue;
                 }
                 else {
+                    k_msgq_put(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
+                    k_msleep(1000);
                     LOG_DBG("other errors, retry later");
                 }
             }
@@ -408,7 +411,8 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     }
 
     if (m_active) {
-        pull_packet_from_tx_msgq();
+        // pull_packet_from_tx_msgq();
+        k_wakeup(tx_thread_id);
     }
 
     return ret;
