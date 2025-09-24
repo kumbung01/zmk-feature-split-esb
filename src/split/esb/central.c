@@ -164,7 +164,7 @@ SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DE
 static void publish_events_work(struct k_work *work) {
     struct esb_data_envelope env;
     while (k_msgq_num_used_get(&rx_msgq) > 0) {
-        int item_err = k_msgq_get(&rx_msgq, &env, K_MSEC(10));
+        int item_err = k_msgq_get(&rx_msgq, &env, K_NO_WAIT);
             // zmk_split_esb_get_item(&rx_buf, (uint8_t *)&env, async_state.rx_sem, sizeof(struct esb_event_envelope));
         switch (item_err) {
         case 0:
@@ -178,10 +178,6 @@ static void publish_events_work(struct k_work *work) {
             LOG_WRN("Issue fetching an item from the RX buffer: %d", item_err);
             return;
         }
-    }
-
-    if (k_msgq_num_used_get(&rx_msgq) > 0) {
-        k_work_submit_to_queue(&rx_work_q, &publish_events);
     }
 }
 
