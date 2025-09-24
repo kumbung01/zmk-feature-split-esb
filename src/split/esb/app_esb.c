@@ -103,7 +103,7 @@ static void event_handler(struct esb_evt const *event) {
             if (esb_read_rx_payload(&rx_payload) == 0) {
                 // LOG_DBG("Chunk %d, len: %d", rx_payload.pid, rx_payload.length);
                 // LOG_DBG("Packet len: %d", rx_payload.length);
-                k_msgq_put(&rx_msgq, rx_payload->data, K_NO_WAIT);
+                k_msgq_put(&rx_msgq, rx_payload.data, K_NO_WAIT);
                 m_event.evt_type = APP_ESB_EVT_RX;
                 m_event.payload = &rx_payload;
                 m_callback(&m_event);
