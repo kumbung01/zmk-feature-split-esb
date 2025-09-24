@@ -14,8 +14,9 @@
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
-extern struct k_work_q rx_work_q;
 
+struct k_work_q rx_work_q;
+K_THREAD_STACK_DEFINE(rx_work_q_stack, CONFIG_ZMK_SPLIT_BLE_PERIPHERAL_STACK_SIZE);
 K_MSGQ_DEFINE(rx_msgq, sizeof(struct esb_data_envelope), CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
 
 void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state) {
@@ -49,4 +50,13 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
             LOG_ERR("Unknown APP ESB event!");
             break;
     }
+}
+
+int service_init(void) {
+    static const struct k_work_queue_config queue_config = {
+        .name = "Split Peripheral Notification Queue"};
+    k_work_queue_start(&rx_work_q, rx_work_q_stack, K_THREAD_STACK_SIZEOF(rx_work_q_stack),
+                       CONFIG_ZMK_SPLIT_BLE_PERIPHERAL_PRIORITY, &queue_config);
+
+    return 0;
 }

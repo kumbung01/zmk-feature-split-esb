@@ -34,12 +34,10 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #define MPSL_THREAD_PRIO             CONFIG_MPSL_THREAD_COOP_PRIO
 #define STACKSIZE                    CONFIG_MAIN_STACK_SIZE
 
-K_THREAD_STACK_DEFINE(rx_work_q_stack, CONFIG_ZMK_SPLIT_BLE_PERIPHERAL_STACK_SIZE);
 
-struct k_work_q rx_work_q;
+extern struct k_work_q rx_work_q;
 
 static void publish_events_work(struct k_work *work);
-
 K_WORK_DEFINE(publish_events, publish_events_work);
 
 extern struct k_msgq rx_msgq;
