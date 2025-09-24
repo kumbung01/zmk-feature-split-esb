@@ -22,7 +22,6 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #include <zmk/split/transport/types.h>
 #include <zmk/event_manager.h>
 #include <zmk/events/position_state_changed.h>
-#include <zmk/events/activity_state_changed.h>
 #include <zmk/events/sensor_event.h>
 #include <zmk/pointing/input_split.h>
 #include <zmk/hid_indicators_types.h>
@@ -191,25 +190,3 @@ K_THREAD_DEFINE(publish_events_thread_id, STACKSIZE,
         publish_events_thread, NULL, NULL, NULL,
         K_PRIO_COOP(MPSL_THREAD_PRIO), 0, 0);
 
-
-static bool m_enabled = false;
-static int on_activity_state(const zmk_event_t *eh) {
-    struct zmk_activity_state_changed *state_ev = as_zmk_activity_state_changed(eh);
-    if (!state_ev) {
-        return 0;
-    }
-
-    if (state_ev->state != ZMK_ACTIVITY_ACTIVE && m_enabled) {
-        m_enabled = true;
-        k_thread_suspend(publish_events_thread_id);
-    }
-    else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !m_enabled) {
-        m_enabled = false;
-        k_thread_resume(publish_events_thread_id);
-    }
-
-    return 0;
-}
-
-ZMK_LISTENER(zmk_split_esb_idle_sleeper, on_activity_state);
-ZMK_SUBSCRIPTION(zmk_split_esb_idle_sleeper, zmk_activity_state_changed);
