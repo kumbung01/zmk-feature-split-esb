@@ -88,16 +88,12 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     size_t payload_size =
         data_size + sizeof(peripheral_id) + sizeof(enum zmk_split_transport_peripheral_event_type);
 
-    struct esb_data_envelope env = {.prefix = {
-                                        .magic_prefix = ZMK_SPLIT_ESB_ENVELOPE_MAGIC_PREFIX,
-                                        .payload_size = payload_size,
-                                    },
-                                    .event = {
+    struct esb_data_envelope env = { .event = {
                                         .source = peripheral_id,
                                         .event = *event,
                                     }};
 
-    size_t pfx_len = sizeof(env.prefix) + payload_size;
+    size_t pfx_len = payload_size;
     memcpy(buf, &env, pfx_len);
 
     app_esb_data_t data;

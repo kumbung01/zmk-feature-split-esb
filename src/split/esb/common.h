@@ -40,7 +40,7 @@ struct esb_event_envelope {
 } __packed;
 
 struct esb_data_envelope {
-    struct esb_msg_prefix prefix;
+    // struct esb_msg_prefix prefix;
     union {
         struct esb_event_payload event;
         struct esb_command_payload command;

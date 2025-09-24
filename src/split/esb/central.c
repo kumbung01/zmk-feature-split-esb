@@ -90,7 +90,7 @@ static int split_central_esb_send_command(uint8_t source,
     memcpy(buf, &env, pfx_len);
 
     app_esb_data_t data;
-    data.len = pfx_len + sizeof(struct esb_msg_postfix);
+    data.len = pfx_len;
     data.data = buf;
     zmk_split_esb_send(&data);
 
