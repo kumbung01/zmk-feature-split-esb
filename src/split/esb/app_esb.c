@@ -203,7 +203,7 @@ void tx_thread() {
     }
 }
 
-K_THREAD_DEFINE(tx_thread_id, 1024,
+K_THREAD_DEFINE(tx_thread_id, 2048,
         tx_thread, NULL, NULL, NULL,
         K_PRIO_COOP(MPSL_THREAD_PRIO), 0, 0);
 #endif

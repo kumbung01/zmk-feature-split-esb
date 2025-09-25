@@ -16,7 +16,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 
 struct k_work_q esb_work_q;
-K_THREAD_STACK_DEFINE(esb_work_q_stack, 1024);
+K_THREAD_STACK_DEFINE(esb_work_q_stack, 2048);
 
 int service_init(void) {
     static const struct k_work_queue_config queue_config = {
