@@ -204,6 +204,7 @@ static void tx_thread(void *p1, void *p2, void *p3) {
 
         /* Wait until a buffer is available */
         buf = net_buf_get(&tx_queue, K_FOREVER);
+        LOG_DBG("hci_rpmsg_module tx_thread");
         /* Pass buffer to the stack */
         err = bt_send(buf);
         if (err) {
@@ -294,6 +295,7 @@ static void rx_thread(void *p1, void *p2, void *p3) {
         struct net_buf *buf;
 
         buf = net_buf_get(&rx_queue, K_FOREVER);
+        LOG_DBG("hci_rpmsg_module rx thread");
         // NRF_P0->OUTSET = BIT(30);
         hci_rpmsg_send(buf, HCI_REGULAR_MSG);
         // NRF_P0->OUTCLR = BIT(30);
@@ -434,6 +436,7 @@ int hci_rpmsg_run(void) {
         struct net_buf *buf;
 
         buf = net_buf_get(&rx_queue, K_FOREVER);
+        LOG_DBG("hci_rpmsg_run");
         hci_rpmsg_send(buf, HCI_REGULAR_MSG);
         // NRF_P0->OUT ^= BIT(30);
     }
