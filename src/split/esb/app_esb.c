@@ -194,14 +194,12 @@ void tx_thread() {
                 LOG_DBG("fifo is empty");
             }
         }
-
-        k_yield();
     }
 }
 
 K_THREAD_DEFINE(tx_thread_id, 2048,
         tx_thread, NULL, NULL, NULL,
-        K_PRIO_COOP(MPSL_THREAD_PRIO), 0, 0);
+        1, 0, 0);
 #endif
 
 
@@ -254,7 +252,7 @@ static int esb_initialize(app_esb_mode_t mode) {
     config.mode = (mode == APP_ESB_MODE_PTX) ? ESB_MODE_PTX : ESB_MODE_PRX;
     config.tx_mode = ESB_TXMODE_MANUAL_START;
     config.selective_auto_ack = true;
-    config.tx_output_power = -4;
+    config.tx_output_power = -8;
 
     err = esb_init(&config);
 
