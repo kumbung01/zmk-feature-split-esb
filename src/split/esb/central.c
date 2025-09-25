@@ -177,17 +177,17 @@ static void publish_events_thread() {
     uint8_t count = 0;
     while (true)
     {
-        count++;
         if (k_msgq_get(&rx_msgq, &env, K_FOREVER) == 0) {
             zmk_split_transport_central_peripheral_event_handler(&esb_central, 
                                                             env.event.source,
                                                             env.event.event);
         }
 
-        if (count >= CONFIG_ESB_RX_FIFO_SIZE) {
-            count = 0;
-            k_yield();
-        }
+        // count++;
+        // if (count >= CONFIG_ESB_RX_FIFO_SIZE) {
+        //     count = 0;
+        //     k_yield();
+        // }
     }
 }
 
