@@ -200,6 +200,11 @@ void tx_thread() {
                 LOG_DBG("fifo is empty");
             }
         }
+
+        if (count++ >= CONFIG_ESB_TX_FIFO_SIZE) {
+            count = 0;
+            k_yield();
+        }
     }
 }
 
