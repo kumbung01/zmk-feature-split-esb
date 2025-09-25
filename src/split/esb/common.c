@@ -14,9 +14,19 @@
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
-
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 struct k_work_q esb_work_q;
 K_THREAD_STACK_DEFINE(esb_work_q_stack, CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE);
+
+int service_init(void) {
+    static const struct k_work_queue_config queue_config = {
+        .name = "Split Peripheral Notification Queue"};
+    k_work_queue_start(&esb_work_q, esb_work_q_stack, K_THREAD_STACK_SIZEOF(esb_work_q_stack),
+                       3, &queue_config);
+
+    return 0;
+}
+#endif
 K_MSGQ_DEFINE(rx_msgq, sizeof(struct esb_data_envelope), CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
 
 void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state) {
@@ -46,11 +56,3 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
     }
 }
 
-int service_init(void) {
-    static const struct k_work_queue_config queue_config = {
-        .name = "Split Peripheral Notification Queue"};
-    k_work_queue_start(&esb_work_q, esb_work_q_stack, K_THREAD_STACK_SIZEOF(esb_work_q_stack),
-                       3, &queue_config);
-
-    return 0;
-}
