@@ -163,6 +163,11 @@ void tx_thread() {
                 continue;
             }
 
+            if (m_mode == APP_ESB_MODE_PTX && tx_failed) {
+                tx_failed = false;
+                esb_pop_tx();
+            }
+
             ret = esb_write_payload(&payload.payload);
             if (ret == 0) {
                 LOG_DBG("tx write success");
@@ -184,10 +189,6 @@ void tx_thread() {
         }
 
         if (m_mode == APP_ESB_MODE_PTX) {
-            if (tx_failed) {
-                tx_failed = false;
-                esb_pop_tx();
-            }
             ret = esb_start_tx();
             if (ret == -ENODATA) {
                 LOG_DBG("fifo is empty");
