@@ -177,7 +177,6 @@ static void publish_events_thread() {
     while (true)
     {
         if (k_msgq_get(&rx_msgq, &env, K_FOREVER) == 0) {
-            LOG_DBG("central publish thread");
             zmk_split_transport_central_peripheral_event_handler(&esb_central, 
                                                             env.event.source,
                                                             env.event.event);
