@@ -168,7 +168,7 @@ void tx_thread() {
         if (k_msgq_get(&m_msgq_tx_payloads, &payload, K_FOREVER) == 0) {
             LOG_DBG("app_esb tx thread");
             int64_t delta = k_uptime_get() - payload.timestamp;
-            if (delta < 0 || delta > TIMEOUT_MS) {
+            if (delta > TIMEOUT_MS) {
                 LOG_DBG("event timeout expired, skip event");
                 continue;
             }
@@ -196,12 +196,14 @@ void tx_thread() {
                 }
             }
         }
+
+        k_yield();
     }
 }
 
 K_THREAD_DEFINE(tx_thread_id, 2048,
         tx_thread, NULL, NULL, NULL,
-        3, 0, 0);
+        -1, 0, 0);
 #endif
 
 
