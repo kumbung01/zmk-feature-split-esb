@@ -56,8 +56,6 @@ uint8_t esb_addr_prefix[8] = DT_INST_PROP(0, addr_prefix);
 
 static app_esb_callback_t m_callback;
 
-// extern struct k_work_q esb_work_q;
-
 // Define a buffer of payloads to store TX payloads in between timeslots
 K_MSGQ_DEFINE(m_msgq_tx_payloads, sizeof(payload_t), 
               CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
@@ -112,50 +110,55 @@ static void event_handler(struct esb_evt const *event) {
     }
 }
 
-// void pull_tx_queue(struct k_work *_work) {
-//     payload_t payload = {0};
-//     int ret = 0;
-//     int64_t now = k_uptime_get();
-//     while (k_msgq_num_used_get(&m_msgq_tx_payloads) > 0) {
-//         if (esb_tx_full()) {
-//             continue;
-//         }
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+extern k_work_q esb_work_q;
 
-//         ret = k_msgq_get(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
-//         if (ret) {
-//             continue;
-//         }
+void pull_tx_queue(struct k_work *_work) {
+    payload_t payload = {0};
+    int ret = 0;
+    int64_t now = k_uptime_get();
+    while (k_msgq_num_used_get(&m_msgq_tx_payloads) > 0) {
+        if (esb_tx_full()) {
+            continue;
+        }
 
-//         int64_t age = now - payload.timestamp;
-//         if (age < 0 || age > TIMEOUT_MS) {
-//             continue;
-//         }
+        ret = k_msgq_get(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
+        if (ret) {
+            continue;
+        }
 
-//         ret = esb_write_payload(&payload.payload);
-//         if (ret == 0) {
-//             if (m_mode == APP_ESB_MODE_PTX) {
-//                 ret = esb_start_tx();
-//                 if (ret == -ENODATA) {
-//                     LOG_DBG("fifo is empty");
-//                 }
-//             }
-//         }
-//         else {
-//             LOG_DBG("esb_write_payload returned %d", ret);
-//             if (ret == -EMSGSIZE) {
-//                 // msg size too large, discard it
-//                 continue;
-//             }
-//             else {
-//                 LOG_DBG("other errors, retry later");
-//                 k_msgq_put(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
-//                 break;
-//             }
-//         }    
-//     }
-// }
+        int64_t age = now - payload.timestamp;
+        if (age < 0 || age > TIMEOUT_MS) {
+            continue;
+        }
 
-// static K_WORK_DEFINE(pull_tx_queue_work, pull_tx_queue);
+        ret = esb_write_payload(&payload.payload);
+        if (ret == 0) {
+            if (m_mode == APP_ESB_MODE_PTX) {
+                ret = esb_start_tx();
+                if (ret == -ENODATA) {
+                    LOG_DBG("fifo is empty");
+                }
+            }
+        }
+        else {
+            LOG_DBG("esb_write_payload returned %d", ret);
+            if (ret == -EMSGSIZE) {
+                // msg size too large, discard it
+                continue;
+            }
+            else {
+                LOG_DBG("other errors, retry later");
+                k_msgq_put(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
+                break;
+            }
+        }    
+    }
+}
+
+static K_WORK_DEFINE(pull_tx_queue_work, pull_tx_queue);
+
+#else
 
 void tx_thread() {
     payload_t payload = {0};
@@ -197,7 +200,8 @@ void tx_thread() {
 
 K_THREAD_DEFINE(tx_thread_id, 1300,
         tx_thread, NULL, NULL, NULL,
-        3, 0, 0);
+        1, 0, 0);
+#endif
 
 
 static int clocks_start(void) {
@@ -286,68 +290,6 @@ static int esb_initialize(app_esb_mode_t mode) {
 #define ESB_TX_FIFO_REQUE_MAX (CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS \
                                * CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT)
 
-#if 0
-int pull_packet_from_tx_msgq(void) {
-    int ret = 0;
-    static payload_t payload;
-    uint32_t cnt = 0;
-    int64_t now = k_uptime_get();
-
-    while (!esb_tx_full() && cnt++ < CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS) {
-        if (k_msgq_num_used_get(&m_msgq_tx_payloads) == 0) {
-            LOG_DBG("No more packets in msgq");
-
-            break;
-        }
-
-        ret = k_msgq_get(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
-        if (ret != 0)
-        {
-            LOG_WRN("Failed to get packet from msgq");
-
-            continue;
-        }
-
-
-        int64_t age = now - payload.timestamp;
-        if (age > TIMEOUT_MS || age < 0)
-        {
-            LOG_DBG("event timeout expired, skip event");
-            continue;
-        }
-
-        ret = esb_write_payload(&payload.payload);
-        if (ret == 0)
-        {
-            continue;
-        }
-
-        else
-        {
-            LOG_DBG("esb_write_payload returned %d", ret);
-            if (ret == -EMSGSIZE) {
-                // msg size too large, discard it
-                LOG_WRN("esb_tx_fifo: tx_payload size too large (%d) > CONFIG_ESB_MAX_PAYLOAD_LENGTH (%d)",
-                        payload.payload.length, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
-                continue;
-            }
-            else {
-                LOG_DBG("other errors, retry later");
-                
-                break;
-            }
-        }
-    }
-
-    ret = esb_start_tx();
-    if (ret == -ENODATA) {
-        LOG_DBG("fifo is empty");
-    }
-
-    return ret;
-}
-#endif
-
 int zmk_split_esb_init(app_esb_mode_t mode, app_esb_callback_t callback) {
     int ret;
     m_callback = callback;
@@ -366,7 +308,9 @@ int zmk_split_esb_init(app_esb_mode_t mode, app_esb_callback_t callback) {
         LOG_ERR("esb_set_rf_channel failed: %d", ret);
     }
 
-    // k_thread_suspend(tx_thread_id);
+#if !IS_ENALBED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+    k_thread_suspend(tx_thread_id);
+#endif
 
     return 0;
 }
@@ -423,10 +367,11 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
         LOG_WRN("Failed to queue esb tx_payload_q (%d)", ret);
     }
 
-    // if (m_active) {
-    //     // k_wakeup(tx_thread_id);
-    //     k_work_submit_to_queue(&esb_work_q, &pull_tx_queue_work);
-    // }
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+    if (m_active) {
+        k_work_submit_to_queue(&esb_work_q, &pull_tx_queue_work);
+    }
+#endif
 
     return ret;
 }
@@ -500,11 +445,15 @@ static int on_activity_state(const zmk_event_t *eh) {
     if (m_mode == APP_ESB_MODE_PTX) {
         if (state_ev->state != ZMK_ACTIVITY_ACTIVE && m_enabled) {
             zmk_split_esb_set_enable(false);
+#if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
             k_thread_suspend(tx_thread_id);
+#endif
         }
         else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !m_enabled) {
             zmk_split_esb_set_enable(true);
+#if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
             k_thread_resume(tx_thread_id);
+#endif
         }
     }
 
