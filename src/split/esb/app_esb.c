@@ -203,7 +203,7 @@ void tx_thread() {
     }
 }
 
-K_THREAD_DEFINE(tx_thread_id, 2048,
+K_THREAD_DEFINE(tx_thread_id, 1024,
         tx_thread, NULL, NULL, NULL,
         K_PRIO_COOP(MPSL_THREAD_PRIO), 0, 0);
 #endif
@@ -335,14 +335,14 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     int ret = 0;
     payload_t payload;
 
-    // if (k_msgq_num_free_get(&m_msgq_tx_payloads) == 0) {
-    //     LOG_WRN("esb tx_payload_q full, dropping oldest packet");
-    //     if (k_msgq_get(&m_msgq_tx_payloads, &payload, K_NO_WAIT) != 0) { // drop the oldest packet
-    //         LOG_WRN("msgq drop fail, early return");
+    if (k_msgq_num_free_get(&m_msgq_tx_payloads) == 0) {
+        LOG_WRN("esb tx_payload_q full, dropping oldest packet");
+        if (k_msgq_get(&m_msgq_tx_payloads, &payload, K_NO_WAIT) != 0) { // drop the oldest packet
+            LOG_WRN("msgq drop fail, early return");
 
-    //         return 0;
-    //     }
-    // }
+            return 0;
+        }
+    }
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     payload.payload.pipe = ((struct esb_data_envelope*)tx_packet->data)->event.source; // this should match tx FIFO pipe
