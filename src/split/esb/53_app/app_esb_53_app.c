@@ -22,7 +22,7 @@
 
 #define CBOR_BUF_SIZE 16
 
-LOG_MODULE_REGISTER(rpc_app, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(rpc_app, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 /* This defines a transport for our RPC command group.
  * Here we use the IPC transport (nrf_rpc_ipc.h):

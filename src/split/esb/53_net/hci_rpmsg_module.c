@@ -28,7 +28,7 @@
 #include <zephyr/logging/log_ctrl.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(hci_rpmsg, LOG_LEVEL_INF);// CONFIG_BT_LOG_LEVEL);
+LOG_MODULE_REGISTER(hci_rpmsg, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);// CONFIG_BT_LOG_LEVEL);
 
 static struct ipc_ept hci_ept;
 

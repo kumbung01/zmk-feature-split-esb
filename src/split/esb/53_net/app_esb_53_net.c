@@ -22,7 +22,7 @@
 
 #define CBOR_BUF_SIZE 16
 
-LOG_MODULE_REGISTER(rpc_net, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(rpc_net, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 /* See rpc_app.c (in the cpuapp/ dir) for an explanation. */
 NRF_RPC_IPC_TRANSPORT(esb_group_tr, DEVICE_DT_GET(DT_NODELABEL(ipc0)), "nrf_rpc_ept");
