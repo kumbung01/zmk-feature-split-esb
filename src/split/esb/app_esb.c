@@ -151,10 +151,12 @@ static K_WORK_DEFINE(pull_tx_queue_work, pull_tx_queue);
 void tx_thread() {
     payload_t payload = {0};
     int ret = 0;
+    int count = 0;
     while (true)
     {
         if (k_msgq_get(&m_msgq_tx_payloads, &payload, K_FOREVER) == 0) {
             LOG_DBG("app_esb tx thread");
+
             int64_t delta = k_uptime_get() - payload.timestamp;
             if (delta > TIMEOUT_MS) {
                 LOG_DBG("event timeout expired, skip event");
@@ -187,12 +189,18 @@ void tx_thread() {
                 LOG_DBG("fifo is empty");
             }
         }
+        
+        count++;
+        if (count >= CONFIG_ESB_TX_FIFO_SIZE) {
+            count = 0;
+            k_yield();
+        }
     }
 }
 
 K_THREAD_DEFINE(tx_thread_id, 2048,
         tx_thread, NULL, NULL, NULL,
-        1, 0, 0);
+        K_PRIO_COOP(MPSL_THREAD_PRIO), 0, 0);
 #endif
 
 
