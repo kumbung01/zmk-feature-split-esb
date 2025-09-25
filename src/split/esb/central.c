@@ -178,13 +178,15 @@ static void publish_events_thread() {
     while (true)
     {
         if (k_msgq_get(&rx_msgq, &env, K_FOREVER) == 0) {
-            zmk_split_transport_central_peripheral_event_handler(&esb_central, 
+            int ret = zmk_split_transport_central_peripheral_event_handler(&esb_central, 
                                                             env.event.source,
                                                             env.event.event);
-            
+
+            if (ret)
+                k_yield();
         }
 
-        if (count++ >= CONFIG_ESB_TX_FIFO_SIZE) {
+        if (count++ >= CONFIG_ESB_RX_FIFO_SIZE) {
             count = 0;
             k_yield();
         }
