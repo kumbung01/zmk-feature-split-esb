@@ -308,7 +308,7 @@ int zmk_split_esb_init(app_esb_mode_t mode, app_esb_callback_t callback) {
         LOG_ERR("esb_set_rf_channel failed: %d", ret);
     }
 
-#if !IS_ENALBED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+#if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     k_thread_suspend(tx_thread_id);
 #endif
 
