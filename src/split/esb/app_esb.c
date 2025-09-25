@@ -69,6 +69,7 @@ static bool m_enabled = false;
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 extern struct k_msgq rx_msgq;
 // static volatile uint32_t tx_fail_count = 0;
+static bool tx_failed = false;
 static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
     switch (event->evt_id) {
@@ -77,32 +78,19 @@ static void event_handler(struct esb_evt const *event) {
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
             // tx_fail_count = 0;
-
+            tx_failed = false;
             m_callback(&m_event);
             break;
         case ESB_EVENT_TX_FAILED:
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
-            esb_pop_tx();
-            // if (m_mode == APP_ESB_MODE_PTX) {
-            //     if (tx_fail_count > 0) {
-            //         esb_pop_tx();
-            //         tx_fail_count = 0;
-            //     }
-            //     else {
-            //         tx_fail_count++;
-            //         esb_start_tx();
-            //     }
-            // }
-             
+            tx_failed = true;
             m_callback(&m_event);
             break;
         case ESB_EVENT_RX_RECEIVED:
             // LOG_DBG("RX SUCCESS");
             struct esb_payload rx_payload = {0};
             if (esb_read_rx_payload(&rx_payload) == 0) {
-                // LOG_DBG("Chunk %d, len: %d", rx_payload.pid, rx_payload.length);
-                // LOG_DBG("Packet len: %d", rx_payload.length);
                 k_msgq_put(&rx_msgq, rx_payload.data, K_NO_WAIT);
                 m_event.evt_type = APP_ESB_EVT_RX;
                 m_event.payload = &rx_payload;
@@ -177,12 +165,7 @@ void tx_thread() {
 
             ret = esb_write_payload(&payload.payload);
             if (ret == 0) {
-                if (m_mode == APP_ESB_MODE_PTX) {
-                    ret = esb_start_tx();
-                    if (ret == -ENODATA) {
-                        LOG_DBG("fifo is empty");
-                    }
-                }
+                LOG_DBG("tx write success");
             }
             else {
                 LOG_DBG("esb_write_payload returned %d", ret);
@@ -195,7 +178,19 @@ void tx_thread() {
                 else {
                     k_msgq_put(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
                     LOG_DBG("other errors, retry later");
+                    continue;
                 }
+            }
+        }
+
+        if (m_mode == APP_ESB_MODE_PTX) {
+            if (tx_failed) {
+                tx_failed = false;
+                esb_pop_tx();
+            }
+            ret = esb_start_tx();
+            if (ret == -ENODATA) {
+                LOG_DBG("fifo is empty");
             }
         }
 
@@ -335,14 +330,14 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     int ret = 0;
     payload_t payload;
 
-    if (k_msgq_num_free_get(&m_msgq_tx_payloads) == 0) {
-        LOG_WRN("esb tx_payload_q full, dropping oldest packet");
-        if (k_msgq_get(&m_msgq_tx_payloads, &payload, K_NO_WAIT) != 0) { // drop the oldest packet
-            LOG_WRN("msgq drop fail, early return");
+    // if (k_msgq_num_free_get(&m_msgq_tx_payloads) == 0) {
+    //     LOG_WRN("esb tx_payload_q full, dropping oldest packet");
+    //     if (k_msgq_get(&m_msgq_tx_payloads, &payload, K_NO_WAIT) != 0) { // drop the oldest packet
+    //         LOG_WRN("msgq drop fail, early return");
 
-            return 0;
-        }
-    }
+    //         return 0;
+    //     }
+    // }
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     payload.payload.pipe = ((struct esb_data_envelope*)tx_packet->data)->event.source; // this should match tx FIFO pipe
