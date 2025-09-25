@@ -111,7 +111,7 @@ static void event_handler(struct esb_evt const *event) {
 }
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-extern k_work_q esb_work_q;
+extern struct k_work_q esb_work_q;
 
 void pull_tx_queue(struct k_work *_work) {
     payload_t payload = {0};
