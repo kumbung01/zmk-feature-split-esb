@@ -182,12 +182,7 @@ static void publish_events_thread() {
                                                             env.event.source,
                                                             env.event.event);
         }
-
-        count++;
-        if (count >= CONFIG_ESB_RX_FIFO_SIZE) {
-            count = 0;
-            k_yield();
-        }
+        k_yield();
     }
 }
 
