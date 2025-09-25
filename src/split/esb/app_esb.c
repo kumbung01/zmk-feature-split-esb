@@ -68,7 +68,7 @@ static bool m_enabled = false;
 
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 extern struct k_msgq rx_msgq;
-// static volatile uint32_t tx_fail_count = 0;
+static volatile uint32_t tx_fail_count = 0;
 static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
     switch (event->evt_id) {
@@ -76,13 +76,23 @@ static void event_handler(struct esb_evt const *event) {
    
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
-            // tx_fail_count = 0;
+            tx_fail_count = 0;
             m_callback(&m_event);
             break;
         case ESB_EVENT_TX_FAILED:
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
-            esb_pop_tx();
+            if (m_mode == APP_ESB_MODE_PTX) {
+                if (tx_fail_count > 0) {
+                    esb_pop_tx();
+                    tx_fail_count = 0;
+                }
+                else {
+                    esb_start_tx();
+                    tx_fail_count++;
+                }
+            }
+            
             m_callback(&m_event);
             break;
         case ESB_EVENT_RX_RECEIVED:
@@ -178,6 +188,7 @@ void tx_thread() {
                 else {
                     k_msgq_put(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
                     LOG_DBG("other errors, retry later");
+                    k_yield();
                     continue;
                 }
             }
@@ -189,8 +200,6 @@ void tx_thread() {
                 LOG_DBG("fifo is empty");
             }
         }
-
-        k_yield();
     }
 }
 
@@ -249,7 +258,7 @@ static int esb_initialize(app_esb_mode_t mode) {
     config.mode = (mode == APP_ESB_MODE_PTX) ? ESB_MODE_PTX : ESB_MODE_PRX;
     config.tx_mode = ESB_TXMODE_MANUAL_START;
     config.selective_auto_ack = true;
-    config.tx_output_power = -8;
+    config.tx_output_power = -4;
 
     err = esb_init(&config);
 
@@ -278,7 +287,7 @@ static int esb_initialize(app_esb_mode_t mode) {
         esb_start_rx();
     }
 
-    // tx_fail_count = 0;
+    tx_fail_count = 0;
 
     return 0;
 }
