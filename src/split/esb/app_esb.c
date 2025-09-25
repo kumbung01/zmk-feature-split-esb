@@ -282,7 +282,8 @@ static int esb_initialize(app_esb_mode_t mode) {
         esb_start_rx();
     }
 
-    tx_fail_count = 0;
+    // tx_fail_count = 0;
+    tx_failed = false;
 
     return 0;
 }
