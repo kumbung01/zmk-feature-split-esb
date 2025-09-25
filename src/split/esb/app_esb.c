@@ -203,7 +203,7 @@ void tx_thread() {
 
 K_THREAD_DEFINE(tx_thread_id, 2048,
         tx_thread, NULL, NULL, NULL,
-        -1, 0, 0);
+        K_PRIO_COOP(MPSL_THREAD_PRIO), 0, 0);
 #endif
 
 
@@ -431,15 +431,9 @@ static int app_esb_resume(void) {
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) {
     switch (type) {
         case APP_TS_STARTED:
-#if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-            k_thread_resume(tx_thread_id);
-#endif
             app_esb_resume();
             break;
         case APP_TS_STOPPED:
-#if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-            k_thread_suspend(tx_thread_id);
-#endif
             app_esb_suspend();
             break;
     }
@@ -453,9 +447,15 @@ static int on_activity_state(const zmk_event_t *eh) {
 
     if (m_mode == APP_ESB_MODE_PTX) {
         if (state_ev->state != ZMK_ACTIVITY_ACTIVE && m_enabled) {
+#if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+            k_thread_suspend(tx_thread_id);
+#endif
             zmk_split_esb_set_enable(false);
         }
         else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !m_enabled) {
+#if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+            k_thread_resume(tx_thread_id);
+#endif
             zmk_split_esb_set_enable(true);
         }
     }

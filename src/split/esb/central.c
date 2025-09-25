@@ -189,5 +189,5 @@ static void publish_events_thread() {
 
 K_THREAD_DEFINE(publish_events_thread_id, STACKSIZE,
         publish_events_thread, NULL, NULL, NULL,
-        -1, 0, 0);
+        K_PRIO_COOP(MPSL_THREAD_PRIO), 0, 0);
 
