@@ -181,6 +181,11 @@ static void publish_events_thread() {
             zmk_split_transport_central_peripheral_event_handler(&esb_central, 
                                                             env.event.source,
                                                             env.event.event);
+            
+        }
+
+        if (count++ >= CONFIG_ESB_TX_FIFO_SIZE) {
+            count = 0;
             k_yield();
         }
     }
