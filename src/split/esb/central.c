@@ -181,19 +181,11 @@ static void publish_events_thread() {
             int ret = zmk_split_transport_central_peripheral_event_handler(&esb_central, 
                                                             env.event.source,
                                                             env.event.event);
-
-            if (ret)
-                k_yield();
-        }
-
-        if (count++ >= CONFIG_ESB_RX_FIFO_SIZE) {
-            count = 0;
-            k_yield();
         }
     }
 }
 
 K_THREAD_DEFINE(publish_events_thread_id, STACKSIZE,
         publish_events_thread, NULL, NULL, NULL,
-        K_PRIO_COOP(MPSL_THREAD_PRIO), 0, 0);
+        5, 0, 0);
 
