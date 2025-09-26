@@ -161,7 +161,6 @@ static K_WORK_DEFINE(pull_tx_queue_work, pull_tx_queue);
 void tx_thread() {
     payload_t payload = {0};
     int ret = 0;
-    int count = 0;
     while (true)
     {
         if (k_msgq_get(&m_msgq_tx_payloads, &payload, K_FOREVER) == 0) {
@@ -188,7 +187,7 @@ void tx_thread() {
                 else {
                     k_msgq_put(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
                     LOG_DBG("other errors, retry later");
-                    k_yield();
+                    k_msleep(1);
                     continue;
                 }
             }
@@ -200,17 +199,12 @@ void tx_thread() {
                 LOG_DBG("fifo is empty");
             }
         }
-
-        if (count++ >= CONFIG_ESB_TX_FIFO_SIZE) {
-            count = 0;
-            k_yield();
-        }
     }
 }
 
 K_THREAD_DEFINE(tx_thread_id, 1024,
         tx_thread, NULL, NULL, NULL,
-        K_PRIO_COOP(MPSL_THREAD_PRIO), 0, 0);
+        1, 0, 0);
 #endif
 
 
@@ -466,15 +460,9 @@ static int on_activity_state(const zmk_event_t *eh) {
 
     if (m_mode == APP_ESB_MODE_PTX) {
         if (state_ev->state != ZMK_ACTIVITY_ACTIVE && m_enabled) {
-#if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-            k_thread_suspend(tx_thread_id);
-#endif
             zmk_split_esb_set_enable(false);
         }
         else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !m_enabled) {
-#if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-            k_thread_resume(tx_thread_id);
-#endif
             zmk_split_esb_set_enable(true);
         }
     }
