@@ -182,10 +182,15 @@ static void publish_events_thread() {
                                                             env.event.source,
                                                             env.event.event);
         }
+
+        if (count++ >= 5) {
+            count = 0;
+            k_yield();
+        }
     }
 }
 
 K_THREAD_DEFINE(publish_events_thread_id, STACKSIZE,
         publish_events_thread, NULL, NULL, NULL,
-        1, 0, 0);
+        K_PRIO_COOP(MPSL_THREAD_PRIO), 0, 0);
 

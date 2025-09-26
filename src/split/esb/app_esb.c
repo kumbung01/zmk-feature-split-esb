@@ -161,6 +161,7 @@ static K_WORK_DEFINE(pull_tx_queue_work, pull_tx_queue);
 void tx_thread() {
     payload_t payload = {0};
     int ret = 0;
+    size_t count = 0;
     while (true)
     {
         if (k_msgq_get(&m_msgq_tx_payloads, &payload, K_FOREVER) == 0) {
@@ -199,12 +200,17 @@ void tx_thread() {
                 LOG_DBG("fifo is empty");
             }
         }
+        if (count++ >= 2)
+        {
+            count = 0;
+            k_yield();
+        }
     }
 }
 
-K_THREAD_DEFINE(tx_thread_id, 1024,
+K_THREAD_DEFINE(tx_thread_id, 2048,
         tx_thread, NULL, NULL, NULL,
-        1, 0, 0);
+        K_PRIO_COOP(MPSL_THREAD_PRIO), 0, 0);
 #endif
 
 
@@ -312,10 +318,6 @@ int zmk_split_esb_init(app_esb_mode_t mode, app_esb_callback_t callback) {
         LOG_ERR("esb_set_rf_channel failed: %d", ret);
     }
 
-#if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-    k_thread_suspend(tx_thread_id);
-#endif
-
     return 0;
 }
 
@@ -371,11 +373,14 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
         LOG_WRN("Failed to queue esb tx_payload_q (%d)", ret);
     }
 
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     if (m_active) {
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
         k_work_submit_to_queue(&esb_work_q, &pull_tx_queue_work);
-    }
+#else
+        k_wakeup(tx_thread_id);
 #endif
+    }
+
 
     return ret;
 }
