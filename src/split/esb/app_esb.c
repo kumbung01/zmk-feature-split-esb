@@ -454,12 +454,14 @@ static int on_activity_state(const zmk_event_t *eh) {
 
     if (m_mode == APP_ESB_MODE_PTX) {
         if (state_ev->state != ZMK_ACTIVITY_ACTIVE && m_enabled) {
+            LOG_DBG("device not active");
 #if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
             k_thread_suspend(tx_thread_id);
 #endif
             zmk_split_esb_set_enable(false);
         }
         else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !m_enabled) {
+            LOG_DBG("device active");
 #if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
             k_thread_resume(tx_thread_id);
 #endif
