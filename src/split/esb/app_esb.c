@@ -452,16 +452,26 @@ static int on_activity_state(const zmk_event_t *eh) {
         return 0;
     }
 
+    switch(state_ev->state) {
+        case ZMK_ACTIVITY_ACTIVE:
+            LOG_DBG("state: ACTIVE");
+            break;
+        case ZMK_ACTIVITY_IDLE:
+            LOG_DBG("state: IDLE");
+            break;
+        case ZMK_ACTIVITY_SLEEP:
+            LOG_DBG("state: SLEEP");
+            break;
+    }
+
     if (m_mode == APP_ESB_MODE_PTX) {
         if (state_ev->state != ZMK_ACTIVITY_ACTIVE && m_enabled) {
-            LOG_DBG("device not active");
 #if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
             k_thread_suspend(tx_thread_id);
 #endif
             zmk_split_esb_set_enable(false);
         }
         else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !m_enabled) {
-            LOG_DBG("device active");
 #if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
             k_thread_resume(tx_thread_id);
 #endif
