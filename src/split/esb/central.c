@@ -183,7 +183,7 @@ static void publish_events_thread() {
                                                             env.event.event);
         }
 
-        if (count++ >= 5) {
+        if (count++ >= 2) {
             count = 0;
             k_yield();
         }
