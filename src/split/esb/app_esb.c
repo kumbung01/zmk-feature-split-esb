@@ -178,9 +178,10 @@ void tx_thread() {
         while (k_msgq_get(&m_msgq_tx_payloads, &payload, K_NO_WAIT) == 0) {
             LOG_DBG("app_esb tx thread");
 
-            int64_t delta = k_uptime_get() - payload.timestamp;
+            int64_t now = k_uptime_get();
+            int64_t delta = now - payload.timestamp;
             if (delta > TIMEOUT_MS) {
-                LOG_DBG("event timeout expired, skip event");
+                LOG_DBG("event timeout expired, skip event(%lld, %lld, %lld)", now, payload.timestamp, delta);
                 continue;
             }
 
@@ -370,6 +371,7 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
     }
 
     payload.timestamp = k_uptime_get();
+    LOG_DBG("timestamp: %lld", payload.timestamp);
     payload.payload.length = tx_packet->len;
     memcpy(payload.payload.data, tx_packet->data, tx_packet->len);
     
