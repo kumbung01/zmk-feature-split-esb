@@ -69,6 +69,7 @@ static bool m_enabled = false;
 
 
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
+extern struct k_msgq tx_msgq;
 extern struct k_msgq rx_msgq;
 static volatile uint32_t tx_fail_count = 0;
 static void event_handler(struct esb_evt const *event) {
@@ -172,7 +173,7 @@ void tx_thread() {
 
         if (esb_tx_full()) {
             LOG_DBG("esb_tx_full");
-            if (esb_idle()) {
+            if (esb_is_idle()) {
                 LOG_DBG("esb tx full but idle, esb_flush_tx");
                 esb_flush_tx();
             }
