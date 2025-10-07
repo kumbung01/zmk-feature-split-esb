@@ -61,6 +61,8 @@ static app_esb_callback_t m_callback;
 K_MSGQ_DEFINE(m_msgq_tx_payloads, sizeof(payload_t), 
               CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
 
+K_SEM_DEFINE(tx_sem, 0, 1);
+
 static app_esb_mode_t m_mode;
 static bool m_active = false;
 static bool m_enabled = false;
@@ -78,6 +80,7 @@ static void event_handler(struct esb_evt const *event) {
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
             tx_fail_count = 0;
             m_callback(&m_event);
+            k_sem_give(&tx_sem);
             break;
         case ESB_EVENT_TX_FAILED:
             // Forward an event to the application
@@ -164,6 +167,12 @@ void tx_thread() {
     size_t count = 0;
     while (true)
     {
+        k_sem_take(&tx_sem, K_FOREVER);
+
+        if (esb_tx_full()) {
+            continue;
+        }
+
         if (k_msgq_get(&m_msgq_tx_payloads, &payload, K_FOREVER) == 0) {
             LOG_DBG("app_esb tx thread");
 
@@ -199,11 +208,6 @@ void tx_thread() {
             if (ret == -ENODATA) {
                 LOG_DBG("fifo is empty");
             }
-        }
-        if (count++ >= 2)
-        {
-            count = 0;
-            k_yield();
         }
     }
 }
@@ -377,7 +381,7 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet) {
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
         k_work_submit_to_queue(&esb_work_q, &pull_tx_queue_work);
 #else
-        k_wakeup(tx_thread_id);
+        k_sem_give(&tx_sem);
 #endif
     }
 
