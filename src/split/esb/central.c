@@ -41,6 +41,8 @@ static void publish_events_work(struct k_work *work) {}
 K_WORK_DEFINE(publish_events, publish_events_work);
 
 extern struct k_msgq rx_msgq;
+extern struct k_sem tx_sem;
+extern struct k_msgq tx_msgq;
 
 static struct zmk_split_esb_async_state async_state = {
     .process_tx_work = &publish_events,
@@ -52,7 +54,7 @@ static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd) {
     struct esb_data_envelope env = { .source = source,
                                      .timestamp = k_uptime_get(),
-                                     .event = *event
+                                     .command = cmd
                                     };
 
     k_msgq_put(&tx_msgq, &env, K_NO_WAIT);
