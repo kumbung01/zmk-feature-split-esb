@@ -128,7 +128,7 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     payload->noack = true;
 #endif
 
-    pasyload->length = 1; // reserve 1 byte for count
+    payload->length = 1; // reserve 1 byte for count
 
     while (k_msgq_num_used_get(msgq) > 0) {
         k_msgq_peek(msgq, &env);
