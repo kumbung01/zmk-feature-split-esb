@@ -116,7 +116,6 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     int64_t now = k_uptime_get();
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-    payload->pipe = ((struct esb_data_envelope*)payload->data).source; // this should match tx FIFO pipe
     ssize_t (*get_payload_data_size)(const struct zmk_split_transport_central_command *cmd)  = get_payload_data_size_cmd;
 #else
     payload->pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID; // use the peripheral_id as the ESB pipe number
@@ -155,6 +154,11 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
         memcpy(&payload->data[payload->length], &env.buf.data, data_size);
         payload->length += data_size;
         cnt++;
+
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK)
+        payload->pipe = env.source; // use the source as the ESB pipe number
+        break;
+#endif
     }
 
     payload->data[0] = cnt;
