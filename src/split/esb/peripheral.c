@@ -47,7 +47,7 @@ K_WORK_DEFINE(process_tx_work, process_tx_work_handler);
 
 static struct zmk_split_esb_async_state async_state = {
     .rx_size_process_trigger = sizeof(struct esb_command_envelope),
-    .process_tx_work = process_tx_work,
+    .process_tx_work = &process_tx_work,
 };
 
 void zmk_split_esb_on_ptx_esb_callback(app_esb_event_t *event) {
