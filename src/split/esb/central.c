@@ -154,7 +154,7 @@ static void break_packet(struct esb_payload *payload) {
 
     for (int i = 0; i < count; i++) {
         evt.type = (enum zmk_split_transport_peripheral_event_type)data[0];
-        evt.data = (struct zmk_split_transport_peripheral_event)&data[1].data;
+        evt.data = (struct zmk_split_transport_peripheral_event)&data[1];
         data += 1 + get_payload_data_size_evt(&evt);
         LOG_DBG("RX event type %d from source %d", evt.type, source);
         zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
