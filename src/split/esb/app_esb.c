@@ -173,7 +173,7 @@ void tx_thread() {
             continue;
         }
 
-        if (k_msgq_get(&m_msgq_tx_payloads, &payload, K_FOREVER) == 0) {
+        if (k_msgq_get(&m_msgq_tx_payloads, &payload, K_NO_WAIT) == 0) {
             LOG_DBG("app_esb tx thread");
 
             int64_t delta = k_uptime_get() - payload.timestamp;
