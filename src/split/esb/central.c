@@ -147,15 +147,32 @@ static int zmk_split_esb_central_init(void) {
 SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 
 static void break_packet(struct esb_payload *payload) {
-    int count = payload->data[0]; // first byte is count
-    uint8_t source = payload->pipe; // this should match tx FIFO pipe
+    int count = payload->data[0]; // first byte = number of events
+    uint8_t source = payload->pipe;
     uint8_t *data = &payload->data[1];
     struct zmk_split_transport_peripheral_event evt;
 
     for (int i = 0; i < count; i++) {
+        memset(&evt, 0, sizeof(evt));
+
+        // 1️⃣ event type 복원
         evt.type = (enum zmk_split_transport_peripheral_event_type)data[0];
-        evt.data = (struct zmk_split_transport_peripheral_event)data[1];
-        data += 1 + get_payload_data_size_evt(&evt);
+        data += 1;
+
+        // 2️⃣ event payload 복원
+        ssize_t data_size = get_payload_data_size_evt(&evt);
+
+        // 안전 체크
+        if (data_size < 0 || data_size > CONFIG_ESB_MAX_PAYLOAD_LENGTH) {
+            LOG_ERR("Invalid data size %zd for event type %d", data_size, evt.type);
+            break;
+        }
+
+        // 3️⃣ 구조체에 이벤트 데이터 복사
+        memcpy(&evt.data, data, data_size);
+        data += data_size;
+
+        // 4️⃣ 이벤트 핸들러 호출
         LOG_DBG("RX event type %d from source %d", evt.type, source);
         zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
     }

@@ -49,7 +49,7 @@ struct esb_data_envelope {
             uint8_t type;
             uint8_t data[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
         } buf; 
-    }
+    };
 } __packed;
 
 struct esb_msg_postfix {
