@@ -30,6 +30,9 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #include "app_esb.h"
 #include "common.h"
 
+#define MPSL_THREAD_PRIO             CONFIG_MPSL_THREAD_COOP_PRIO
+#define STACKSIZE                    CONFIG_MAIN_STACK_SIZE
+
 #define TX_BUFFER_SIZE                                                                             \
     ((sizeof(struct esb_event_envelope) + sizeof(struct esb_msg_postfix)) *                        \
      CONFIG_ZMK_SPLIT_ESB_EVENT_BUFFER_ITEMS) + 4
@@ -49,8 +52,6 @@ void zmk_split_esb_on_ptx_esb_callback(app_esb_event_t *event) {
 }
 
 
-
-extern struct k_msgq m_msgq_tx_payloads;
 extern struct k_msgq tx_msgq;
 extern struct k_msgq rx_msgq;
 extern struct k_sem tx_sem;
