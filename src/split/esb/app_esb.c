@@ -173,7 +173,7 @@ void tx_thread() {
             continue;
         }
 
-        if (k_msgq_get(&m_msgq_tx_payloads, &payload, K_NO_WAIT) == 0) {
+        while (k_msgq_get(&m_msgq_tx_payloads, &payload, K_NO_WAIT) == 0) {
             LOG_DBG("app_esb tx thread");
 
             int64_t delta = k_uptime_get() - payload.timestamp;
@@ -185,6 +185,7 @@ void tx_thread() {
             ret = esb_write_payload(&payload.payload);
             if (ret == 0) {
                 LOG_DBG("tx write success");
+                break;
             }
             else {
                 LOG_DBG("esb_write_payload returned %d", ret);
@@ -195,10 +196,7 @@ void tx_thread() {
                     continue;
                 }
                 else {
-                    k_msgq_put(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
-                    LOG_DBG("other errors, retry later");
-                    k_msleep(1);
-                    continue;
+                    break;
                 }
             }
         }
