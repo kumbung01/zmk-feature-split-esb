@@ -169,7 +169,7 @@ static void publish_events_thread() {
     }
 }
 
-K_THREAD_DEFINE(publish_events_thread_id, 2048,
+K_THREAD_DEFINE(publish_events_thread_id, 1024,
         publish_events_thread, NULL, NULL, NULL,
         5, 0, 0);
 
