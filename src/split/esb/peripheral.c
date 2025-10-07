@@ -171,5 +171,5 @@ static void publish_events_thread() {
 
 K_THREAD_DEFINE(publish_events_thread_id, 2048,
         publish_events_thread, NULL, NULL, NULL,
-        0, 0, 0);
+        5, 0, 0);
 
