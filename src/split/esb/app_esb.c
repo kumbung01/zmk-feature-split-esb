@@ -205,15 +205,17 @@ void tx_thread() {
                 }
             }
         }
-    }
 
-    if (m_mode == APP_ESB_MODE_PTX) {
-        LOG_DBG("esb_start_tx count %d", count);
-        ret = esb_start_tx();
-        if (ret == -ENODATA) {
-            LOG_DBG("fifo is empty");
+        if (m_mode == APP_ESB_MODE_PTX) {
+            LOG_DBG("esb_start_tx count %d", count);
+            ret = esb_start_tx();
+            if (ret == -ENODATA) {
+                LOG_DBG("fifo is empty");
+            }
         }
     }
+
+
 }
 
 K_THREAD_DEFINE(tx_thread_id, 2048,
