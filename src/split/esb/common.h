@@ -48,7 +48,7 @@ struct esb_data_envelope {
         struct buf {
             uint8_t type;
             uint8_t data[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
-        } 
+        } buf; 
     }
 } __packed;
 
