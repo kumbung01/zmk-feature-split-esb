@@ -168,8 +168,10 @@ void tx_thread() {
     while (true)
     {
         k_sem_take(&tx_sem, K_FOREVER);
+        LOG_DBG("tx thread awake");
 
         if (esb_tx_full()) {
+            LOG_DBG("esb_tx_full");
             continue;
         }
 
@@ -196,12 +198,14 @@ void tx_thread() {
                     continue;
                 }
                 else {
+                    LOG_DBG("other errors, retry later");
                     break;
                 }
             }
         }
 
         if (m_mode == APP_ESB_MODE_PTX) {
+            LOG_DBG("esb_start_tx");
             ret = esb_start_tx();
             if (ret == -ENODATA) {
                 LOG_DBG("fifo is empty");
