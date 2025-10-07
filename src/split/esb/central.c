@@ -37,7 +37,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 extern struct k_work_q esb_work_q;
 
-static void publish_events_work(struct k_work *work);
+static void publish_events_work(struct k_work *work) {}
 K_WORK_DEFINE(publish_events, publish_events_work);
 
 extern struct k_msgq rx_msgq;
