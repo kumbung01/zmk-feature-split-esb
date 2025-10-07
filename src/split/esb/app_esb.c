@@ -156,7 +156,7 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
         payload->length += data_size;
         cnt++;
 
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK)
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
         payload->pipe = env.source; // use the source as the ESB pipe number
         break;
 #endif
