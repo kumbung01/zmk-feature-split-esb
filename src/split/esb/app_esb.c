@@ -116,7 +116,7 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     int64_t now = k_uptime_get();
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-    // payload->pipe = ((struct esb_data_envelope*)payload->data)->event.source; // this should match tx FIFO pipe
+    payload->pipe = ((struct esb_data_envelope*)payload->data).source; // this should match tx FIFO pipe
     ssize_t (*get_payload_data_size)(const struct zmk_split_transport_central_command *cmd)  = get_payload_data_size_cmd;
 #else
     payload->pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID; // use the peripheral_id as the ESB pipe number
@@ -142,6 +142,7 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
         }
 
         k_msgq_get(msgq, &env, K_NO_WAIT);
+        LOG_DBG("now: %lld env: %lld diff: %lld", now, env.timestamp, now - env.timestamp);
         if (now - env.timestamp > TIMEOUT_MS) {
             LOG_DBG("timeout expired, drop old packet");
             continue;
@@ -203,6 +204,8 @@ void tx_thread() {
                 LOG_DBG("fifo is empty");
             }
         }
+
+        k_yield();
     }
 }
 
