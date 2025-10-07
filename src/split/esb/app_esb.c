@@ -189,6 +189,7 @@ void tx_thread() {
             continue;
         }
 
+        LOG_WRN("TX packet with %d events on pipe %d", count, payload.pipe);
         ret = esb_write_payload(&payload);
         if (ret != 0) {
             LOG_DBG("esb_write_payload returned %d", ret);

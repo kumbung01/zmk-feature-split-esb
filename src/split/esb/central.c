@@ -138,7 +138,7 @@ static int break_packet(struct esb_payload *payload) {
     uint8_t *data = &payload->data[1];
     struct zmk_split_transport_peripheral_event evt;
 
-    LOG_DBG("RX packet with %d events from source %d", count, source);
+    LOG_WRN("RX packet with %d events from source %d", count, source);
 
     for (int i = 0; i < count; i++) {
         memset(&evt, 0, sizeof(evt));
