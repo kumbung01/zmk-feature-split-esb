@@ -39,13 +39,6 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 static const uint8_t peripheral_id = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID;
 
-static void publish_commands_work(struct k_work *work);
-
-K_WORK_DEFINE(publish_commands, publish_commands_work);
-
-static void process_tx_cb(void);
-K_MSGQ_DEFINE(cmd_msg_queue, sizeof(struct zmk_split_transport_central_command), 3, 4);
-
 static struct zmk_split_esb_async_state async_state = {
     .rx_size_process_trigger = sizeof(struct esb_command_envelope),
     .process_tx_callback = process_tx_cb,
@@ -134,37 +127,49 @@ static int zmk_split_esb_peripheral_init(void) {
 
 SYS_INIT(zmk_split_esb_peripheral_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 
-static void process_tx_cb(void) {
-    while (k_msgq_num_used_get(&rx_msgq) > 0) {
-        struct esb_command_envelope env;
-        int item_err = k_msgq_get(&rx_msgq, &env, K_NO_WAIT);
-        switch (item_err) {
-        case 0:
-            if (env.payload.cmd.type == ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_POLL_EVENTS) {
-                // pull_packet_from_tx_msgq();
-            } else {
-                int ret = k_msgq_put(&cmd_msg_queue, &env.payload.cmd, K_NO_WAIT);
-                if (ret < 0) {
-                    LOG_WRN("Failed to queue command for processing (%d)", ret);
-                    return;
-                }
+static int break_packet(struct esb_payload *payload) {
+    int count = payload->data[0]; // first byte = number of events
+    uint8_t source = payload->pipe;
+    uint8_t *data = &payload->data[1];
+    LOG_WRN("RX packet with %d events from source %d", count, source);
 
-                k_work_submit_to_queue(&esb_work_q, &publish_commands);
-            }
+    for (int i = 0; i < count; i++) {
+        struct zmk_split_transport_peripheral_event evt = {0};
+
+        evt.type = (enum zmk_split_transport_peripheral_event_type)data[0];
+        data += 1;
+
+        ssize_t data_size = get_payload_data_size_evt(&evt);
+
+
+        if (data_size < 0) {
+            LOG_ERR("Invalid data size %zd for event type %d", data_size, evt.type);
             break;
-        case -EAGAIN:
-            return;
-        default:
-            LOG_WRN("Issue fetching an item from the RX buffer: %d", item_err);
-            return;
+        }
+
+        memcpy(&evt.data, data, data_size);
+        data += data_size;
+
+        LOG_DBG("RX event type %d from source %d", evt.type, source);
+        zmk_split_transport_peripheral_command_handler(&esb_peripheral, cmd);
+    }
+
+    return count;
+}
+
+static void publish_events_thread() {
+    struct esb_payload payload;
+    while (true)
+    {
+        if (k_msgq_get(&rx_msgq, &payload, K_FOREVER) == 0) {
+            break_packet(&payload);
+
+            k_yield();
         }
     }
 }
 
-static void publish_commands_work(struct k_work *work) {
-    struct zmk_split_transport_central_command cmd;
+K_THREAD_DEFINE(publish_events_thread_id, STACKSIZE,
+        publish_events_thread, NULL, NULL, NULL,
+        K_PRIO_COOP(MPSL_THREAD_PRIO), 0, 0);
 
-    while (k_msgq_get(&cmd_msg_queue, &cmd, K_NO_WAIT) >= 0) {
-        zmk_split_transport_peripheral_command_handler(&esb_peripheral, cmd);
-    }
-}
