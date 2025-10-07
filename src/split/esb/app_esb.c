@@ -109,7 +109,7 @@ static void event_handler(struct esb_evt const *event) {
     }
 }
 
-static int make_packet(k_msgq *msgq, struct esb_payload *payload) {
+static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     struct esb_data_envelope env = {0};
     int cnt = 0;
     int64_t now = k_uptime_get();
