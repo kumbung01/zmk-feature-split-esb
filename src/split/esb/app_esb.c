@@ -205,6 +205,8 @@ void tx_thread() {
                 LOG_DBG("fifo is empty");
             }
         }
+
+        k_yield();
     }
 }
 

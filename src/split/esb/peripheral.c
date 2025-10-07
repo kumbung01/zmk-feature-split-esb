@@ -152,6 +152,8 @@ static int break_packet(struct esb_payload *payload) {
 
         LOG_DBG("RX command type %d from source %d", cmd.type, source);
         zmk_split_transport_peripheral_command_handler(&esb_peripheral, cmd);
+
+        k_yield();
     }
 
     return count;
