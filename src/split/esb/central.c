@@ -62,8 +62,9 @@ static int split_central_esb_send_command(uint8_t source,
     size_t payload_size =
         data_size + sizeof(source) + sizeof(enum zmk_split_transport_central_command_type);
 
-    struct esb_data_envelope env = {    .command = {
-                                            .source = source,
+    struct esb_data_envelope env = {    .source = source,
+                                        .timestamp = k_uptime_get(),    
+                                        .command = {
                                             .cmd = cmd,
                                         }};
 
@@ -146,17 +147,6 @@ static int zmk_split_esb_central_init(void) {
 }
 
 SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
-
-static void publish_events_work(struct k_work *work) {
-    struct esb_data_envelope env;
-    while (k_msgq_num_used_get(&rx_msgq) > 0) {
-        if (k_msgq_get(&rx_msgq, &env, K_FOREVER) == 0) {
-            zmk_split_transport_central_peripheral_event_handler(&esb_central, 
-                                                                env.event.source,
-                                                                env.event.event);
-        }
-    }
-}
 
 static void break_packet(struct esb_payload *payload) {
     int count = payload->data[0]; // first byte is count

@@ -41,13 +41,14 @@ struct esb_event_envelope {
 
 struct esb_data_envelope {
     uint32_t timestamp;
+    uint8_t source;
     union {
         struct zmk_split_transport_peripheral_event event;
         struct zmk_split_transport_central_command command;
         struct buf {
             uint8_t type;
             uint8_t data[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
-        } buf;
+        } 
     }
 } __packed;
 
