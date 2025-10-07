@@ -212,7 +212,7 @@ void tx_thread() {
 
 K_THREAD_DEFINE(tx_thread_id, 1024,
         tx_thread, NULL, NULL, NULL,
-        5, 0, 0);
+        K_PRIO_COOP(MPSL_THREAD_PRIO), 0, 0);
 
 static int clocks_start(void) {
     int err;
