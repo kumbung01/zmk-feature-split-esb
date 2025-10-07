@@ -64,9 +64,7 @@ static int split_central_esb_send_command(uint8_t source,
 
     struct esb_data_envelope env = {    .source = source,
                                         .timestamp = k_uptime_get(),    
-                                        .command = {
-                                            .cmd = cmd,
-                                        }};
+                                        .command = cmd,};
 
     size_t pfx_len = payload_size;
     memcpy(buf, &env, pfx_len);
