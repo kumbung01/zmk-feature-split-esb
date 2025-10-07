@@ -180,8 +180,9 @@ void tx_thread() {
 
             int64_t now = k_uptime_get();
             int64_t delta = now - payload.timestamp;
+            LOG_DBG("timestamp(%lld, %lld, %lld)", now, payload.timestamp, delta);
             if (delta > TIMEOUT_MS) {
-                LOG_DBG("event timeout expired, skip event(%lld, %lld, %lld)", now, payload.timestamp, delta);
+                LOG_DBG("timeout expired, drop old packet");
                 continue;
             }
 
