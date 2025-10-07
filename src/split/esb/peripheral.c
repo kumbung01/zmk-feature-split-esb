@@ -42,12 +42,12 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 static const uint8_t peripheral_id = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID;
 
-static void process_tx_cb_handler(struct k_work *work);
-K_WORK_DEFINE(process_tx_cb, process_tx_cb_handler);
+static void process_tx_work_handler(struct k_work *work);
+K_WORK_DEFINE(process_tx_work, process_tx_work_handler);
 
 static struct zmk_split_esb_async_state async_state = {
     .rx_size_process_trigger = sizeof(struct esb_command_envelope),
-    .process_tx_callback = process_tx_cb,
+    .process_tx_work = process_tx_work,
 };
 
 void zmk_split_esb_on_ptx_esb_callback(app_esb_event_t *event) {
@@ -161,7 +161,7 @@ static int break_packet(struct esb_payload *payload) {
     return count;
 }
 
-static void process_tx_cb_handler(struct k_work *work) {
+static void process_tx_work_handler(struct k_work *work) {
     struct esb_payload payload;
 
     while (k_msgq_get(&rx_msgq, &payload, K_NO_WAIT) == 0) {

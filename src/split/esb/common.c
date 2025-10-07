@@ -76,9 +76,9 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
                 state->process_tx_callback();
             } 
             
-            // else if (state->process_tx_work) {
-            //     k_work_submit_to_queue(&esb_work_q, state->process_tx_work);
-            // }
+            else if (state->process_tx_work) {
+                k_work_submit(state->process_tx_work);
+            }
 
             break;
         default:
