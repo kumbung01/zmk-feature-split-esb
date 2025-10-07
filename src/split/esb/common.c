@@ -86,33 +86,3 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
             break;
     }
 }
-
-int break_packet(struct esb_payload *payload) {
-    int count = payload->data[0]; // first byte = number of events
-    uint8_t source = payload->pipe;
-    uint8_t *data = &payload->data[1];
-    LOG_WRN("RX packet with %d events from source %d", count, source);
-
-    for (int i = 0; i < count; i++) {
-        struct zmk_split_transport_peripheral_event evt = {0};
-
-        evt.type = (enum zmk_split_transport_peripheral_event_type)data[0];
-        data += 1;
-
-        ssize_t data_size = get_payload_data_size_evt(&evt);
-
-
-        if (data_size < 0) {
-            LOG_ERR("Invalid data size %zd for event type %d", data_size, evt.type);
-            break;
-        }
-
-        memcpy(&evt.data, data, data_size);
-        data += data_size;
-
-        LOG_DBG("RX event type %d from source %d", evt.type, source);
-        zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
-    }
-
-    return count;
-}
