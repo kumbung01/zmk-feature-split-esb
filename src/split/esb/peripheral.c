@@ -42,9 +42,12 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 static const uint8_t peripheral_id = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID;
 
+static void process_tx_cb_handler(struct k_work *work);
+K_WORK_DEFEINE(process_tx_cb, process_tx_cb_handler);
+
 static struct zmk_split_esb_async_state async_state = {
     .rx_size_process_trigger = sizeof(struct esb_command_envelope),
-    // .process_tx_callback = process_tx_cb,
+    .process_tx_callback = process_tx_cb,
 };
 
 void zmk_split_esb_on_ptx_esb_callback(app_esb_event_t *event) {
@@ -153,24 +156,15 @@ static int break_packet(struct esb_payload *payload) {
 
         LOG_DBG("RX command type %d from source %d", cmd.type, source);
         zmk_split_transport_peripheral_command_handler(&esb_peripheral, cmd);
-
-        k_yield();
     }
 
     return count;
 }
 
-static void publish_events_thread() {
+static void process_tx_cb_handler(struct k_work *work) {
     struct esb_payload payload;
-    while (true)
-    {
-        if (k_msgq_get(&rx_msgq, &payload, K_FOREVER) == 0) {
-            break_packet(&payload);
-        }
+    
+    while (k_msgq_get(&rx_msgq, &payload, K_NO_WAIT) == 0) {
+        break_packet(&payload);
     }
 }
-
-K_THREAD_DEFINE(publish_events_thread_id, 1024,
-        publish_events_thread, NULL, NULL, NULL,
-        K_PRIO_COOP(MPSL_THREAD_PRIO), 0, 0);
-

@@ -103,6 +103,7 @@ static void event_handler(struct esb_evt const *event) {
             if (esb_read_rx_payload(&rx_payload) == 0) {
                 k_msgq_put(&rx_msgq, &rx_payload, K_NO_WAIT);
             }
+            m_callback(&m_event);
             break;
     }
 }
@@ -162,57 +163,6 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
 
     return cnt;
 }
-
-void tx_thread() {
-    while (true)
-    {
-        struct esb_payload payload = {0};
-        int ret = 0;
-        size_t count = 0;
-
-        k_sem_take(&tx_sem, K_FOREVER);
-        LOG_DBG("tx thread awake");
-
-        if (esb_tx_full()) {
-            LOG_DBG("esb_tx_full");
-            if (esb_is_idle()) {
-                LOG_DBG("esb tx full but idle, esb_flush_tx");
-                esb_flush_tx();
-            }
-            else {
-                LOG_DBG("esb tx full and busy, retry later");
-                continue;
-            }
-        }
-
-        count = make_packet(&tx_msgq, &payload);
-        if (count == 0) {
-            LOG_DBG("no packet to send");
-            continue;
-        }
-
-        LOG_WRN("TX packet with %d events on pipe %d", count, payload.pipe);
-        ret = esb_write_payload(&payload);
-        if (ret != 0) {
-            LOG_DBG("esb_write_payload returned %d", ret);
-            continue;
-        }
-
-        if (m_mode == APP_ESB_MODE_PTX) {
-            LOG_DBG("esb_start_tx count %d", count);
-            ret = esb_start_tx();
-            if (ret == -ENODATA) {
-                LOG_DBG("fifo is empty");
-            }
-        }
-
-        k_yield();
-    }
-}
-
-K_THREAD_DEFINE(tx_thread_id, 1024,
-        tx_thread, NULL, NULL, NULL,
-        K_PRIO_COOP(MPSL_THREAD_PRIO), 0, 0);
 
 static int clocks_start(void) {
     int err;
