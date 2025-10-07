@@ -163,7 +163,36 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
 
     return cnt;
 }
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+void tx_work_handler() {
+    while (k_msgq_num_used_get(&tx_msgq) > 0) {
+        struct esb_payload payload = {0};
+        int ret = 0;
+        size_t count = 0;
 
+        count = make_packet(&tx_msgq, &payload);
+        if (count == 0) {
+            LOG_DBG("no packet to send");
+            return;
+        }
+
+        LOG_WRN("TX packet with %d events on pipe %d", count, payload.pipe);
+        ret = esb_write_payload(&payload);
+        if (ret != 0) {
+            LOG_DBG("esb_write_payload returned %d", ret);
+            return;
+        }
+
+        LOG_DBG("esb_start_tx count %d", count);
+        ret = esb_start_tx();
+        if (ret == -ENODATA) {
+            LOG_DBG("fifo is empty");
+        }
+    }
+}
+
+K_WORK_DEFINE(tx_work, tx_work_handler);
+#else
 void tx_thread() {
     while (true)
     {
@@ -214,6 +243,7 @@ void tx_thread() {
 K_THREAD_DEFINE(tx_thread_id, 1600,
         tx_thread, NULL, NULL, NULL,
         K_PRIO_COOP(MPSL_THREAD_PRIO), 0, 0);
+#endif
 
 
 static int clocks_start(void) {

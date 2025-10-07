@@ -45,7 +45,7 @@ static struct zmk_split_esb_async_state async_state = {
     .rx_size_process_trigger = ESB_MSG_EXTRA_SIZE + 1,
 };
 
-
+extern k_work tx_work;
 static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd) {
     struct esb_data_envelope env = { .source = source,
@@ -54,7 +54,7 @@ static int split_central_esb_send_command(uint8_t source,
                                     };
 
     k_msgq_put(&tx_msgq, &env, K_NO_WAIT);
-    k_sem_give(&tx_sem);
+    k_work_submit_to_queue(&esb_work_q, &tx_work);
 
     return 0;
 }
