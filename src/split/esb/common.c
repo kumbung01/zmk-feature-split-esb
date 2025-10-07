@@ -14,6 +14,38 @@
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
+K_MSGQ_DEFINE(tx_msgq, sizeof(struct esb_data_envelope), CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
+K_MSGQ_DEFINE(rx_msgq, sizeof(struct esb_payload), CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
+
+ssize_t get_payload_data_size_cmd(const struct zmk_split_transport_central_command *cmd) {
+    switch (cmd->type) {
+    case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_POLL_EVENTS:
+        return 0;
+    case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_INVOKE_BEHAVIOR:
+        return sizeof(cmd->data.invoke_behavior);
+    case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_PHYSICAL_LAYOUT:
+        return sizeof(cmd->data.set_physical_layout);
+    case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_HID_INDICATORS:
+        return sizeof(cmd->data.set_hid_indicators);
+    default:
+        return -ENOTSUP;
+    }
+}
+
+ssize_t get_payload_data_size_evt(const struct zmk_split_transport_peripheral_event *evt) {
+    switch (evt->type) {
+    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT:
+        return sizeof(evt->data.input_event);
+    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT:
+        return sizeof(evt->data.key_position_event);
+    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT:
+        return sizeof(evt->data.sensor_event);
+    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT:
+        return sizeof(evt->data.battery_event);
+    default:
+        return -ENOTSUP;
+    }
+}
 
 struct k_work_q esb_work_q;
 K_THREAD_STACK_DEFINE(esb_work_q_stack, 1300);
@@ -27,7 +59,6 @@ int service_init(void) {
     return 0;
 }
 
-K_MSGQ_DEFINE(rx_msgq, sizeof(struct esb_data_envelope), CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
 
 void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state) {
     switch(event->evt_type) {

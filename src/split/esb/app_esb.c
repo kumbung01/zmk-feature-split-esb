@@ -89,6 +89,7 @@ static void event_handler(struct esb_evt const *event) {
                 if (tx_fail_count > 0) {
                     esb_pop_tx();
                     tx_fail_count = 0;
+                    k_sem_give(&tx_sem);
                 }
                 else {
                     esb_start_tx();
@@ -102,108 +103,95 @@ static void event_handler(struct esb_evt const *event) {
             // LOG_DBG("RX SUCCESS");
             struct esb_payload rx_payload = {0};
             if (esb_read_rx_payload(&rx_payload) == 0) {
-                k_msgq_put(&rx_msgq, rx_payload.data, K_NO_WAIT);
-                m_event.evt_type = APP_ESB_EVT_RX;
-                m_event.payload = &rx_payload;
-                m_callback(&m_event);
+                k_msgq_put(&rx_msgq, rx_payload, K_NO_WAIT);
             }
             break;
     }
 }
 
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-extern struct k_work_q esb_work_q;
-
-void pull_tx_queue(struct k_work *_work) {
-    payload_t payload = {0};
-    int ret = 0;
+static int make_packet(k_msgq *msgq, struct esb_payload *payload) {
+    struct esb_data_envelope env = {0};
+    int cnt = 0;
     int64_t now = k_uptime_get();
-    while (k_msgq_num_used_get(&m_msgq_tx_payloads) > 0) {
-        if (esb_tx_full()) {
+
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+    payload->pipe = ((struct esb_data_envelope*)payload->data)->event.source; // this should match tx FIFO pipe
+    ssize_t (*get_payload_data_size)(const struct zmk_split_transport_central_command *cmd)  = get_payload_data_size_cmd;
+#else
+    payload->pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID; // use the peripheral_id as the ESB pipe number
+    ssize_t (*get_payload_data_size)(const struct zmk_split_transport_peripheral_event *evt) = get_payload_data_size_evt;
+#endif
+
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK)
+    payload->noack = false;
+#else
+    payload->noack = true;
+#endif
+
+    pasyload->length = 1; // reserve 1 byte for count
+
+    while (k_msgq_num_used_get(msgq) > 0) {
+        k_msgq_peek(msgq, &env);
+        uint8_t type = env.buf.type;
+        ssize_t data_size = get_payload_data_size(&env.buf);
+
+        if (payload->length + data_size + sizeof(uint8_t) > CONFIG_ESB_MAX_PAYLOAD_LENGTH) {
+            LOG_DBG("packet full (%d + %d + 1 > %d)", payload->length, data_size, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
+            break;
+        }
+
+        k_msgq_get(msgq, &env, K_NO_WAIT);
+        if (now - env.timestamp > TIMEOUT_MS) {
+            LOG_DBG("timeout expired, drop old packet");
             continue;
         }
 
-        ret = k_msgq_get(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
-        if (ret) {
-            continue;
-        }
+        LOG_DBG("adding type %d size %d to packet", type, data_size);
 
-        int64_t age = now - payload.timestamp;
-        if (age < 0 || age > TIMEOUT_MS) {
-            continue;
-        }
-
-        ret = esb_write_payload(&payload.payload);
-        if (ret == 0) {
-            if (m_mode == APP_ESB_MODE_PTX) {
-                ret = esb_start_tx();
-                if (ret == -ENODATA) {
-                    LOG_DBG("fifo is empty");
-                }
-            }
-        }
-        else {
-            LOG_DBG("esb_write_payload returned %d", ret);
-            if (ret == -EMSGSIZE) {
-                // msg size too large, discard it
-                continue;
-            }
-            else {
-                LOG_DBG("other errors, retry later");
-                k_msgq_put(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
-                break;
-            }
-        }    
+        memcpy(&payload->data[payload->length], &type, sizeof(uint8_t));
+        payload->length += sizeof(uint8_t);
+        memcpy(&payload->data[payload->length], &env.buf.data, data_size);
+        payload->length += data_size;
+        cnt++;
     }
+
+    payload->data[0] = cnt;
+
+    return cnt;
 }
 
-static K_WORK_DEFINE(pull_tx_queue_work, pull_tx_queue);
-
-#else
-
 void tx_thread() {
-    payload_t payload = {0};
-    int ret = 0;
-    size_t count = 0;
     while (true)
     {
+        struct esb_payload payload = {0};
+        int ret = 0;
+        size_t count = 0;
+
         k_sem_take(&tx_sem, K_FOREVER);
         LOG_DBG("tx thread awake");
 
         if (esb_tx_full()) {
             LOG_DBG("esb_tx_full");
+            if (esb_idle()) {
+                LOG_DBG("esb tx full but idle, esb_flush_tx");
+                esb_flush_tx();
+            }
+            else {
+                LOG_DBG("esb tx full and busy, retry later");
+                continue;
+            }
+        }
+
+        count = make_packet(&tx_msgq, &payload);
+        if (count == 0) {
+            LOG_DBG("no packet to send");
             continue;
         }
 
-        while (k_msgq_get(&m_msgq_tx_payloads, &payload, K_NO_WAIT) == 0) {
-            LOG_DBG("app_esb tx thread");
-
-            int64_t now = k_uptime_get();
-            int64_t delta = now - payload.timestamp;
-            LOG_DBG("timestamp(%lld, %lld, %lld)", now, payload.timestamp, delta);
-            if (delta > TIMEOUT_MS) {
-                LOG_DBG("timeout expired, drop old packet");
-                continue;
-            }
-
-            ret = esb_write_payload(&payload.payload);
-            if (ret == 0) {
-                LOG_DBG("tx write success");
-                count++;
-            }
-            else {
-                LOG_DBG("esb_write_payload returned %d", ret);
-                if (ret == -EMSGSIZE) {
-                    // msg size too large, discard it
-                    LOG_WRN("esb_tx_fifo: tx_payload size too large (%d) > CONFIG_ESB_MAX_PAYLOAD_LENGTH (%d)",
-                            payload.payload.length, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
-                    continue;
-                }
-                else {
-                    LOG_DBG("other errors, retry later");
-                    break;
-                }
-            }
+        ret = esb_write_payload(&payload);
+        if (ret != 0) {
+            LOG_DBG("esb_write_payload returned %d", ret);
+            continue;
         }
 
         if (m_mode == APP_ESB_MODE_PTX) {
@@ -214,15 +202,11 @@ void tx_thread() {
             }
         }
     }
-
-
 }
 
 K_THREAD_DEFINE(tx_thread_id, 2048,
         tx_thread, NULL, NULL, NULL,
         K_PRIO_COOP(MPSL_THREAD_PRIO), 0, 0);
-#endif
-
 
 static int clocks_start(void) {
     int err;
@@ -340,60 +324,6 @@ int zmk_split_esb_set_enable(bool enabled) {
         zmk_split_esb_timeslot_close_session();
         return 0;
     }
-}
-
-int zmk_split_esb_send(app_esb_data_t *tx_packet) {
-    int ret = 0;
-    payload_t payload;
-
-    if (k_msgq_num_free_get(&m_msgq_tx_payloads) == 0) {
-        LOG_WRN("esb tx_payload_q full, dropping oldest packet");
-        if (k_msgq_get(&m_msgq_tx_payloads, &payload, K_NO_WAIT) != 0) { // drop the oldest packet
-            LOG_WRN("msgq drop fail, early return");
-
-            return 0;
-        }
-    }
-
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-    payload.payload.pipe = ((struct esb_data_envelope*)tx_packet->data)->event.source; // this should match tx FIFO pipe
-#else
-    payload.payload.pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID; // use the peripheral_id as the ESB pipe number, offset by 1
-#endif
-
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK)
-    payload.payload.noack = false;
-#else
-    payload.payload.noack = true;
-#endif
-    
-    if (!(tx_packet->len)) {
-        LOG_WRN("bypass queuing null payload");
-
-        return 0;
-    }
-
-    payload.timestamp = k_uptime_get();
-    LOG_DBG("timestamp: %lld", payload.timestamp);
-    payload.payload.length = tx_packet->len;
-    memcpy(payload.payload.data, tx_packet->data, tx_packet->len);
-    
-    ret = k_msgq_put(&m_msgq_tx_payloads, &payload, K_NO_WAIT);
-
-    if (ret != 0) {
-        LOG_WRN("Failed to queue esb tx_payload_q (%d)", ret);
-    }
-
-    if (m_active) {
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-        k_work_submit_to_queue(&esb_work_q, &pull_tx_queue_work);
-#else
-        k_sem_give(&tx_sem);
-#endif
-    }
-
-
-    return ret;
 }
 
 static int app_esb_suspend(void) {

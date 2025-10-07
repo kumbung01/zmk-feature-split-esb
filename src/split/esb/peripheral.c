@@ -55,51 +55,22 @@ void zmk_split_esb_on_ptx_esb_callback(app_esb_event_t *event) {
     zmk_split_esb_cb(event, &async_state);
 }
 
-static ssize_t get_payload_data_size(const struct zmk_split_transport_peripheral_event *evt) {
-    switch (evt->type) {
-    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT:
-        return sizeof(evt->data.input_event);
-    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT:
-        return sizeof(evt->data.key_position_event);
-    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT:
-        return sizeof(evt->data.sensor_event);
-    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT:
-        return sizeof(evt->data.battery_event);
-    default:
-        return -ENOTSUP;
-    }
-}
+
 
 extern struct k_msgq m_msgq_tx_payloads;
+extern struct k_msgq tx_msgq;
 extern struct k_msgq rx_msgq;
+extern struct k_sem tx_sem;
 extern struct k_work_q esb_work_q;
 
 static int
 split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event) {
-    uint8_t buf[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
+    struct esb_data_envelope env = { .timestamp = k_uptime_get(),
+                                     .event = *event
+                                    };
 
-    ssize_t data_size = get_payload_data_size(event);
-    if (data_size < 0) {
-        LOG_WRN("Failed to determine payload data size %d", data_size);
-        return data_size;
-    }
-
-    // Data + type + source
-    size_t payload_size =
-        data_size + sizeof(peripheral_id) + sizeof(enum zmk_split_transport_peripheral_event_type);
-
-    struct esb_data_envelope env = { .event = {
-                                        .source = peripheral_id,
-                                        .event = *event,
-                                    }};
-
-    size_t pfx_len = payload_size;
-    memcpy(buf, &env, pfx_len);
-
-    app_esb_data_t data;
-    data.len = pfx_len;
-    data.data = buf;
-    zmk_split_esb_send(&data);
+    k_msgq_put(&tx_msgq, &env, K_NO_WAIT);
+    k_sem_give(&tx_sem);
 
     return 0;
 }

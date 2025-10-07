@@ -47,26 +47,12 @@ static struct zmk_split_esb_async_state async_state = {
     .rx_size_process_trigger = ESB_MSG_EXTRA_SIZE + 1,
 };
 
-static ssize_t get_payload_data_size(const struct zmk_split_transport_central_command *cmd) {
-    switch (cmd->type) {
-    case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_POLL_EVENTS:
-        return 0;
-    case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_INVOKE_BEHAVIOR:
-        return sizeof(cmd->data.invoke_behavior);
-    case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_PHYSICAL_LAYOUT:
-        return sizeof(cmd->data.set_physical_layout);
-    case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_HID_INDICATORS:
-        return sizeof(cmd->data.set_hid_indicators);
-    default:
-        return -ENOTSUP;
-    }
-}
 
 static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd) {
     uint8_t buf[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
 
-    ssize_t data_size = get_payload_data_size(&cmd);
+    ssize_t data_size = get_payload_data_size_cmd(&cmd);
     if (data_size < 0) {
         LOG_WRN("Failed to determine payload data size %d", data_size);
         return data_size;
@@ -172,15 +158,28 @@ static void publish_events_work(struct k_work *work) {
     }
 }
 
+static void break_packet(struct esb_payload *payload) {
+    int count = payload->data[0]; // first byte is count
+    uint8_t source = payload->pipe; // this should match tx FIFO pipe
+    uint8_t *data = &payload->data[1];
+    struct zmk_split_transport_peripheral_event evt;
+
+    for (int i = 0; i < count; i++) {
+        evt.type = (enum zmk_split_transport_peripheral_event_type)data[0];
+        evt.data = (struct zmk_split_transport_peripheral_event)&data[1].data;
+        data += 1 + get_payload_data_size_evt(&evt);
+        LOG_DBG("RX event type %d from source %d", evt.type, source);
+        zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
+    }
+}
+
 static void publish_events_thread() {
-    struct esb_data_envelope env;
+    struct esb_payload payload;
     uint8_t count = 0;
     while (true)
     {
-        if (k_msgq_get(&rx_msgq, &env, K_FOREVER) == 0) {
-            int ret = zmk_split_transport_central_peripheral_event_handler(&esb_central, 
-                                                            env.event.source,
-                                                            env.event.event);
+        if (k_msgq_get(&rx_msgq, &payload, K_FOREVER) == 0) {
+            break_packet(&payload);
         }
 
         if (count++ >= 2) {

@@ -40,10 +40,14 @@ struct esb_event_envelope {
 } __packed;
 
 struct esb_data_envelope {
-    // struct esb_msg_prefix prefix;
+    uint32_t timestamp;
     union {
-        struct esb_event_payload event;
-        struct esb_command_payload command;
+        struct zmk_split_transport_peripheral_event event;
+        struct zmk_split_transport_central_command command;
+        struct buf {
+            uint8_t type;
+            uint8_t data[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
+        } buf;
     }
 } __packed;
 
@@ -81,5 +85,7 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
 
 int zmk_split_esb_get_item(struct ring_buf *rx_buf, uint8_t *env, struct k_sem *sem, size_t env_size);
 
+ssize_t get_payload_data_size_evt(const struct zmk_split_transport_peripheral_event *evt);
+ssize_t get_payload_data_size_cmd(const struct zmk_split_transport_central_command *cmd);
 
 int service_init();
