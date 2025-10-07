@@ -142,13 +142,13 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
         }
 
         k_msgq_get(msgq, &env, K_NO_WAIT);
-        LOG_DBG("now: %lld env: %lld diff: %lld", now, env.timestamp, now - env.timestamp);
+        LOG_DBG("now: %u env: %u diff: %u", now, env.timestamp, now - env.timestamp);
         if (now - env.timestamp > TIMEOUT_MS) {
             LOG_DBG("timeout expired, drop old packet");
             continue;
         }
 
-        LOG_DBG("adding type %d size %d to packet", type, data_size);
+        LOG_DBG("adding type %u size %u to packet", type, data_size);
 
         memcpy(&payload->data[payload->length], &type, sizeof(uint8_t));
         payload->length += sizeof(uint8_t);

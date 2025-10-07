@@ -134,23 +134,23 @@ static int break_packet(struct esb_payload *payload) {
     LOG_WRN("RX packet with %d events from source %d", count, source);
 
     for (int i = 0; i < count; i++) {
-        struct zmk_split_transport_peripheral_event evt = {0};
+        struct zmk_split_transport_central_command cmd = {0};
 
-        evt.type = (enum zmk_split_transport_peripheral_event_type)data[0];
+        cmd.type = (enum zmk_split_transport_central_command_type)data[0];
         data += 1;
 
-        ssize_t data_size = get_payload_data_size_evt(&evt);
+        ssize_t data_size = get_payload_data_size_cmd(&cmd);
 
 
         if (data_size < 0) {
-            LOG_ERR("Invalid data size %zd for event type %d", data_size, evt.type);
+            LOG_ERR("Invalid data size %zd for command type %d", data_size, cmd.type);
             break;
         }
 
-        memcpy(&evt.data, data, data_size);
+        memcpy(&cmd.data, data, data_size);
         data += data_size;
 
-        LOG_DBG("RX event type %d from source %d", evt.type, source);
+        LOG_DBG("RX command type %d from source %d", cmd.type, source);
         zmk_split_transport_peripheral_command_handler(&esb_peripheral, cmd);
     }
 
