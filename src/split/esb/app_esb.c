@@ -119,6 +119,7 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     ssize_t (*get_payload_data_size)(const struct zmk_split_transport_central_command *cmd)  = get_payload_data_size_cmd;
 #else
     payload->pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID; // use the peripheral_id as the ESB pipe number
+    LOG_DBG("pipe: %d", payload->pipe);
     ssize_t (*get_payload_data_size)(const struct zmk_split_transport_peripheral_event *evt) = get_payload_data_size_evt;
 #endif
 
