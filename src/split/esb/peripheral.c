@@ -65,10 +65,6 @@ static bool is_enabled = false;
 
 static int
 split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event) {
-    if (!is_enabled) {
-        return -EIO;
-    }
-
     struct esb_data_envelope env = { 
                                      .timestamp = k_uptime_get(),
                                      .event = *event

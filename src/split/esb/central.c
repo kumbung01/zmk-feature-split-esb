@@ -56,10 +56,6 @@ static int split_central_esb_send_command(uint8_t source,
                                      .command = cmd
                                     };
 
-    if (!is_enabled) {
-        return -EIO;
-    }
-
     k_msgq_put(&tx_msgq, &env, K_NO_WAIT);
     k_work_submit_to_queue(&esb_work_q, &tx_work);
 
