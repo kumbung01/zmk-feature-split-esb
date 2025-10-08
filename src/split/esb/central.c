@@ -45,6 +45,9 @@ static struct zmk_split_esb_async_state async_state = {
     .rx_size_process_trigger = ESB_MSG_EXTRA_SIZE + 1,
 };
 
+static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
+static bool is_enabled;
+
 extern struct k_work tx_work;
 static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd) {
@@ -52,6 +55,10 @@ static int split_central_esb_send_command(uint8_t source,
                                      .timestamp = k_uptime_get(),
                                      .command = cmd
                                     };
+
+    if (!is_enabled) {
+        return -EIO;
+    }
 
     k_msgq_put(&tx_msgq, &env, K_NO_WAIT);
     k_work_submit_to_queue(&esb_work_q, &tx_work);
@@ -69,8 +76,7 @@ static int split_central_esb_get_available_source_ids(uint8_t *sources) {
     return 1;
 }
 
-static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
-static bool is_enabled;
+
 
 static int split_central_esb_set_enabled(bool enabled) {
     is_enabled = enabled;

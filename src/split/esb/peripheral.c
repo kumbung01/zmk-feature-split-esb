@@ -60,8 +60,15 @@ extern struct k_msgq rx_msgq;
 extern struct k_sem tx_sem;
 extern struct k_work_q esb_work_q;
 
+static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
+static bool is_enabled = false;
+
 static int
 split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event) {
+    if (!is_enabled) {
+        return -EIO;
+    }
+
     struct esb_data_envelope env = { 
                                      .timestamp = k_uptime_get(),
                                      .event = *event
@@ -74,8 +81,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     return 0;
 }
 
-static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
-static bool is_enabled = false;
+
 
 static int split_peripheral_esb_set_enabled(bool enabled) {
     is_enabled = enabled;
