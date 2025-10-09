@@ -59,7 +59,7 @@ struct payload_buffer {
     uint8_t length;
 } __packed;
 
-#define ESB_MSG_EXTRA_SIZE (sizeof(struct esb_msg_prefix) + sizeof(struct esb_msg_postfix))
+// #define ESB_MSG_EXTRA_SIZE (sizeof(struct esb_msg_prefix) + sizeof(struct esb_msg_postfix))
 
 typedef void (*zmk_split_esb_process_tx_callback_t)(void);
 
