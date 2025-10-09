@@ -52,8 +52,11 @@ struct esb_data_envelope {
     };
 } __packed;
 
-struct esb_msg_postfix {
-    uint32_t crc;
+struct payload_buffer {
+    uint8_t cnt;
+    uint32_t nonce;
+    uint8_t body[CONFIG_ESB_MAX_PAYLOAD_LENGTH - 5];
+    uint8_t length;
 } __packed;
 
 #define ESB_MSG_EXTRA_SIZE (sizeof(struct esb_msg_prefix) + sizeof(struct esb_msg_postfix))
@@ -90,3 +93,6 @@ ssize_t get_payload_data_size_evt(const struct zmk_split_transport_peripheral_ev
 ssize_t get_payload_data_size_cmd(const struct zmk_split_transport_central_command *cmd);
 
 int service_init();
+
+uint32_t get_nonce();
+int process_payload(char* data, size_t length, uint32_t nonce);

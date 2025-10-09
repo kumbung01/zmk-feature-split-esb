@@ -110,8 +110,9 @@ static void event_handler(struct esb_evt const *event) {
 
 static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     struct esb_data_envelope env = {0};
-    int cnt = 0;
-    int64_t now = k_uptime_get();
+    uint32_t now = k_uptime_get();
+    uint32_t nonce = get_nonce();
+    uint8_t* cnt = &payload->data[0];
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     ssize_t (*get_payload_data_size)(const struct zmk_split_transport_central_command *cmd)  = get_payload_data_size_cmd;
@@ -126,12 +127,19 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     payload->noack = true;
 #endif
 
-    payload->length = 1; // reserve 1 byte for count
+    put_u32_le(&payload->data[1], nonce);
+    payload->length = 5;
+    *cnt = 0;
 
     while (k_msgq_num_used_get(msgq) > 0) {
         k_msgq_peek(msgq, &env);
         uint8_t type = env.buf.type;
         ssize_t data_size = get_payload_data_size(&env.buf);
+        if (data_size < 0) {
+            LOG_ERR("Invalid data size %zd for type %d", data_size, type);
+            k_msgq_get(msgq, &env, K_NO_WAIT); // drop the invalid item
+            continue;
+        }
 
         if (payload->length + data_size + sizeof(uint8_t) > CONFIG_ESB_MAX_PAYLOAD_LENGTH) {
             LOG_DBG("packet full (%d + %d + 1 > %d)", payload->length, data_size, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
@@ -151,7 +159,7 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
         payload->length += sizeof(uint8_t);
         memcpy(&payload->data[payload->length], &env.buf.data, data_size);
         payload->length += data_size;
-        cnt++;
+        (*cnt)++;
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
         payload->pipe = env.source; // use the source as the ESB pipe number
@@ -159,10 +167,11 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
 #endif
     }
 
-    payload->data[0] = cnt;
+    process_payload((char*)&payload->data[5], payload->length - 5, nonce);
 
-    return cnt;
+    return *cnt;
 }
+
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 void tx_work_handler() {
     while (k_msgq_num_used_get(&tx_msgq) > 0) {
@@ -295,7 +304,7 @@ static int esb_initialize(app_esb_mode_t mode) {
     config.mode = (mode == APP_ESB_MODE_PTX) ? ESB_MODE_PTX : ESB_MODE_PRX;
     config.tx_mode = ESB_TXMODE_MANUAL_START;
     config.selective_auto_ack = true;
-    config.tx_output_power = -4;
+    // config.tx_output_power = -4;
 
     err = esb_init(&config);
 

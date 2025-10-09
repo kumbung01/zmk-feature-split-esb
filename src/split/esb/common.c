@@ -86,3 +86,34 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
             break;
     }
 }
+
+
+// encrption
+static uint32_t nonce = 0;
+#define ENCRYPTION_KEY = CONFIG_ZMK_SPLIT_ESB_ENCRYPTION_KEY;
+int process_payload(char* data, size_t length, uint32_t nonce) {
+    uint32_t key_len = sizeof(ENCRYPTION_KEY);
+    for (size_t i = 0; i < length; i++) {
+        data[i] ^= (key[i % key_len] ^ ((uint8_t*)&nonce)[i % 4]);
+    }
+
+    return 0;
+}
+
+uint32_t get_nonce() {
+    return nonce++;
+}
+
+uint32_t get_u32_le(const uint8_t *src) {
+    return ((uint32_t)src[0])       |
+           ((uint32_t)src[1] << 8)  |
+           ((uint32_t)src[2] << 16) |
+           ((uint32_t)src[3] << 24);
+}
+
+void put_u32_le(uint8_t *dst, uint32_t v) {
+    dst[0] = (uint8_t)(v & 0xFF);
+    dst[1] = (uint8_t)((v >> 8) & 0xFF);
+    dst[2] = (uint8_t)((v >> 16) & 0xFF);
+    dst[3] = (uint8_t)((v >> 24) & 0xFF);
+}

@@ -133,8 +133,11 @@ SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DE
 static int break_packet(struct esb_payload *payload) {
     int count = payload->data[0]; // first byte = number of events
     uint8_t source = payload->pipe;
-    uint8_t *data = &payload->data[1];
+    uint32_t nonce = get_u32_le(&payload->data[1]);
+    uint8_t *data = &payload->data[5];
     LOG_WRN("RX packet with %d events from source %d", count, source);
+
+    process_payload((char*)&payload->data[5], payload->length - 5, nonce);
 
     for (int i = 0; i < count; i++) {
         struct zmk_split_transport_peripheral_event evt = {0};
