@@ -94,7 +94,7 @@ static uint32_t nonce = 0;
 int process_payload(char* data, size_t length, uint32_t nonce) {
     uint32_t key_len = sizeof(ENCRYPTION_KEY);
     for (size_t i = 0; i < length; i++) {
-        data[i] ^= (key[i % key_len] ^ ((uint8_t*)&nonce)[i % 4]);
+        data[i] ^= (ENCRYPTION_KEY[i % key_len] ^ ((uint8_t*)&nonce)[i % 4]);
     }
 
     return 0;
