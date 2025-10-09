@@ -52,6 +52,10 @@ config ZMK_SPLIT_ESB_KEYBOARD_EVENT_TIMEOUT_MS
     int "keyboard event timeout in ms"
     default 5
 
+config ZMK_SPLIT_ESB_ENCRYPTION_KEY
+    string "10+byte encryption key in string"
+    default "hello world!!!"
+
 module = ZMK_SPLIT_ESB
 module-str = ZMK_SPLIT_ESB
 source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
