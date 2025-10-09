@@ -244,14 +244,12 @@ void tx_thread() {
                 LOG_DBG("fifo is empty");
             }
         }
-
-        k_yield();
     }
 }
 
 K_THREAD_DEFINE(tx_thread_id, 1600,
         tx_thread, NULL, NULL, NULL,
-        K_PRIO_COOP(MPSL_THREAD_PRIO), 0, 0);
+        5, 0, 0);
 #endif
 
 

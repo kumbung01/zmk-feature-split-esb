@@ -158,24 +158,25 @@ static int break_packet(struct esb_payload *payload) {
 
         LOG_DBG("RX event type %d from source %d", evt.type, source);
         zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
-
-        k_yield();
     }
 
     return count;
 }
 
+K_SEM_DEFINE(rx_sem, 0, 1);
 static void publish_events_thread() {
     struct esb_payload payload;
     while (true)
     {
         if (k_msgq_get(&rx_msgq, &payload, K_FOREVER) == 0) {
+            k_sem_take(&rx_sem, K_FOREVER);
             break_packet(&payload);
+            k_sem_give(&rx_sem);
         }
     }
 }
 
 K_THREAD_DEFINE(publish_events_thread_id, STACKSIZE,
         publish_events_thread, NULL, NULL, NULL,
-        K_PRIO_COOP(MPSL_THREAD_PRIO), 0, 0);
+        5, 0, 0);
 
