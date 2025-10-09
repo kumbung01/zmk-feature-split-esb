@@ -90,7 +90,7 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
 
 // encrption
 static uint32_t nonce = 0;
-#define ENCRYPTION_KEY = CONFIG_ZMK_SPLIT_ESB_ENCRYPTION_KEY;
+#define ENCRYPTION_KEY CONFIG_ZMK_SPLIT_ESB_ENCRYPTION_KEY
 int process_payload(char* data, size_t length, uint32_t nonce) {
     uint32_t key_len = sizeof(ENCRYPTION_KEY);
     for (size_t i = 0; i < length; i++) {
