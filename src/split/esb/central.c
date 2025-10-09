@@ -42,7 +42,7 @@ extern struct k_sem tx_sem;
 extern struct k_msgq tx_msgq;
 
 static struct zmk_split_esb_async_state async_state = {
-    .rx_size_process_trigger = sizeof(esb_data_envelope) + 1,
+    .rx_size_process_trigger = sizeof(struct esb_data_envelope) + 1,
 };
 
 static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
