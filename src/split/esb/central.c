@@ -163,16 +163,14 @@ static int break_packet(struct esb_payload *payload) {
     return count;
 }
 
-K_SEM_DEFINE(rx_sem, 0, 1);
+
 static void publish_events_thread() {
     struct esb_payload payload;
     while (true)
     {
         if (k_msgq_get(&rx_msgq, &payload, K_FOREVER) == 0) {
-            k_sem_take(&rx_sem, K_FOREVER);
             break_packet(&payload);
-            k_sem_give(&rx_sem);
-        }
+        }   
     }
 }
 
