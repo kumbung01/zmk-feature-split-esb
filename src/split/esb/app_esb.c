@@ -220,16 +220,15 @@ void tx_thread() {
         k_sem_take(&tx_sem, K_FOREVER);
         LOG_DBG("tx thread awake");
 
+        if (esb_is_idle() == false) {
+            LOG_DBG("esb not idle, retry later");
+            continue;
+        }
+
         if (esb_tx_full()) {
             LOG_DBG("esb_tx_full");
-            if (esb_is_idle()) {
-                LOG_DBG("esb tx full but idle, esb_flush_tx");
-                esb_flush_tx();
-            }
-            else {
-                LOG_DBG("esb tx full and busy, retry later");
-                continue;
-            }
+            esb_flush_tx();
+            continue;
         }
 
         count = make_packet(&tx_msgq, &payload);
@@ -372,7 +371,6 @@ int zmk_split_esb_set_enable(bool enabled) {
     m_enabled = enabled;
     if (enabled) {
         zmk_split_esb_timeslot_open_session();
-        k_sem_give(&tx_sem);
         return 0;
     } else {
         zmk_split_esb_timeslot_close_session();
@@ -418,6 +416,7 @@ static int app_esb_resume(void) {
 
     if(m_mode == APP_ESB_MODE_PTX) {
         err = esb_initialize(m_mode);
+        k_sem_give(&tx_sem);
         m_active = true;
     }
     else {
