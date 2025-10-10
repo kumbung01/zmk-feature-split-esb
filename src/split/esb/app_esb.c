@@ -420,8 +420,8 @@ static int app_esb_resume(void) {
 
     if(m_mode == APP_ESB_MODE_PTX) {
         err = esb_initialize(m_mode);
-        k_sem_give(&tx_sem);
         m_active = true;
+        k_sem_give(&tx_sem);
     }
     else {
         err = esb_initialize(m_mode);
@@ -471,6 +471,10 @@ static int on_activity_state(const zmk_event_t *eh) {
     }
 
     return 0;
+}
+
+int is_esb_active(void) {
+    return m_active;
 }
 
 ZMK_LISTENER(zmk_split_esb_idle_sleeper, on_activity_state);

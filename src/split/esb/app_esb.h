@@ -56,4 +56,6 @@ int zmk_split_esb_send(app_esb_data_t *tx_packet);
 
 int pull_packet_from_tx_msgq(void);
 
+bool is_esb_active(void);
+
 #endif

@@ -57,7 +57,7 @@ static int split_central_esb_send_command(uint8_t source,
                                     };
 
     k_msgq_put(&tx_msgq, &env, K_NO_WAIT);
-    if (is_enabled) {
+    if (is_esb_active()) {
         k_work_submit_to_queue(&esb_work_q, &tx_work);
     }
 
