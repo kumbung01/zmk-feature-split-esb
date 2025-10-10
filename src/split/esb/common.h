@@ -40,7 +40,7 @@ struct esb_event_envelope {
 } __packed;
 
 struct esb_data_envelope {
-    // uint32_t timestamp;
+    uint32_t timestamp;
     uint8_t source;
     union {
         struct zmk_split_transport_peripheral_event event;
