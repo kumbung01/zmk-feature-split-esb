@@ -118,7 +118,7 @@ static void event_handler(struct esb_evt const *event) {
 
 static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     struct esb_data_envelope env = {0};
-    // uint32_t now = k_uptime_get();
+    uint32_t now = k_uptime_get();
     uint32_t nonce = get_nonce();
     uint8_t* cnt = &payload->data[0];
 
@@ -159,11 +159,11 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
         }
 
         k_msgq_get(msgq, &env, K_NO_WAIT);
-        // LOG_DBG("now: %u env: %u diff: %u", now, env.timestamp, now - env.timestamp);
-        // if (now - env.timestamp > TIMEOUT_MS) {
-        //     LOG_DBG("timeout expired, drop old packet");
-        //     continue;
-        // }
+        LOG_DBG("now: %u env: %u diff: %u", now, env.timestamp, now - env.timestamp);
+        if (now - env.timestamp > TIMEOUT_MS) {
+            LOG_DBG("timeout expired, drop old packet");
+            continue;
+        }
 
         LOG_DBG("adding type %u size %u to packet", type, data_size);
 

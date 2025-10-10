@@ -52,7 +52,7 @@ extern struct k_work tx_work;
 static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd) {
     struct esb_data_envelope env = { .source = source,
-                                    //  .timestamp = k_uptime_get(),
+                                     .timestamp = k_uptime_get(),
                                      .command = cmd
                                     };
 
