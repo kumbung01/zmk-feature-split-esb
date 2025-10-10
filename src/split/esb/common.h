@@ -56,3 +56,6 @@ int service_init();
 
 uint32_t get_nonce();
 int process_payload(char* data, size_t length, uint32_t nonce);
+
+uint32_t get_u32_le(const uint8_t *src);
+void put_u32_le(uint8_t *dst, uint32_t val);
