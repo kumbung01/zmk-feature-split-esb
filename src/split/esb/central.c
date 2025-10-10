@@ -44,6 +44,8 @@ extern struct k_work tx_work;
 static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
 
+static struct zmk_split_esb_async_state async_state = {};
+
 static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd) {
     struct esb_data_envelope env = { .source = source,
