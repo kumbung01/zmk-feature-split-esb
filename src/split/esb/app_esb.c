@@ -78,7 +78,9 @@ static void event_handler(struct esb_evt const *event) {
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
             tx_fail_count = 0;
             m_callback(&m_event);
-            k_sem_give(&tx_sem);
+            if (m_enabled && esb_tx_full() == false) {
+                k_sem_give(&tx_sem);
+            }
             break;
         case ESB_EVENT_TX_FAILED:
             // Forward an event to the application
@@ -88,7 +90,12 @@ static void event_handler(struct esb_evt const *event) {
                 if (tx_fail_count > 0) {
                     esb_pop_tx();
                     tx_fail_count = 0;
-                    k_sem_give(&tx_sem);
+                    if (m_enabled && esb_tx_full() == false) {
+                        k_sem_give(&tx_sem);
+                    }
+                    else {
+                        esb_start_tx();
+                    }
                 }
                 else {
                     esb_start_tx();
@@ -365,6 +372,7 @@ int zmk_split_esb_set_enable(bool enabled) {
     m_enabled = enabled;
     if (enabled) {
         zmk_split_esb_timeslot_open_session();
+        k_sem_give(&tx_sem);
         return 0;
     } else {
         zmk_split_esb_timeslot_close_session();

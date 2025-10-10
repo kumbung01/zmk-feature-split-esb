@@ -69,9 +69,11 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
                                     //  .timestamp = k_uptime_get(),
                                      .event = *event
                                     };
-                                    
+
     k_msgq_put(&tx_msgq, &env, K_NO_WAIT);
-    k_sem_give(&tx_sem);
+    if (is_enabled) {
+        k_sem_give(&tx_sem); 
+    }
 
     return 0;
 }

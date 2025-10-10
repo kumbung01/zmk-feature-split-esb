@@ -46,7 +46,7 @@ static struct zmk_split_esb_async_state async_state = {
 };
 
 static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
-static bool is_enabled;
+static bool is_enabled = false;
 
 extern struct k_work tx_work;
 static int split_central_esb_send_command(uint8_t source,
@@ -57,7 +57,9 @@ static int split_central_esb_send_command(uint8_t source,
                                     };
 
     k_msgq_put(&tx_msgq, &env, K_NO_WAIT);
-    k_work_submit_to_queue(&esb_work_q, &tx_work);
+    if (is_enabled) {
+        k_work_submit_to_queue(&esb_work_q, &tx_work);
+    }
 
     return 0;
 }
