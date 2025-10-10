@@ -63,12 +63,8 @@ int service_init(void) {
 void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state) {
     switch(event->evt_type) {
         case APP_ESB_EVT_TX_SUCCESS:
-            // LOG_DBG("ESB TX sent");
-            // pull_packet_from_tx_msgq();
             break;
         case APP_ESB_EVT_TX_FAIL:
-            // LOG_WRN("ESB TX failed");
-            // pull_packet_from_tx_msgq();
             break;
         case APP_ESB_EVT_RX:
             // LOG_DBG("RX + %3d and now buffer is %3d", received, ring_buf_size_get(state->rx_buf));

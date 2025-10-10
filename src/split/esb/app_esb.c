@@ -78,7 +78,7 @@ static void event_handler(struct esb_evt const *event) {
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
             tx_fail_count = 0;
             m_callback(&m_event);
-            if (m_enabled && esb_tx_full() == false) {
+            if (m_active) {
                 k_sem_give(&tx_sem);
             }
             break;
@@ -90,11 +90,8 @@ static void event_handler(struct esb_evt const *event) {
                 if (tx_fail_count > 0) {
                     esb_pop_tx();
                     tx_fail_count = 0;
-                    if (m_enabled && esb_tx_full() == false) {
+                    if (m_active) {
                         k_sem_give(&tx_sem);
-                    }
-                    else {
-                        esb_start_tx();
                     }
                 }
                 else {
@@ -129,11 +126,7 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     ssize_t (*get_payload_data_size)(const struct zmk_split_transport_peripheral_event *evt) = get_payload_data_size_evt;
 #endif
 
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK)
-    payload->noack = false;
-#else
-    payload->noack = true;
-#endif
+    payload->noack = !CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK;
 
     if (k_msgq_num_used_get(msgq) == 0) {
         return 0;
@@ -248,12 +241,10 @@ void tx_thread() {
                 break;
             }
 
-            if (m_mode == APP_ESB_MODE_PTX) {
-                LOG_DBG("esb_start_tx count %d", count);
-                ret = esb_start_tx();
-                if (ret == -ENODATA) {
-                    LOG_DBG("fifo is empty");
-                }
+            LOG_DBG("esb_start_tx count %d", count);
+            ret = esb_start_tx();
+            if (ret == -ENODATA) {
+                LOG_DBG("fifo is empty");
             }
         }
     }
@@ -314,7 +305,7 @@ static int esb_initialize(app_esb_mode_t mode) {
     config.mode = (mode == APP_ESB_MODE_PTX) ? ESB_MODE_PTX : ESB_MODE_PRX;
     config.tx_mode = ESB_TXMODE_MANUAL_START;
     config.selective_auto_ack = true;
-    // config.tx_output_power = -4;
+    config.tx_output_power = -4;
 
     err = esb_init(&config);
 

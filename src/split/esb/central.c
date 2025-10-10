@@ -38,17 +38,12 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 extern struct k_work_q esb_work_q;
 
 extern struct k_msgq rx_msgq;
-extern struct k_sem tx_sem;
 extern struct k_msgq tx_msgq;
-
-static struct zmk_split_esb_async_state async_state = {
-    .rx_size_process_trigger = sizeof(struct esb_data_envelope) + 1,
-};
-
+extern struct k_sem tx_sem;
+extern struct k_work tx_work;
 static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
 
-extern struct k_work tx_work;
 static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd) {
     struct esb_data_envelope env = { .source = source,
