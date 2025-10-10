@@ -135,6 +135,10 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     payload->noack = true;
 #endif
 
+    if (k_msgq_num_used_get(msgq) == 0) {
+        return 0;
+    }
+
     put_u32_le(&payload->data[1], nonce);
     payload->length = 5;
     *cnt = 0;
