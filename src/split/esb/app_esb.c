@@ -229,35 +229,31 @@ void tx_thread() {
             continue;
         }
 
-        if (esb_is_idle() == false) {
-            LOG_DBG("esb not idle, retry later");
-            continue;
-        }
+        while (k_msgq_num_used_get(&tx_msgq) > 0) {
+            if (esb_tx_full()) {
+                LOG_DBG("esb tx full, wait for next tx event");
+                break;
+            }
 
-        if (esb_tx_full()) {
-            LOG_DBG("esb_tx_full");
-            esb_flush_tx();
-            continue;
-        }
+            count = make_packet(&tx_msgq, &payload);
+            if (count == 0) {
+                LOG_DBG("no packet to send");
+                break;
+            }
 
-        count = make_packet(&tx_msgq, &payload);
-        if (count == 0) {
-            LOG_DBG("no packet to send");
-            continue;
-        }
+            LOG_WRN("TX packet with %d events on pipe %d", count, payload.pipe);
+            ret = esb_write_payload(&payload);
+            if (ret != 0) {
+                LOG_DBG("esb_write_payload returned %d", ret);
+                break;
+            }
 
-        LOG_WRN("TX packet with %d events on pipe %d", count, payload.pipe);
-        ret = esb_write_payload(&payload);
-        if (ret != 0) {
-            LOG_DBG("esb_write_payload returned %d", ret);
-            continue;
-        }
-
-        if (m_mode == APP_ESB_MODE_PTX) {
-            LOG_DBG("esb_start_tx count %d", count);
-            ret = esb_start_tx();
-            if (ret == -ENODATA) {
-                LOG_DBG("fifo is empty");
+            if (m_mode == APP_ESB_MODE_PTX) {
+                LOG_DBG("esb_start_tx count %d", count);
+                ret = esb_start_tx();
+                if (ret == -ENODATA) {
+                    LOG_DBG("fifo is empty");
+                }
             }
         }
     }
