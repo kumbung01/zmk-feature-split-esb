@@ -224,6 +224,11 @@ void tx_thread() {
         k_sem_take(&tx_sem, K_FOREVER);
         LOG_DBG("tx thread awake");
 
+        if (m_active == false) {
+            LOG_DBG("esb not active, retry later");
+            continue;
+        }
+
         if (esb_is_idle() == false) {
             LOG_DBG("esb not idle, retry later");
             continue;
@@ -473,7 +478,7 @@ static int on_activity_state(const zmk_event_t *eh) {
     return 0;
 }
 
-int is_esb_active(void) {
+bool is_esb_active(void) {
     return m_active;
 }
 
