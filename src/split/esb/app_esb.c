@@ -170,6 +170,10 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
         payload->pipe = env.source; // use the source as the ESB pipe number
         break;
 #endif
+
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_SINGLE_PACKET)
+        break;
+#endif
     }
 
     process_payload((char*)&payload->data[5], payload->length - 5, nonce);

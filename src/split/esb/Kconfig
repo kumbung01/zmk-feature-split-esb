@@ -56,6 +56,10 @@ config ZMK_SPLIT_ESB_ENCRYPTION_KEY
     string "10+byte encryption key in string"
     default "hello world!!!"
 
+config ZMK_SPLIT_ESB_SINGLE_PACKET
+    bool "Use single packet mode"
+    default y
+
 module = ZMK_SPLIT_ESB
 module-str = ZMK_SPLIT_ESB
 source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
