@@ -69,7 +69,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
                                      .event = *event
                                     };
 
-    k_msgq_put(&tx_msgq, &env, K_MSEC(TIMEOUT_MS));
+    k_msgq_put(&tx_msgq, &env, K_MSEC(10));
     if (is_esb_active()) {
         k_sem_give(&tx_sem); 
     }

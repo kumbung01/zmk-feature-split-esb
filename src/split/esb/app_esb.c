@@ -235,14 +235,12 @@ void tx_thread() {
             count = make_packet(&tx_msgq, &payload);
             if (count == 0) {
                 LOG_DBG("no packet to send");
-                break;
             }
 
             LOG_WRN("TX packet with %d events on pipe %d", count, payload.pipe);
             ret = esb_write_payload(&payload);
             if (ret != 0) {
                 LOG_DBG("esb_write_payload returned %d", ret);
-                break;
             }
 
             LOG_DBG("esb_start_tx count %d", count);
