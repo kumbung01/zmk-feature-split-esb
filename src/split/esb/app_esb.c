@@ -250,13 +250,15 @@ void tx_thread() {
             if (ret == -ENODATA) {
                 LOG_DBG("fifo is empty");
             }
+
+            k_yield();
         }
     }
 }
 
 K_THREAD_DEFINE(tx_thread_id, 1600,
         tx_thread, NULL, NULL, NULL,
-        0, 0, 0);
+        -1, 0, 0);
 #endif
 
 
