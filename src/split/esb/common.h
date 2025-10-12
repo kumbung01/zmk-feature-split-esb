@@ -12,6 +12,8 @@
 #include <zmk/split/transport/types.h>
 #include "app_esb.h"
 
+#define TIMEOUT_MS CONFIG_ZMK_SPLIT_ESB_KEYBOARD_EVENT_TIMEOUT_MS
+
 struct esb_data_envelope {
     uint32_t timestamp;
     uint8_t source;

@@ -247,18 +247,16 @@ void tx_thread() {
 
             LOG_DBG("esb_start_tx count %d", count);
             ret = esb_start_tx();
-            if (ret == -ENODATA) {
-                LOG_DBG("fifo is empty");
+            if (ret != 0) {
+                LOG_DBG("esb_start_tx returned %d", ret);
             }
-
-            k_yield();
         }
     }
 }
 
 K_THREAD_DEFINE(tx_thread_id, 1600,
         tx_thread, NULL, NULL, NULL,
-        -1, 0, 0);
+        0, 0, 0);
 #endif
 
 
