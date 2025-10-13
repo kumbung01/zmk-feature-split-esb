@@ -38,6 +38,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 extern struct k_work_q esb_work_q;
 
 extern struct k_msgq rx_msgq;
+extern struct k_sem rx_sem;
 extern struct k_msgq tx_msgq;
 extern struct k_sem tx_sem;
 extern struct k_work tx_work;
@@ -167,13 +168,17 @@ static void publish_events_thread() {
     struct esb_payload payload;
     while (true)
     {
-        if (k_msgq_get(&rx_msgq, &payload, K_FOREVER) == 0) {
+        k_sem_take(&rx_sem, K_FOREVER);
+
+        if (k_msgq_get(&rx_msgq, &payload, K_NO_WAIT) == 0) {
             break_packet(&payload);
         }   
+
+        k_yield();
     }
 }
 
 K_THREAD_DEFINE(publish_events_thread_id, STACKSIZE,
         publish_events_thread, NULL, NULL, NULL,
-        0, 0, 0);
+        -1, 0, 0);
 
