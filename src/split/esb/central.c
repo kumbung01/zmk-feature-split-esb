@@ -159,7 +159,8 @@ static int break_packet(struct esb_payload *payload) {
         LOG_DBG("RX event type %d from source %d", evt.type, source);
         zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
 
-        k_yield();
+        if (i & 1)
+            k_yield();
     }
 
     return count;
@@ -168,13 +169,32 @@ static int break_packet(struct esb_payload *payload) {
 
 static void publish_events_thread() {
     struct esb_payload payload;
+    int count = 0;
+    uint32_t before = 0, now = 0;
     while (true)
     {
         k_sem_take(&rx_sem, K_FOREVER);
+        now = k_uptime_get();
+        if (now - before > 10) {
+            count = 0;
+        }
 
         if (k_msgq_get(&rx_msgq, &payload, K_NO_WAIT) == 0) {
-            break_packet(&payload);
+            int ret = break_packet(&payload);
+            if (ret < 2) {
+                count += ret;
+            }
+            else {
+                count = 0;
+            }
+
+            if (count > 2) {
+                count = 0;
+                k_yield();
+            }
         }   
+
+        before = now;
     }
 }
 
