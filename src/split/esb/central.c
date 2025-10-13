@@ -176,7 +176,7 @@ static void publish_events_thread() {
     {
         k_sem_take(&rx_sem, K_FOREVER);
         now = k_uptime_get();
-        if (now - before > 10) {
+        if (now - before >= 5) {
             count = 0;
         }
 
@@ -189,13 +189,13 @@ static void publish_events_thread() {
                 count = 0;
             }
 
-            if (count > 2) {
+            if (count >= 2) {
                 count = 0;
                 k_yield();
             }
         }   
 
-        before = now;
+        before = k_uptime_get();
     }
 }
 
