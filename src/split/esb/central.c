@@ -54,7 +54,7 @@ static int split_central_esb_send_command(uint8_t source,
                                      .command = cmd
                                     };
 
-    k_msgq_put(&tx_msgq, &env, K_MSEC(10));
+    k_msgq_put(&tx_msgq, &env, K_MSEC(TIMEOUT_MS));
     if (is_esb_active()) {
         k_work_submit_to_queue(&esb_work_q, &tx_work);
     }
@@ -158,6 +158,8 @@ static int break_packet(struct esb_payload *payload) {
 
         LOG_DBG("RX event type %d from source %d", evt.type, source);
         zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
+
+        k_yield();
     }
 
     return count;
@@ -173,8 +175,6 @@ static void publish_events_thread() {
         if (k_msgq_get(&rx_msgq, &payload, K_NO_WAIT) == 0) {
             break_packet(&payload);
         }   
-
-        k_yield();
     }
 }
 
