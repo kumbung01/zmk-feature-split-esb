@@ -169,12 +169,11 @@ static void publish_events_thread() {
     {
         if (k_msgq_get(&rx_msgq, &payload, K_FOREVER) == 0) {
             break_packet(&payload);
-            k_yield();
         }   
     }
 }
 
 K_THREAD_DEFINE(publish_events_thread_id, STACKSIZE,
         publish_events_thread, NULL, NULL, NULL,
-        -1, 0, 0);
+        0, 0, 0);
 
