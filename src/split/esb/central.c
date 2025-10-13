@@ -158,8 +158,6 @@ static int break_packet(struct esb_payload *payload) {
 
         LOG_DBG("RX event type %d from source %d", evt.type, source);
         zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
-
-        k_yield();
     }
 
     return count;
@@ -174,6 +172,7 @@ static void publish_events_thread() {
 
         if (k_msgq_get(&rx_msgq, &payload, K_NO_WAIT) == 0) {
             break_packet(&payload);
+            k_yield();
         }   
     }
 }
