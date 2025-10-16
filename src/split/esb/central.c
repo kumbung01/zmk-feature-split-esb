@@ -165,8 +165,9 @@ static int break_packet(struct esb_payload *payload) {
             k_yield();
             yield_cnt = 0;
         }
-
-        yield_cnt++;
+        else {
+            yield_cnt++;
+        }
     }
 
     return count;
