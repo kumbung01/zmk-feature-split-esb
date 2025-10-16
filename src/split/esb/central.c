@@ -180,7 +180,7 @@ static void publish_events_thread() {
         //     yield = 0;
         // }
 
-        if (k_msgq_get(&rx_msgq, &payload, K_NO_WAIT) == 0) {
+        while (k_msgq_get(&rx_msgq, &payload, K_NO_WAIT) == 0) {
             break_packet(&payload);
         }   
 
