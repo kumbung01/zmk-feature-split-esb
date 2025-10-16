@@ -160,10 +160,10 @@ static int break_packet(struct esb_payload *payload) {
         LOG_DBG("RX event type %d from source %d", evt.type, source);
         zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
 
-        if (yield)
-            k_yield();
+        // if (yield)
+        //     k_yield();
 
-        yield = !yield;
+        // yield = !yield;
     }
 
     return count;
@@ -175,12 +175,12 @@ static void publish_events_thread() {
 
     while (true)
     {
-        uint32_t before = k_uptime_get();
+        // uint32_t before = k_uptime_get();
         k_sem_take(&rx_sem, K_FOREVER);
-        uint32_t now = k_uptime_get();
-        if (now - before >= TIMEOUT_MS) {
-            yield = false;
-        }
+        // uint32_t now = k_uptime_get();
+        // if (now - before >= TIMEOUT_MS) {
+        //     yield = false;
+        // }
 
         if (k_msgq_get(&rx_msgq, &payload, K_NO_WAIT) == 0) {
             break_packet(&payload);
@@ -190,5 +190,5 @@ static void publish_events_thread() {
 
 K_THREAD_DEFINE(publish_events_thread_id, STACKSIZE,
         publish_events_thread, NULL, NULL, NULL,
-        -1, 0, 0);
+        0, 0, 0);
 
