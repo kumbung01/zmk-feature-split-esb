@@ -45,7 +45,13 @@ extern struct k_work tx_work;
 static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
 
-static struct zmk_split_esb_async_state async_state = {};
+static void process_tx_work_handler(struct k_work *work);
+K_WORK_DEFINE(process_tx_work, process_tx_work_handler);
+
+static struct zmk_split_esb_async_state async_state = {
+    .process_tx_work = &process_tx_work,
+};
+
 
 static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd) {
@@ -167,7 +173,7 @@ static int break_packet(struct esb_payload *payload) {
     return count;
 }
 
-
+#if 0
 static void publish_events_thread() {
     struct esb_payload payload;
     // uint32_t before = k_uptime_get();
@@ -182,4 +188,13 @@ static void publish_events_thread() {
 K_THREAD_DEFINE(publish_events_thread_id, STACKSIZE,
         publish_events_thread, NULL, NULL, NULL,
         -1, 0, 0);
+#endif
+
+static void process_tx_work_handler(struct k_work *work) {
+    struct esb_payload payload;
+
+    while (k_msgq_get(&rx_msgq, &payload, K_NO_WAIT) == 0) {
+        break_packet(&payload);
+    }
+}
 
