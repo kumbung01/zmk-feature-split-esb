@@ -133,10 +133,11 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     put_u32_le(&payload->data[1], nonce);
     payload->length = 5;
     *cnt = 0;
+    ssize_t data_size_max = get_payload_data_size_max();
 
     while (k_msgq_num_used_get(msgq) > 0) {
-        if (payload->length + get_payload_data_size_max() > CONFIG_ESB_MAX_PAYLOAD_LENGTH) {
-            LOG_DBG("packet full (%d + %d + 1 > %d)", payload->length, data_size, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
+        if (payload->length + data_size_max > CONFIG_ESB_MAX_PAYLOAD_LENGTH) {
+            LOG_DBG("packet full (%d + %d > %d)", payload->length, data_size_max, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
             break;
         }
 
