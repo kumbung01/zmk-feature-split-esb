@@ -106,8 +106,8 @@ static void event_handler(struct esb_evt const *event) {
             // LOG_DBG("RX SUCCESS");
             struct esb_payload rx_payload = {0};
             if (esb_read_rx_payload(&rx_payload) == 0) {
-                k_msgq_put(&rx_msgq, &rx_payload, K_NO_WAIT);
-                k_sem_give(&rx_sem);
+                if (k_msgq_put(&rx_msgq, &rx_payload, K_NO_WAIT) == 0);
+                    k_sem_give(&rx_sem);
             }
             m_callback(&m_event);
             break;
@@ -115,7 +115,6 @@ static void event_handler(struct esb_evt const *event) {
 }
 
 static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
-    struct esb_data_envelope env = {0};
     uint32_t now = k_uptime_get();
     uint32_t nonce = get_nonce();
     uint8_t* cnt = &payload->data[0];
@@ -140,7 +139,11 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
             break;
         }
 
-        k_msgq_get(msgq, &env, K_NO_WAIT);
+        struct esb_data_envelope env = {0};
+        if (k_msgq_get(msgq, &env, K_NO_WAIT) != 0) {
+            continue;
+        }
+
         uint8_t type = env.buf.type;
         ssize_t data_size = get_payload_data_size_buf(&env.buf);
         if (data_size < 0) {
@@ -230,10 +233,9 @@ void tx_thread() {
                 LOG_DBG("esb_write_payload returned %d", ret);
             }
 
-            LOG_DBG("esb_start_tx count %d", count);
             ret = esb_start_tx();
             if (ret != 0) {
-                LOG_DBG("esb_start_tx returned %d", ret);
+                LOG_WRN("esb_start_tx returned %d", ret);
             }
         }
     }
