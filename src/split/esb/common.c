@@ -78,7 +78,7 @@ int service_init(void) {
     static const struct k_work_queue_config queue_config = {
         .name = "Split Peripheral Notification Queue"};
     k_work_queue_start(&esb_work_q, esb_work_q_stack, K_THREAD_STACK_SIZEOF(esb_work_q_stack),
-                       3, &queue_config);
+                       -1, &queue_config);
 
     return 0;
 }
