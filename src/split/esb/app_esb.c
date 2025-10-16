@@ -116,7 +116,7 @@ static void event_handler(struct esb_evt const *event) {
 
 static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     struct esb_data_envelope env = {0};
-    // uint32_t now = k_uptime_get();
+    uint32_t now = k_uptime_get();
     uint32_t nonce = get_nonce();
     uint8_t* cnt = &payload->data[0];
 
@@ -145,6 +145,11 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
         ssize_t data_size = get_payload_data_size_buf(&env.buf);
         if (data_size < 0) {
             LOG_ERR("Invalid data size %zd for type %d", data_size, type);
+            continue;
+        }
+
+        if (now - env.timestamp > TIMEOUT_MS) {
+            LOG_DBG("dropping old event type %d timestamp %d", type, now - env.timestamp);
             continue;
         }
 
