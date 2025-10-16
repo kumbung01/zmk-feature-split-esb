@@ -135,26 +135,18 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     *cnt = 0;
 
     while (k_msgq_num_used_get(msgq) > 0) {
-        k_msgq_peek(msgq, &env);
-        uint8_t type = env.buf.type;
-        ssize_t data_size = get_payload_data_size_buf(&env.buf);
-        if (data_size < 0) {
-            LOG_ERR("Invalid data size %zd for type %d", data_size, type);
-            k_msgq_get(msgq, &env, K_NO_WAIT); // drop the invalid item
-            continue;
-        }
-
-        if (payload->length + data_size + sizeof(uint8_t) > CONFIG_ESB_MAX_PAYLOAD_LENGTH) {
+        if (payload->length + get_payload_data_size_max() > CONFIG_ESB_MAX_PAYLOAD_LENGTH) {
             LOG_DBG("packet full (%d + %d + 1 > %d)", payload->length, data_size, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
             break;
         }
 
         k_msgq_get(msgq, &env, K_NO_WAIT);
-        // LOG_DBG("now: %u env: %u diff: %u", now, env.timestamp, now - env.timestamp);
-        // if (now - env.timestamp > TIMEOUT_MS) {
-        //     LOG_DBG("timeout expired, drop old packet");
-        //     continue;
-        // }
+        uint8_t type = env.buf.type;
+        ssize_t data_size = get_payload_data_size_buf(&env.buf);
+        if (data_size < 0) {
+            LOG_ERR("Invalid data size %zd for type %d", data_size, type);
+            continue;
+        }
 
         LOG_DBG("adding type %u size %u to packet", type, data_size);
 
