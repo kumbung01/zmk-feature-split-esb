@@ -131,7 +131,7 @@ static int zmk_split_esb_central_init(void) {
 SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 
 
-static bool yield = false;
+static int yield = 0;
 static int break_packet(struct esb_payload *payload) {
     int count = payload->data[0]; // first byte = number of events
     uint8_t source = payload->pipe;

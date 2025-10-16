@@ -153,11 +153,11 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
         }
 
         k_msgq_get(msgq, &env, K_NO_WAIT);
-        LOG_DBG("now: %u env: %u diff: %u", now, env.timestamp, now - env.timestamp);
-        if (now - env.timestamp > TIMEOUT_MS) {
-            LOG_DBG("timeout expired, drop old packet");
-            continue;
-        }
+        // LOG_DBG("now: %u env: %u diff: %u", now, env.timestamp, now - env.timestamp);
+        // if (now - env.timestamp > TIMEOUT_MS) {
+        //     LOG_DBG("timeout expired, drop old packet");
+        //     continue;
+        // }
 
         LOG_DBG("adding type %u size %u to packet", type, data_size);
 
@@ -200,12 +200,6 @@ void tx_work_handler() {
         if (ret != 0) {
             LOG_DBG("esb_write_payload returned %d", ret);
             return;
-        }
-
-        LOG_DBG("esb_start_tx count %d", count);
-        ret = esb_start_tx();
-        if (ret == -ENODATA) {
-            LOG_DBG("fifo is empty");
         }
     }
 }
