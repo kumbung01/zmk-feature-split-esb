@@ -130,7 +130,7 @@ static int zmk_split_esb_central_init(void) {
 SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 
 
-static bool yield = false;
+static int yield = 0;
 static int break_packet(struct esb_payload *payload) {
     int count = payload->data[0]; // first byte = number of events
     uint8_t source = payload->pipe;
@@ -146,9 +146,7 @@ static int break_packet(struct esb_payload *payload) {
         evt.type = (enum zmk_split_transport_peripheral_event_type)data[0];
         data += 1;
 
-        ssize_t data_size = get_payload_data_size_evt(&evt);
-
-
+        ssize_t data_size = get_payload_data_size_evt(&evt);    
         if (data_size < 0) {
             LOG_ERR("Invalid data size %zd for event type %d", data_size, evt.type);
             break;
@@ -160,10 +158,10 @@ static int break_packet(struct esb_payload *payload) {
         LOG_DBG("RX event type %d from source %d", evt.type, source);
         zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
 
-        // if (yield)
+        // if (yield >= 2)
         //     k_yield();
-
-        // yield = !yield;
+        // else
+        //     yield++;
     }
 
     return count;
@@ -172,23 +170,25 @@ static int break_packet(struct esb_payload *payload) {
 
 static void publish_events_thread() {
     struct esb_payload payload;
+    uint32_t before = k_uptime_get();
 
     while (true)
     {
-        // uint32_t before = k_uptime_get();
         k_sem_take(&rx_sem, K_FOREVER);
         // uint32_t now = k_uptime_get();
         // if (now - before >= TIMEOUT_MS) {
-        //     yield = false;
+        //     yield = 0;
         // }
 
         if (k_msgq_get(&rx_msgq, &payload, K_NO_WAIT) == 0) {
             break_packet(&payload);
         }   
+
+        // before = now;
     }
 }
 
 K_THREAD_DEFINE(publish_events_thread_id, STACKSIZE,
         publish_events_thread, NULL, NULL, NULL,
-        0, 0, 0);
+        -1, 0, 0);
 
