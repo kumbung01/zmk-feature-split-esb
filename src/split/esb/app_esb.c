@@ -96,9 +96,8 @@ static void event_handler(struct esb_evt const *event) {
                 }
                 else {
                     tx_fail_count++;
+                    esb_start_tx();
                 }
-                
-                esb_start_tx();
             }
             
             m_callback(&m_event);
