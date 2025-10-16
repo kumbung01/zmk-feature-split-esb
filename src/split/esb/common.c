@@ -14,8 +14,16 @@
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
-K_MSGQ_DEFINE(tx_msgq, sizeof(struct esb_data_envelope), CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
-K_MSGQ_DEFINE(rx_msgq, sizeof(struct esb_payload), CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS, 4);
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_ROLE_CENTRAL)
+#define RX_MSGQ_SIZE CONFIG_ZMK_SPLIT_ESB_EVENT_BUFFER_ITEMS
+#define TX_MSGQ_SIZE CONFIG_ZMK_SPLIT_ESB_CMD_BUFFER_ITEMS
+#else
+#define RX_MSGQ_SIZE CONFIG_ZMK_SPLIT_ESB_CMD_BUFFER_ITEMS
+#define TX_MSGQ_SIZE CONFIG_ZMK_SPLIT_ESB_EVENT_BUFFER_ITEMS
+#endif
+
+K_MSGQ_DEFINE(tx_msgq, sizeof(struct esb_data_envelope), TX_MSGQ_SIZE, 4);
+K_MSGQ_DEFINE(rx_msgq, sizeof(struct esb_payload), RX_MSGQ_SIZE, 4);
 
 ssize_t get_payload_data_size_cmd(const struct zmk_split_transport_central_command *cmd) {
     switch (cmd->type) {
