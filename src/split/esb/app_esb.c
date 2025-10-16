@@ -100,9 +100,7 @@ static void event_handler(struct esb_evt const *event) {
             // LOG_DBG("RX SUCCESS");
             struct esb_payload rx_payload = {0};
             if (esb_read_rx_payload(&rx_payload) == 0) {
-                if(k_msgq_put(&rx_msgq, &rx_payload, K_NO_WAIT) == 0) {
-                    k_sem_give(&rx_sem);
-                }
+                k_msgq_put(&rx_msgq, &rx_payload, K_NO_WAIT);
             }
             m_callback(&m_event);
             break;

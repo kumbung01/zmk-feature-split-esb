@@ -170,21 +170,12 @@ static int break_packet(struct esb_payload *payload) {
 
 static void publish_events_thread() {
     struct esb_payload payload;
-    uint32_t before = k_uptime_get();
+    // uint32_t before = k_uptime_get();
 
     while (true)
     {
-        k_sem_take(&rx_sem, K_FOREVER);
-        // uint32_t now = k_uptime_get();
-        // if (now - before >= TIMEOUT_MS) {
-        //     yield = 0;
-        // }
-
-        while (k_msgq_get(&rx_msgq, &payload, K_NO_WAIT) == 0) {
-            break_packet(&payload);
-        }   
-
-        // before = now;
+        k_msgq_get(&rx_msgq, &payload, K_FOREVER);
+        break_packet(&payload);   
     }
 }
 
