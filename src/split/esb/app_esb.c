@@ -161,10 +161,8 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
 
         LOG_DBG("adding type %u size %u to packet", type, data_size);
 
-        memcpy(&payload->data[payload->length], &type, sizeof(uint8_t));
-        payload->length += sizeof(uint8_t);
-        memcpy(&payload->data[payload->length], &env.buf.data, data_size);
-        payload->length += data_size;
+        memcpy(&payload->data[payload->length], &env.buf, sizeof(uint8_t) + data_size);
+        payload->length += sizeof(uint8_t) + data_size;
         (*cnt)++;
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)

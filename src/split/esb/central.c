@@ -131,7 +131,7 @@ static int zmk_split_esb_central_init(void) {
 SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 
 
-static int yield = 0;
+static int yield_cnt = 0;
 static int break_packet(struct esb_payload *payload) {
     int count = payload->data[0]; // first byte = number of events
     uint8_t source = payload->pipe;
@@ -161,10 +161,12 @@ static int break_packet(struct esb_payload *payload) {
         LOG_DBG("RX event type %d from source %d", evt.type, source);
         zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
 
-        if (yield) {
+        if (yield_cnt >= 2) {
             k_yield();
+            yield_cnt = 0;
         }
-        yield = !yield;  
+
+        yield_cnt++;
     }
 
     return count;
@@ -179,8 +181,8 @@ static void publish_events_thread() {
         uint32_t before = k_uptime_get();
         k_sem_take(&rx_sem, K_FOREVER);
         uint32_t now = k_uptime_get();
-        if (now - before >= 5) {
-            yield = false;
+        if (now - before >= TIMEOUT_MS) {
+            yield_cnt = 0;
         }
 
         if (k_msgq_get(&rx_msgq, &payload, K_NO_WAIT) == 0) {
