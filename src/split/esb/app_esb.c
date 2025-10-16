@@ -86,6 +86,7 @@ static void event_handler(struct esb_evt const *event) {
             if (m_mode == APP_ESB_MODE_PTX) {
                 if (tx_fail_count > 0) {
                     esb_pop_tx();
+                    esb_start_tx();
                     tx_fail_count = 0;
                     k_sem_give(&tx_sem);
                 }
