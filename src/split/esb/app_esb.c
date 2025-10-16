@@ -77,10 +77,7 @@ static void event_handler(struct esb_evt const *event) {
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
             tx_fail_count = 0;
-            m_callback(&m_event);
-            if (m_active) {
-                k_sem_give(&tx_sem);
-            }
+            k_sem_give(&tx_sem);
             break;
         case ESB_EVENT_TX_FAILED:
             // Forward an event to the application
@@ -90,24 +87,20 @@ static void event_handler(struct esb_evt const *event) {
                 if (tx_fail_count > 0) {
                     esb_pop_tx();
                     tx_fail_count = 0;
-                    if (m_active) {
-                        k_sem_give(&tx_sem);
-                    }
+                    k_sem_give(&tx_sem);
                 }
                 else {
                     tx_fail_count++;
                     esb_start_tx();
                 }
             }
-            
-            m_callback(&m_event);
             break;
         case ESB_EVENT_RX_RECEIVED:
             // LOG_DBG("RX SUCCESS");
             struct esb_payload rx_payload = {0};
             if (esb_read_rx_payload(&rx_payload) == 0) {
-                if (k_msgq_put(&rx_msgq, &rx_payload, K_NO_WAIT) == 0);
-                    k_sem_give(&rx_sem);
+                k_msgq_put(&rx_msgq, &rx_payload, K_NO_WAIT);
+                k_sem_give(&rx_sem);
             }
             m_callback(&m_event);
             break;
