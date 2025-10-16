@@ -55,6 +55,14 @@ ssize_t get_payload_data_size_evt(const struct zmk_split_transport_peripheral_ev
     }
 }
 
+ssize_t get_payload_data_size_buf(const struct zmk_split_transport_buffer *buf) {
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_ROLE_CENTRAL)
+    return get_payload_data_size_cmd((const struct zmk_split_transport_central_command *)buf);
+#else
+    return get_payload_data_size_evt((const struct zmk_split_transport_peripheral_event *)buf);
+#endif
+}
+
 struct k_work_q esb_work_q;
 K_THREAD_STACK_DEFINE(esb_work_q_stack, 1300);
 

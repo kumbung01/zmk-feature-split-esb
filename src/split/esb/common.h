@@ -14,16 +14,18 @@
 
 #define TIMEOUT_MS CONFIG_ZMK_SPLIT_ESB_KEYBOARD_EVENT_TIMEOUT_MS
 
+struct zmk_split_transport_buffer {
+    uint8_t type;
+    uint8_t data[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
+};
+
 struct esb_data_envelope {
     uint32_t timestamp;
     uint8_t source;
     union {
         struct zmk_split_transport_peripheral_event event;
         struct zmk_split_transport_central_command command;
-        struct buf {
-            uint8_t type;
-            uint8_t data[CONFIG_ESB_MAX_PAYLOAD_LENGTH];
-        } buf; 
+        struct zmk_split_transport_buffer buf;
     };
 } __packed;
 

@@ -95,9 +95,10 @@ static void event_handler(struct esb_evt const *event) {
                     }
                 }
                 else {
-                    esb_start_tx();
                     tx_fail_count++;
                 }
+                
+                esb_start_tx();
             }
             
             m_callback(&m_event);
@@ -116,17 +117,13 @@ static void event_handler(struct esb_evt const *event) {
 
 static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     struct esb_data_envelope env = {0};
-    uint32_t now = k_uptime_get();
+    // uint32_t now = k_uptime_get();
     uint32_t nonce = get_nonce();
     uint8_t* cnt = &payload->data[0];
 
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-    ssize_t (*get_payload_data_size)(const struct zmk_split_transport_central_command *cmd)  = get_payload_data_size_cmd;
-#else
+#if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     payload->pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID; // use the peripheral_id as the ESB pipe number
-    ssize_t (*get_payload_data_size)(const struct zmk_split_transport_peripheral_event *evt) = get_payload_data_size_evt;
 #endif
-
     payload->noack = !CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK;
 
     if (k_msgq_num_used_get(msgq) == 0) {
@@ -140,7 +137,7 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     while (k_msgq_num_used_get(msgq) > 0) {
         k_msgq_peek(msgq, &env);
         uint8_t type = env.buf.type;
-        ssize_t data_size = get_payload_data_size(&env.buf);
+        ssize_t data_size = get_payload_data_size_buf(&env.buf);
         if (data_size < 0) {
             LOG_ERR("Invalid data size %zd for type %d", data_size, type);
             k_msgq_get(msgq, &env, K_NO_WAIT); // drop the invalid item
