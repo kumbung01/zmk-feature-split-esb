@@ -78,7 +78,7 @@ int service_init(void) {
     static const struct k_work_queue_config queue_config = {
         .name = "Split Peripheral Notification Queue"};
     k_work_queue_start(&esb_work_q, esb_work_q_stack, K_THREAD_STACK_SIZEOF(esb_work_q_stack),
-                       -1, &queue_config);
+                       5, &queue_config);
 
     return 0;
 }
@@ -97,7 +97,7 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
             } 
             
             else if (state->process_tx_work) {
-                k_work_submit(state->process_tx_work);
+                k_work_submit_to_queue(&esb_work_q, state->process_tx_work);
             }
 
             break;
