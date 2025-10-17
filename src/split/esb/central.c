@@ -174,8 +174,11 @@ static void publish_events_thread() {
 
     while (true)
     {
-        k_msgq_get(&rx_msgq, &payload, K_FOREVER);
-        break_packet(&payload);   
+        k_sem_take(&rx_sem, K_FOREVER);
+        
+        while (k_msgq_get(&rx_msgq, &payload, K_FOREVER) == 0) {
+            break_packet(&payload);   
+        }
     }
 }
 
