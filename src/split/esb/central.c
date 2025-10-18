@@ -60,7 +60,7 @@ static int split_central_esb_send_command(uint8_t source,
                                      .command = cmd
                                     };
 
-    if (is_esb_active() && k_msgq_put(&tx_msgq, &env, K_MSEC(TIMEOUT_MS)) == 0) {
+    if (k_msgq_put(&tx_msgq, &env, K_MSEC(TIMEOUT_MS)) == 0) {
         k_work_submit_to_queue(&esb_work_q, &tx_work);
     }
 

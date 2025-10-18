@@ -207,7 +207,7 @@ void tx_thread() {
         k_sem_take(&tx_sem, K_FOREVER);
         LOG_DBG("tx thread awake");
 
-        if (m_active == false) {
+        if (!is_esb_active()) {
             LOG_DBG("esb not active, retry later");
             continue;
         }
