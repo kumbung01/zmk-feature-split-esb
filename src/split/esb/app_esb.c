@@ -67,9 +67,6 @@ static bool m_enabled = false;
 
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 extern struct k_msgq tx_msgq;
-// extern struct k_msgq rx_msgq;
-extern struct ring_buf rx_ringbuf;
-extern struct k_spinlock rx_ringbuf_lock;
 static volatile uint32_t tx_fail_count = 0;
 static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
@@ -103,10 +100,9 @@ static void event_handler(struct esb_evt const *event) {
             m_event.evt_type = APP_ESB_EVT_RX;
             struct esb_payload rx_payload = {0};
             if (esb_read_rx_payload(&rx_payload) == 0) {
-                k_spinlock_key_t key = k_spin_lock(&rx_ringbuf_lock);
-                ring_buf_put(&rx_ringbuf, rx_payload.data, rx_payload.length);
-                k_spin_unlock(&rx_ringbuf_lock, key);
-                k_sem_give(&rx_sem);
+                if (put_data_to_ringbuf(rx_payload.data, rx_payload.length) == 0) {
+                    k_sem_give(&rx_sem);
+                }
             }
             m_callback(&m_event);
             break;
@@ -448,7 +444,7 @@ static int on_activity_state(const zmk_event_t *eh) {
         if (state_ev->state != ZMK_ACTIVITY_ACTIVE && m_enabled) {
             zmk_split_esb_set_enable(false);
             k_msgq_purge(&tx_msgq);
-            // k_msgq_purge(&rx_msgq);
+            reset_ringbuf
         }
         else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !m_enabled) {
             zmk_split_esb_set_enable(true);

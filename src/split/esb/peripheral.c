@@ -133,47 +133,35 @@ static int zmk_split_esb_peripheral_init(void) {
 
 SYS_INIT(zmk_split_esb_peripheral_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 
-static int break_packet(struct esb_payload *payload) {
-#if 0
-    int count = payload->data[0]; // first byte = number of events
-    uint8_t source = payload->pipe;
-    uint32_t nonce = get_u32_le(&payload->data[1]);
-    uint8_t *data = &payload->data[5];
-    LOG_WRN("RX packet with %d events from source %d", count, source);
 
-    process_payload((char*)&payload->data[5], payload->length - 5, nonce);
-
-    for (int i = 0; i < count; i++) {
+static size_t error_count = 0;
+static void process_tx_work_handler(struct k_work *work) {
+    while (get_ringbuf_size() > 0) {
+        uint8_t source = 0xff;
+        uint8_t type = 0xff;
         struct zmk_split_transport_central_command cmd = {0};
 
-        cmd.type = (enum zmk_split_transport_central_command_type)data[0];
-        data += 1;
-
-        ssize_t data_size = get_payload_data_size_cmd(&cmd);
-
-
-        if (data_size < 0) {
-            LOG_ERR("Invalid data size %zd for command type %d", data_size, cmd.type);
-            break;
+        int ret = get_data_from_ringbuf(&source, &type, &cmd.data, true);
+        if (ret < 0) {
+            LOG_DBG("get_data_from_ringbuf failed (ret %d)", ret);
+            error_count++;
+            return;
         }
 
-        memcpy(&cmd.data, data, data_size);
-        data += data_size;
+        cmd.type = (enum zmk_split_transport_central_command_type)type;
 
-        LOG_DBG("RX command type %d from source %d", cmd.type, source);
-        zmk_split_transport_peripheral_command_handler(&esb_peripheral, cmd);
+        LOG_DBG("TX command type %d to source %d", cmd.type, source);
+        ret = zmk_split_transport_peripheral_command_handler(&esb_peripheral, cmd);
+        if (ret < 0) {
+            LOG_ERR("zmk_split_transport_peripheral_command_handler failed (ret %d)", ret);
+            error_count++;
+            return;
+        }
     }
 
-    return count;
-#else
-    return 0;
-#endif
-}
-
-static void process_tx_work_handler(struct k_work *work) {
-    // struct esb_payload payload;
-
-    // while (k_msgq_get(&rx_msgq, &payload, K_NO_WAIT) == 0) {
-    //     break_packet(&payload);
-    // }
+    if (error_count > 3) {
+        LOG_WRN("process_tx_work_handler encountered %d errors", error_count);
+        reset_ringbuf();
+        error_count = 0;
+    }
 }
