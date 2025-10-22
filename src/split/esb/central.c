@@ -142,7 +142,7 @@ static void publish_events_thread() {
     {
         k_sem_take(&rx_sem, K_FOREVER);
 
-        while (get_ringbuf_size() > 0) {
+        while (get_ringbuf_size() > 3) { // at least source(1) + type(1) + data(1)
             uint8_t source = 0xff;
             uint8_t type = 0xff;
             struct zmk_split_transport_peripheral_event evt = {0};

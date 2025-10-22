@@ -136,7 +136,7 @@ SYS_INIT(zmk_split_esb_peripheral_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY
 
 static size_t error_count = 0;
 static void process_tx_work_handler(struct k_work *work) {
-    while (get_ringbuf_size() > 0) {
+    while (get_ringbuf_size() > 3) { // at least source(1) + type(1) + data(1)
         uint8_t source = 0xff;
         uint8_t type = 0xff;
         struct zmk_split_transport_central_command cmd = {0};
