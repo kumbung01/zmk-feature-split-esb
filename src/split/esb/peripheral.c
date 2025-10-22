@@ -170,9 +170,9 @@ static int break_packet(struct esb_payload *payload) {
 }
 
 static void process_tx_work_handler(struct k_work *work) {
-    struct esb_payload payload;
+    // struct esb_payload payload;
 
-    while (k_msgq_get(&rx_msgq, &payload, K_NO_WAIT) == 0) {
-        break_packet(&payload);
-    }
+    // while (k_msgq_get(&rx_msgq, &payload, K_NO_WAIT) == 0) {
+    //     break_packet(&payload);
+    // }
 }
