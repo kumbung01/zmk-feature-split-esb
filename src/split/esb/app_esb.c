@@ -67,7 +67,9 @@ static bool m_enabled = false;
 
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 extern struct k_msgq tx_msgq;
-extern struct k_msgq rx_msgq;
+// extern struct k_msgq rx_msgq;
+extern struct ring_buf rx_ringbuf;
+extern struct k_spinlock rx_ringbuf_lock;
 static volatile uint32_t tx_fail_count = 0;
 static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
