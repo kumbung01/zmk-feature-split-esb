@@ -24,7 +24,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 K_MSGQ_DEFINE(tx_msgq, sizeof(struct esb_data_envelope), TX_MSGQ_SIZE, 4);
 // K_MSGQ_DEFINE(rx_msgq, sizeof(struct esb_payload), RX_MSGQ_SIZE, 4);
 RING_BUF_DECLARE(rx_ringbuf, sizeof(struct esb_data_envelope) * RX_MSGQ_SIZE);
-k_spinlock rx_ringbuf_lock;
+struct k_spinlock rx_ringbuf_lock;
 
 ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type _type) {
     switch (_type) {
