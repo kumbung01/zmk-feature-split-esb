@@ -62,7 +62,7 @@ uint32_t get_nonce();
 int process_payload(char* data, size_t length, uint32_t nonce);
 
 size_t get_ringbuf_size();
-int reset_ringbuf();
+void reset_ringbuf();
 int get_data_from_ringbuf(uint8_t *source, uint8_t *type, void *data, bool is_cmd);
 int put_data_to_ringbuf(void *data, size_t length);
 
