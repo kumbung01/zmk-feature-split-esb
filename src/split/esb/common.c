@@ -142,7 +142,7 @@ void put_u32_le(uint8_t *dst, uint32_t v) {
 }
 
 size_t get_ringbuf_size() {
-    return ring_buf_size_get(rx_ringbuf);
+    return ring_buf_size_get(&rx_ringbuf);
 }
 
 void reset_ringbuf() {
