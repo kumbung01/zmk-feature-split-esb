@@ -30,10 +30,8 @@ struct esb_data_envelope {
 } __packed;
 
 struct payload_buffer {
-    uint8_t cnt;
     uint32_t nonce;
-    uint8_t body[CONFIG_ESB_MAX_PAYLOAD_LENGTH - 5];
-    uint8_t length;
+    uint8_t body[CONFIG_ESB_MAX_PAYLOAD_LENGTH - 4];
 } __packed;
 
 // #define ESB_MSG_EXTRA_SIZE (sizeof(struct esb_msg_prefix) + sizeof(struct esb_msg_postfix))
@@ -53,10 +51,10 @@ struct zmk_split_esb_async_state {
 
 void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state);
 
-ssize_t get_payload_data_size_evt(const struct zmk_split_transport_peripheral_event *evt);
-ssize_t get_payload_data_size_cmd(const struct zmk_split_transport_central_command *cmd);
-ssize_t get_payload_data_size_buf(const struct zmk_split_transport_buffer *buf);
-ssize_t get_payload_data_size_max();
+ssize_t get_payload_data_size_evt(enum zmk_split_transport_peripheral_event_type _type);
+ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type _type);
+ssize_t get_payload_data_size_buf(uint8_t _type, bool is_cmd);
+ssize_t get_payload_data_size_max(bool is_cmd);
 
 int service_init();
 

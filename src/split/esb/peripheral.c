@@ -55,7 +55,7 @@ void zmk_split_esb_on_ptx_esb_callback(app_esb_event_t *event) {
 
 
 extern struct k_msgq tx_msgq;
-extern struct k_msgq rx_msgq;
+// extern struct k_msgq rx_msgq;
 extern struct k_sem tx_sem;
 extern struct k_work_q esb_work_q;
 
@@ -133,6 +133,7 @@ static int zmk_split_esb_peripheral_init(void) {
 SYS_INIT(zmk_split_esb_peripheral_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 
 static int break_packet(struct esb_payload *payload) {
+#if 0
     int count = payload->data[0]; // first byte = number of events
     uint8_t source = payload->pipe;
     uint32_t nonce = get_u32_le(&payload->data[1]);
@@ -163,6 +164,9 @@ static int break_packet(struct esb_payload *payload) {
     }
 
     return count;
+#else
+    return 0;
+#endif
 }
 
 static void process_tx_work_handler(struct k_work *work) {

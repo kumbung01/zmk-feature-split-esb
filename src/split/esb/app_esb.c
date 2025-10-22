@@ -101,9 +101,10 @@ static void event_handler(struct esb_evt const *event) {
             m_event.evt_type = APP_ESB_EVT_RX;
             struct esb_payload rx_payload = {0};
             if (esb_read_rx_payload(&rx_payload) == 0) {
-                if (k_msgq_put(&rx_msgq, &rx_payload, K_NO_WAIT) == 0) {
-                    k_sem_give(&rx_sem); 
-                }
+                k_spinlock_key_t key = k_spin_lock(&rx_ringbuf_lock);
+                ring_buf_put(&rx_ringbuf, rx_payload.data, rx_payload.length);
+                k_spin_unlock(&rx_ringbuf_lock, key);
+                k_sem_give(&rx_sem);
             }
             m_callback(&m_event);
             break;
@@ -113,7 +114,7 @@ static void event_handler(struct esb_evt const *event) {
 static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     uint32_t now = k_uptime_get();
     uint32_t nonce = get_nonce();
-    uint8_t* cnt = &payload->data[0];
+    uint8_t count = 0;
 
 #if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     payload->pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID; // use the peripheral_id as the ESB pipe number
@@ -124,10 +125,9 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
         return 0;
     }
 
-    put_u32_le(&payload->data[1], nonce);
-    payload->length = 5;
-    *cnt = 0;
-    ssize_t data_size_max = get_payload_data_size_max();
+    // put_u32_le(payload->data, nonce);
+    // payload->length = 4;
+    ssize_t data_size_max = get_payload_data_size_max(m_mode == APP_ESB_MODE_PRX);
 
     while (k_msgq_num_used_get(msgq) > 0) {
         if (payload->length + data_size_max > CONFIG_ESB_MAX_PAYLOAD_LENGTH) {
@@ -141,7 +141,7 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
         }
 
         uint8_t type = env.buf.type;
-        ssize_t data_size = get_payload_data_size_buf(&env.buf);
+        ssize_t data_size = get_payload_data_size_buf(type, m_mode == APP_ESB_MODE_PRX);
         if (data_size < 0) {
             LOG_ERR("Invalid data size %zd for type %d", data_size, type);
             continue;
@@ -154,9 +154,11 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
 
         LOG_DBG("adding type %u size %u to packet", type, data_size);
 
+        payload->data[payload->length] = env.source;
+        payload->length += sizeof(uint8_t);
         memcpy(&payload->data[payload->length], &env.buf, sizeof(uint8_t) + data_size);
         payload->length += sizeof(uint8_t) + data_size;
-        (*cnt)++;
+        count++;
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
         payload->pipe = env.source; // use the source as the ESB pipe number
@@ -168,9 +170,9 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
 #endif
     }
 
-    process_payload((char*)&payload->data[5], payload->length - 5, nonce);
+    // process_payload((char*)&payload->data[5], payload->length - 5, nonce);
 
-    return *cnt;
+    return count;
 }
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)

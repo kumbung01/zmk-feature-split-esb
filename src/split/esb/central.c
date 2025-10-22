@@ -37,7 +37,9 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 extern struct k_work_q esb_work_q;
 
-extern struct k_msgq rx_msgq;
+// extern struct k_msgq rx_msgq;
+extern struct k_spinlock rx_ringbuf_lock;
+extern struct ring_buf rx_ringbuf;
 extern struct k_sem rx_sem;
 extern struct k_msgq tx_msgq;
 extern struct k_sem tx_sem;
@@ -136,48 +138,86 @@ static int zmk_split_esb_central_init(void) {
 SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 
 
-static int yield = 0;
-static int break_packet(struct esb_payload *payload) {
-    int count = payload->data[0]; // first byte = number of events
-    uint8_t source = payload->pipe;
-    uint32_t nonce = get_u32_le(&payload->data[1]);
-    uint8_t *data = &payload->data[5];
-    LOG_WRN("RX packet with %d events from source %d", count, source);
+// static int yield = 0;
+// static int break_packet(struct esb_payload *payload) {
+//     int count = payload->data[0]; // first byte = number of events
+//     uint8_t source = payload->pipe;
+//     uint32_t nonce = get_u32_le(&payload->data[1]);
+//     uint8_t *data = &payload->data[5];
+//     LOG_WRN("RX packet with %d events from source %d", count, source);
 
-    process_payload((char*)&payload->data[5], payload->length - 5, nonce);
+//     process_payload((char*)&payload->data[5], payload->length - 5, nonce);
 
-    for (int i = 0; i < count; i++) {
-        struct zmk_split_transport_peripheral_event evt = {0};
+//     for (int i = 0; i < count; i++) {
+//         struct zmk_split_transport_peripheral_event evt = {0};
 
-        evt.type = (enum zmk_split_transport_peripheral_event_type)data[0];
-        data += 1;
+//         evt.type = (enum zmk_split_transport_peripheral_event_type)data[0];
+//         data += 1;
 
-        ssize_t data_size = get_payload_data_size_evt(&evt);    
-        if (data_size < 0) {
-            LOG_ERR("Invalid data size %zd for event type %d", data_size, evt.type);
-            break;
-        }
+//         ssize_t data_size = get_payload_data_size_evt(&evt);    
+//         if (data_size < 0) {
+//             LOG_ERR("Invalid data size %zd for event type %d", data_size, evt.type);
+//             break;
+//         }
 
-        memcpy(&evt.data, data, data_size);
-        data += data_size;
+//         memcpy(&evt.data, data, data_size);
+//         data += data_size;
 
-        LOG_DBG("RX event type %d from source %d", evt.type, source);
-        zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
-    }
+//         LOG_DBG("RX event type %d from source %d", evt.type, source);
+//         zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
+//     }
 
-    return count;
-}
+//     return count;
+// }
 
 
 static void publish_events_thread() {
-    struct esb_payload payload;
+    size_t error_count = 0;
 
     while (true)
     {
+        uint8_t source = 0xff;
+        uint8_t type = 0xff;
+        struct zmk_split_transport_peripheral_event evt = {0};
+
         k_sem_take(&rx_sem, K_FOREVER);
 
-        while (k_msgq_get(&rx_msgq, &payload, K_NO_WAIT) == 0) {
-            break_packet(&payload);   
+        while (ring_buf_size_get(&rx_ringbuf) > 0) {
+            size_t received = 0;
+            k_spinlock_key_t key = k_spin_lock(&rx_ringbuf_lock);
+            received = ring_buf_get(&rx_ringbuf, &source, sizeof(uint8_t));
+            received += ring_buf_get(&rx_ringbuf, &type, sizeof(uint8_t));
+            k_spin_unlock(&rx_ringbuf_lock, key);
+
+            ssize_t data_size = get_payload_data_size_evt(type);
+            if (data_size < 0) {
+                LOG_ERR("Invalid data size %zd for event type %d", data_size, type);
+                error_count++;
+                break;
+            }
+            evt.type = (enum zmk_split_transport_peripheral_event_type)type;
+
+            key = k_spin_lock(&rx_ringbuf_lock);
+            received = ring_buf_get(&rx_ringbuf, &evt.data, data_size);
+            k_spin_unlock(&rx_ringbuf_lock, key);
+
+            if (received == 0) {
+                break;
+            }
+
+            int ret = k_split_transport_central_peripheral_event_handler(&esb_central, (uint8_t)source, evt);
+            if (ret < 0) {
+                LOG_ERR("k_split_transport_central_peripheral_event_handler failed (ret %d)", ret);
+                error_count++;
+            }
+        }
+
+        if (error_count > 3) {
+            LOG_WRN("publish_events_thread encountered %d errors", error_count);
+            k_spinlock_key_t key = k_spin_lock(&rx_ringbuf_lock);
+            ring_buf_reset(&rx_ringbuf);
+            k_spin_unlock(&rx_ringbuf_lock, key);
+            error_count = 0;\
         }
     }
 }

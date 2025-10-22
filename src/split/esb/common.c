@@ -7,7 +7,6 @@
 #include "common.h"
 
 #include <zephyr/sys/crc.h>
-#include <zephyr/drivers/uart.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
 #include <esb.h>
@@ -23,52 +22,56 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #endif
 
 K_MSGQ_DEFINE(tx_msgq, sizeof(struct esb_data_envelope), TX_MSGQ_SIZE, 4);
-K_MSGQ_DEFINE(rx_msgq, sizeof(struct esb_payload), RX_MSGQ_SIZE, 4);
+// K_MSGQ_DEFINE(rx_msgq, sizeof(struct esb_payload), RX_MSGQ_SIZE, 4);
+RING_BUF_DECLARE(rx_ringbuf, sizeof(struct esb_data_envelope) * RX_MSGQ_SIZE);
+k_spinlock rx_ringbuf_lock;
 
-ssize_t get_payload_data_size_cmd(const struct zmk_split_transport_central_command *cmd) {
-    switch (cmd->type) {
+ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type _type) {
+    switch (_type) {
     case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_POLL_EVENTS:
         return 0;
     case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_INVOKE_BEHAVIOR:
-        return sizeof(cmd->data.invoke_behavior);
+        return sizeof(((struct zmk_split_transport_central_command*)0)->data.invoke_behavior);
     case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_PHYSICAL_LAYOUT:
-        return sizeof(cmd->data.set_physical_layout);
+        return sizeof(((struct zmk_split_transport_central_command*)0)->data.set_physical_layout);
     case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_HID_INDICATORS:
-        return sizeof(cmd->data.set_hid_indicators);
+        return sizeof(((struct zmk_split_transport_central_command*)0)->data.set_hid_indicators);
     default:
         return -ENOTSUP;
     }
 }
 
-ssize_t get_payload_data_size_evt(const struct zmk_split_transport_peripheral_event *evt) {
-    switch (evt->type) {
+ssize_t get_payload_data_size_evt(enum zmk_split_transport_peripheral_event_type _type) {
+    switch (_type) {
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT:
-        return sizeof(evt->data.input_event);
+        return sizeof(((struct zmk_split_transport_peripheral_event*)0)->data.input_event);
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT:
-        return sizeof(evt->data.key_position_event);
+        return sizeof(((struct zmk_split_transport_peripheral_event*)0)->data.key_position_event);
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT:
-        return sizeof(evt->data.sensor_event);
+        return sizeof(((struct zmk_split_transport_peripheral_event*)0)->data.sensor_event);
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT:
-        return sizeof(evt->data.battery_event);
+        return sizeof(((struct zmk_split_transport_peripheral_event*)0)->data.battery_event);
     default:
         return -ENOTSUP;
     }
 }
 
-ssize_t get_payload_data_size_buf(const struct zmk_split_transport_buffer *buf) {
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_ROLE_CENTRAL)
-    return get_payload_data_size_cmd((const struct zmk_split_transport_central_command *)buf);
-#else
-    return get_payload_data_size_evt((const struct zmk_split_transport_peripheral_event *)buf);
-#endif
+
+ssize_t get_payload_data_size_buf(uint8_t _type, bool is_cmd) {
+    if (is_cmd) {
+        return get_payload_data_size_cmd((enum zmk_split_transport_central_command_type)_type);
+    } else {
+        return get_payload_data_size_evt((enum zmk_split_transport_peripheral_event_type)_type);
+    }
 }
 
-ssize_t get_payload_data_size_max() {
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_ROLE_CENTRAL)
-        return sizeof(struct zmk_split_transport_central_command);
-#else
-        return sizeof(struct zmk_split_transport_peripheral_event);
-#endif
+
+ssize_t get_payload_data_size_max(bool is_cmd) {
+    if (is_cmd) {
+        return sizeof(((struct zmk_split_transport_central_command*)0)->data);
+    } else {
+        return sizeof(((struct zmk_split_transport_peripheral_event*)0)->data);
+    }
 }
 
 struct k_work_q esb_work_q;
