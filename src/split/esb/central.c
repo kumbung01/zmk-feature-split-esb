@@ -217,14 +217,14 @@ static void publish_events_thread() {
             k_spinlock_key_t key = k_spin_lock(&rx_ringbuf_lock);
             ring_buf_reset(&rx_ringbuf);
             k_spin_unlock(&rx_ringbuf_lock, key);
-            error_count = 0;\
+            error_count = 0;
         }
     }
 }
 
 K_THREAD_DEFINE(publish_events_thread_id, STACKSIZE,
         publish_events_thread, NULL, NULL, NULL,
-        -1, 0, 0);
+        0, 0, 0);
 
 
 // static void process_tx_work_handler(struct k_work *work) {
