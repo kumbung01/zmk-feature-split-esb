@@ -111,7 +111,7 @@ static void event_handler(struct esb_evt const *event) {
 
 static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     uint32_t now = k_uptime_get();
-    uint32_t nonce = get_nonce();
+    // uint32_t nonce = get_nonce();
     uint8_t count = 0;
 
 #if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)

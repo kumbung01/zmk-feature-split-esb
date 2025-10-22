@@ -153,7 +153,8 @@ static void publish_events_thread() {
                 LOG_DBG("get_data_from_ringbuf failed (ret %d)", ret);
                 continue;
             }
-
+            
+            evt.type = (enum zmk_split_transport_peripheral_event_type)type;
             ret = zmk_split_transport_central_peripheral_event_handler(&esb_central, (uint8_t)source, evt);
             if (ret < 0) {
                 LOG_ERR("zmk_split_transport_central_peripheral_event_handler failed (ret %d)", ret);
