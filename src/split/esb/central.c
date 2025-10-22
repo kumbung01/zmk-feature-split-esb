@@ -154,7 +154,7 @@ static void publish_events_thread() {
                 continue;
             }
 
-            int ret = zmk_split_transport_central_peripheral_event_handler(&esb_central, (uint8_t)source, evt);
+            ret = zmk_split_transport_central_peripheral_event_handler(&esb_central, (uint8_t)source, evt);
             if (ret < 0) {
                 LOG_ERR("zmk_split_transport_central_peripheral_event_handler failed (ret %d)", ret);
                 error_count++;
