@@ -68,6 +68,7 @@ static bool m_enabled = false;
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 extern struct k_msgq tx_msgq;
 static volatile uint32_t tx_fail_count = 0;
+static int8_t pids_before[CONFIG_ESB_PIPE_COUNT];
 static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
     switch (event->evt_id) {
@@ -98,8 +99,15 @@ static void event_handler(struct esb_evt const *event) {
         case ESB_EVENT_RX_RECEIVED:
             LOG_DBG("RX SUCCESS");
             m_event.evt_type = APP_ESB_EVT_RX;
-            struct esb_payload rx_payload = {0};
+            struct esb_payload rx_payload;
             if (esb_read_rx_payload(&rx_payload) == 0) {
+                if (pids_before[rx_payload.pipe] == rx_payload.pid) {
+                    LOG_DBG("RX on pipe %d with same pid %d", rx_payload.pipe, rx_payload.pid);
+                    break;
+                }
+
+                LOG_DBG("RX on pipe %d with new pid %d (before %d)", rx_payload.pipe, rx_payload.pid, pids_before[rx_payload.pipe]);
+                pids_before[rx_payload.pipe] = rx_payload.pid;
                 if (put_data_to_ringbuf(rx_payload.data, rx_payload.length) == 0) {
                     k_sem_give(&rx_sem);
                 }
@@ -397,6 +405,7 @@ static int app_esb_suspend(void) {
 static int app_esb_resume(void) {
     int err = 0;
 
+    memset(pids_before, -1, sizeof(pids_before));
     if(m_mode == APP_ESB_MODE_PTX) {
         err = esb_initialize(m_mode);
         m_active = true;
