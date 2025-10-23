@@ -55,6 +55,7 @@ void zmk_split_esb_on_ptx_esb_callback(app_esb_event_t *event) {
 
 
 extern struct k_msgq tx_msgq;
+extern struct k_mem_slab tx_slab;
 // extern struct k_msgq rx_msgq;
 extern struct k_sem tx_sem;
 extern struct k_work_q esb_work_q;
@@ -64,15 +65,26 @@ static bool is_enabled = false;
 
 static int
 split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event) {
-    struct esb_data_envelope env = { 
-                                     .source = peripheral_id,
-                                     .timestamp = k_uptime_get(),
-                                     .event = *event
-                                    };
-
-    if (k_msgq_put(&tx_msgq, &env, K_MSEC(TIMEOUT_MS)) == 0) {
-        k_sem_give(&tx_sem); 
+    struct esb_data_envelope *env;
+    int ret = k_mem_slab_alloc(&tx_slab, (void **)&env, K_NO_WAIT);
+    if (ret < 0) {
+        LOG_ERR("Failed to allocate tx_slab (err %d)", ret);
+        return -ENOMEM;
     }
+
+    env->source = peripheral_id;
+    env->timestamp = k_uptime_get();
+    env->event = *event;
+    ret = k_msgq_put(&tx_msgq, &env, K_MSEC(TIMEOUT_MS));
+    if (ret < 0) {
+        LOG_ERR("k_msgq_put failed (err %d)", ret);
+        k_mem_slab_free(&tx_slab, (void *)env);
+        return ret;
+    }
+    LOG_DBG("Queued ptr %p to tx_msgq", env);
+    LOG_HEXDUMP_DBG(env, sizeof(*env), "ptr:");
+
+    k_sem_give(&tx_sem);
 
     return 0;
 }

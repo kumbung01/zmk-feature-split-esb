@@ -21,7 +21,8 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #define TX_MSGQ_SIZE CONFIG_ZMK_SPLIT_ESB_EVENT_BUFFER_ITEMS
 #endif
 
-K_MSGQ_DEFINE(tx_msgq, sizeof(struct esb_data_envelope), TX_MSGQ_SIZE, 4);
+K_MEM_SLAB_DEFINE(tx_slab, sizeof(struct esb_data_envelope), TX_MSGQ_SIZE, 4);
+K_MSGQ_DEFINE(tx_msgq, sizeof(void*), TX_MSGQ_SIZE, 4);
 // K_MSGQ_DEFINE(rx_msgq, sizeof(struct esb_payload), RX_MSGQ_SIZE, 4);
 RING_BUF_DECLARE(rx_ringbuf, sizeof(struct esb_data_envelope) * RX_MSGQ_SIZE);
 static struct k_spinlock rx_ringbuf_lock;

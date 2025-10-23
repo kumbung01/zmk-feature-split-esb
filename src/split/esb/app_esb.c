@@ -67,6 +67,7 @@ static bool m_enabled = false;
 
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 extern struct k_msgq tx_msgq;
+extern struct k_mem_slab tx_slab;
 static volatile uint32_t tx_fail_count = 0;
 static int8_t pids_before[CONFIG_ESB_PIPE_COUNT];
 static void event_handler(struct esb_evt const *event) {
@@ -132,8 +133,6 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
         return 0;
     }
 
-    // put_u32_le(payload->data, nonce);
-    // payload->length = 4;
     ssize_t data_size_max = get_payload_data_size_max(m_mode == APP_ESB_MODE_PRX);
 
     while (k_msgq_num_used_get(msgq) > 0) {
@@ -142,30 +141,37 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
             break;
         }
 
-        struct esb_data_envelope env = {0};
+        struct esb_data_envelope *env = NULL;
         if (k_msgq_get(msgq, &env, K_NO_WAIT) != 0) {
             continue;
         }
 
-        uint8_t type = env.buf.type;
+        LOG_DBG("dequeued ptr %p from tx_msgq", env);
+        LOG_HEXDUMP_DBG(env, sizeof(*env), "dequeued ptr:");
+
+        uint8_t type = env->buf.type;
         ssize_t data_size = get_payload_data_size_buf(type, m_mode == APP_ESB_MODE_PRX);
         if (data_size < 0) {
             LOG_ERR("Invalid data size %zd for type %d", data_size, type);
+            k_mem_slab_free(&tx_slab, (void *)env);
             continue;
         }
 
         if (now - env.timestamp > TIMEOUT_MS) {
             LOG_DBG("dropping old event type %d timestamp %d", type, now - env.timestamp);
+            k_mem_slab_free(&tx_slab, (void *)env);
             continue;
         }
 
         LOG_DBG("adding type %u size %u to packet", type, data_size);
 
-        payload->data[payload->length] = env.source;
+        payload->data[payload->length] = env->source;
         payload->length += sizeof(uint8_t);
-        memcpy(&payload->data[payload->length], &env.buf, sizeof(uint8_t) + data_size);
+        memcpy(&payload->data[payload->length], &env->buf, sizeof(uint8_t) + data_size);
         payload->length += sizeof(uint8_t) + data_size;
         count++;
+
+        k_mem_slab_free(&tx_slab, (void *)env);
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
         payload->pipe = env.source; // use the source as the ESB pipe number
