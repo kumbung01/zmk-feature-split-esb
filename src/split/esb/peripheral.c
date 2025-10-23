@@ -155,29 +155,29 @@ SYS_INIT(zmk_split_esb_peripheral_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY
 
 
 static void process_tx_work_handler(struct k_work *work) {
-    while (true) {
-        uint8_t source = 0xff;
-        uint8_t type = 0xff;
-        struct zmk_split_transport_central_command cmd;
+    // while (true) {
+    //     uint8_t source = 0xff;
+    //     uint8_t type = 0xff;
+    //     struct zmk_split_transport_central_command cmd;
 
-        int ret = get_data_from_ringbuf(&source, &type, &cmd.data, true);
-        if (ret == -EAGAIN) {
-            break;
-        }
+    //     int ret = get_data_from_ringbuf(&source, &type, &cmd.data, true);
+    //     if (ret == -EAGAIN) {
+    //         break;
+    //     }
 
-        if (ret < 0) {
-            LOG_ERR("get_data_from_ringbuf failed (err %d)", ret);
-            reset_ringbuf();
-            break;
-        }
+    //     if (ret < 0) {
+    //         LOG_ERR("get_data_from_ringbuf failed (err %d)", ret);
+    //         reset_ringbuf();
+    //         break;
+    //     }
 
-        cmd.type = (enum zmk_split_transport_central_command_type)type;
+    //     cmd.type = (enum zmk_split_transport_central_command_type)type;
 
-        LOG_DBG("TX command type %d to source %d", cmd.type, source);
-        ret = zmk_split_transport_peripheral_command_handler(&esb_peripheral, cmd);
-        if (ret < 0) {
-            LOG_ERR("zmk_split_transport_peripheral_command_handler failed (ret %d)", ret);
-            return;
-        }
-    }
+    //     LOG_DBG("TX command type %d to source %d", cmd.type, source);
+    //     ret = zmk_split_transport_peripheral_command_handler(&esb_peripheral, cmd);
+    //     if (ret < 0) {
+    //         LOG_ERR("zmk_split_transport_peripheral_command_handler failed (ret %d)", ret);
+    //         return;
+    //     }
+    // }
 }

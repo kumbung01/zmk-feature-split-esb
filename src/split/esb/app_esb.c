@@ -68,6 +68,8 @@ static bool m_enabled = false;
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 extern struct k_msgq tx_msgq;
 extern struct k_mem_slab tx_slab;
+extern struct k_msgq rx_msgq;
+extern struct k_mem_slab rx_slab;
 static volatile uint32_t tx_fail_count = 0;
 static int8_t pids_before[CONFIG_ESB_PIPE_COUNT];
 static void event_handler(struct esb_evt const *event) {
@@ -100,19 +102,29 @@ static void event_handler(struct esb_evt const *event) {
         case ESB_EVENT_RX_RECEIVED:
             LOG_DBG("RX SUCCESS");
             m_event.evt_type = APP_ESB_EVT_RX;
-            struct esb_payload rx_payload;
-            if (esb_read_rx_payload(&rx_payload) == 0) {
-                if (pids_before[rx_payload.pipe] == rx_payload.pid) {
-                    LOG_DBG("RX on pipe %d with same pid %d", rx_payload.pipe, rx_payload.pid);
-                    pids_before[rx_payload.pipe] = -1; // reset to force next packet acceptance
+            struct esb_payload *rx_payload = NULL
+            if (k_mem_slab_alloc(&rx_slab, (void **)&rx_payload, K_NO_WAIT) != 0) {
+                LOG_ERR("Failed to allocate rx_slab");
+                break;
+            }
+
+            if (esb_read_rx_payload(rx_payload) == 0) {
+                int pipe = rx_payload->pipe;
+                int pid = rx_payload->pid;
+                if (pids_before[pipe] == pid) {
+                    LOG_DBG("RX on pipe %d with same pid %d", pipe, pid);
+                    pids_before[pipe] = -1; // reset to force next packet acceptance
                     break;
                 }
 
-                LOG_DBG("RX on pipe %d with new pid %d (before %d)", rx_payload.pipe, rx_payload.pid, pids_before[rx_payload.pipe]);
-                pids_before[rx_payload.pipe] = rx_payload.pid;
-                if (put_data_to_ringbuf(rx_payload.data, rx_payload.length) == 0) {
-                    k_sem_give(&rx_sem);
+                LOG_DBG("RX on pipe %d with new pid %d (before %d)", pipe, pid, pids_before[pipe]);
+                pids_before[pipe] = pid;
+                if (k_msgq_put(&rx_msgq, &rx_payload, K_NO_WAIT) != 0) {
+                    LOG_ERR("k_msgq_put failed");
+                    k_mem_slab_free(&rx_slab, (void *)rx_payload);
+                    break;
                 }
+                k_sem_give(&rx_sem);
             }
             m_callback(&m_event);
             break;
@@ -134,6 +146,7 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     }
 
     ssize_t data_size_max = get_payload_data_size_max(m_mode == APP_ESB_MODE_PRX);
+    payload->length = 1; // reserve first byte for count
 
     while (k_msgq_num_used_get(msgq) > 0) {
         if (payload->length + data_size_max > CONFIG_ESB_MAX_PAYLOAD_LENGTH) {
@@ -167,10 +180,8 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
 
         LOG_DBG("adding type %u size %u to packet", type, data_size);
 
-        payload->data[payload->length] = source;
-        payload->length += sizeof(uint8_t);
-        payload->data[payload->length] = type;
-        payload->length += sizeof(uint8_t);
+        // payload->data[payload->length++] = source;
+        payload->data[payload->length++] = type;
         memcpy(&payload->data[payload->length], env->buf.data, data_size);
         payload->length += data_size;
         count++;
@@ -186,6 +197,8 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
         break;
 #endif
     }
+
+    payload->data[0] = count;
 
     // process_payload((char*)&payload->data[5], payload->length - 5, nonce);
 

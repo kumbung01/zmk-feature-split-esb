@@ -55,25 +55,21 @@ static struct zmk_split_esb_async_state async_state = {
 
 static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd) {
-    // struct esb_data_envelope env = { .source = source,
-    //                                  .timestamp = k_uptime_get(),
-    //                                  .command = cmd
-    //                                 };
-
     struct esb_data_envelope *env;
     int ret = k_mem_slab_alloc(&tx_slab, (void **)&env, K_NO_WAIT);
     if (ret < 0) {
         LOG_ERR("k_mem_slab_alloc failed (err %d)", ret);
-        return ret;
+        return -EAGAIN;
     }
     
-    env->buf.type = (uint8_t)cmd.type;
     ssize_t data_size = get_payload_data_size_cmd(cmd.type);
     if (data_size < 0) {
         LOG_ERR("get_payload_data_size_cmd failed (err %d)", data_size);
         k_mem_slab_free(&tx_slab, (void *)env);
-        return data_size;
+        return -ENOTSUP;
     }
+
+    env->buf.type = (uint8_t)cmd.type;
     memcpy(env->buf.data, &cmd.data, data_size);
     env->source = source;
     env->timestamp = k_uptime_get();
@@ -165,26 +161,44 @@ static void publish_events_thread() {
         k_sem_take(&rx_sem, K_FOREVER);
 
         while (true) {
-            uint8_t source = 0xff;
-            uint8_t type = 0xff;
-            struct zmk_split_transport_peripheral_event evt;
-
-            int err = get_data_from_ringbuf(&source, &type, &evt.data, false);
-            if (err == -EAGAIN) {
+            struct esb_payload *rx_payload = NULL;
+            int err = k_msgq_get(&rx_msgq, &rx_payload, K_NO_WAIT);
+            if (err < 0) {
+                LOG_DBG("k_msgq_get failed (err %d)", err);
                 break;
             }
 
-            if (err < 0) {
-                LOG_ERR("get_data_from_ringbuf failed (err %d)", err);
-                reset_ringbuf();
-                break;
+            int source = rx_payload->pipe;
+            uint8_t *data = rx_payload->data;
+            size_t length = rx_payload->length;
+            size_t count = data[0];
+            size_t offset = 1;
+
+            for (size_t i = 0; i < count; ++i) {
+                struct zmk_split_transport_peripheral_event evt = {0};
+                int type = data[offset];
+                ssize_t data_size = get_payload_data_size_evt((enum zmk_split_transport_peripheral_event_type)type);
+                if (data_size < 0) {
+                    LOG_ERR("Unknown event type %d", type);
+                    break;
+                }
+
+                if (length < data_size + offset) {
+                    LOG_ERR("Payload too small for event type %d", type);
+                    break;
+                }
+
+                evt.type = (enum zmk_split_transport_peripheral_event_type)type;
+                memcpy(&evt.data, &data[offset + 1], data_size);
+                err = zmk_split_transport_central_peripheral_event_handler(&esb_central, (uint8_t)source, evt);
+                if (err < 0) {
+                    LOG_ERR("zmk_split_transport_central_peripheral_event_handler failed (ret %d)", err);
+                }
+
+                offset += data_size + 1;
             }
-            
-            evt.type = (enum zmk_split_transport_peripheral_event_type)type;
-            err = zmk_split_transport_central_peripheral_event_handler(&esb_central, (uint8_t)source, evt);
-            if (err < 0) {
-                LOG_ERR("zmk_split_transport_central_peripheral_event_handler failed (ret %d)", err);
-            }
+
+            k_mem_slab_free(&rx_slab, (void *)rx_payload);
         }
     }
 }

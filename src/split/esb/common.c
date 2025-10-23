@@ -23,9 +23,8 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 K_MEM_SLAB_DEFINE(tx_slab, sizeof(struct esb_data_envelope), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(tx_msgq, sizeof(void*), TX_MSGQ_SIZE, 4);
-// K_MSGQ_DEFINE(rx_msgq, sizeof(struct esb_payload), RX_MSGQ_SIZE, 4);
-RING_BUF_DECLARE(rx_ringbuf, sizeof(struct esb_data_envelope) * RX_MSGQ_SIZE);
-static struct k_spinlock rx_ringbuf_lock;
+K_MEM_SLAB_DEFINE(rx_slab, sizeof(struct esb_payload), RX_MSGQ_SIZE, 4);
+K_MSGQ_DEFINE(rx_msgq, sizeof(void*), RX_MSGQ_SIZE, 4);
 
 ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type _type) {
     switch (_type) {
@@ -142,65 +141,3 @@ void put_u32_le(uint8_t *dst, uint32_t v) {
     dst[3] = (uint8_t)((v >> 24) & 0xFF);
 }
 
-size_t get_ringbuf_size() {
-    return ring_buf_size_get(&rx_ringbuf);
-}
-
-void reset_ringbuf() {
-    k_spinlock_key_t key = k_spin_lock(&rx_ringbuf_lock);
-    ring_buf_reset(&rx_ringbuf);
-    k_spin_unlock(&rx_ringbuf_lock, key);
-}
-
-int get_data_from_ringbuf(uint8_t *source, uint8_t *type, void *data, bool is_cmd) {
-    size_t received = 0;
-    uint8_t header[2];
-    k_spinlock_key_t key = k_spin_lock(&rx_ringbuf_lock);
-    if (ring_buf_peek(&rx_ringbuf, header, 2) != 2) {
-        k_spin_unlock(&rx_ringbuf_lock, key);
-        return -EAGAIN;
-    }
-
-    if (header[0] >= CONFIG_ESB_PIPE_COUNT) {
-        k_spin_unlock(&rx_ringbuf_lock, key);
-        return -ENOTSUP;
-    }
-
-    ssize_t data_size = get_payload_data_size_buf(header[1], is_cmd);
-    if (data_size < 0) {
-        k_spin_unlock(&rx_ringbuf_lock, key);
-        return -ENOTSUP;
-    }
-
-    size_t packet_size = 2 + data_size;
-    if (ring_buf_size_get(&rx_ringbuf) < packet_size) {
-        k_spin_unlock(&rx_ringbuf_lock, key);
-        return -EAGAIN;
-    }
-
-    received = ring_buf_get(&rx_ringbuf, header, 2);
-    received += ring_buf_get(&rx_ringbuf, data, data_size);
-    k_spin_unlock(&rx_ringbuf_lock, key);
-
-    if (received != packet_size) {
-        return -EIO;
-    }
-
-    *source = header[0];
-    *type = header[1];
-
-    return 0;
-}
-
-int put_data_to_ringbuf(void *data, size_t length) {
-    size_t written = 0;
-    k_spinlock_key_t key = k_spin_lock(&rx_ringbuf_lock);
-    written = ring_buf_put(&rx_ringbuf, data, length);
-    k_spin_unlock(&rx_ringbuf_lock, key);
-
-    if (written != length) {
-        return -EIO;
-    }
-
-    return 0;
-}
