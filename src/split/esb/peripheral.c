@@ -134,18 +134,22 @@ static int zmk_split_esb_peripheral_init(void) {
 SYS_INIT(zmk_split_esb_peripheral_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 
 
-static size_t error_count = 0;
+
 static void process_tx_work_handler(struct k_work *work) {
-    while (get_ringbuf_size() > 3) { // at least source(1) + type(1) + data(1)
+    while (true) {
         uint8_t source = 0xff;
         uint8_t type = 0xff;
-        struct zmk_split_transport_central_command cmd = {0};
+        struct zmk_split_transport_central_command cmd;
 
         int ret = get_data_from_ringbuf(&source, &type, &cmd.data, true);
+        if (ret == -EAGAIN) {
+            break;
+        }
+
         if (ret < 0) {
-            LOG_DBG("get_data_from_ringbuf failed (ret %d)", ret);
-            error_count++;
-            return;
+            LOG_ERR("get_data_from_ringbuf failed (err %d)", ret);
+            reset_ringbuf();
+            break;
         }
 
         cmd.type = (enum zmk_split_transport_central_command_type)type;
@@ -154,14 +158,7 @@ static void process_tx_work_handler(struct k_work *work) {
         ret = zmk_split_transport_peripheral_command_handler(&esb_peripheral, cmd);
         if (ret < 0) {
             LOG_ERR("zmk_split_transport_peripheral_command_handler failed (ret %d)", ret);
-            error_count++;
             return;
         }
-    }
-
-    if (error_count > 3) {
-        LOG_WRN("process_tx_work_handler encountered %d errors", error_count);
-        reset_ringbuf();
-        error_count = 0;
     }
 }

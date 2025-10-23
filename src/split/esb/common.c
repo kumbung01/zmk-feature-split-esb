@@ -153,21 +153,40 @@ void reset_ringbuf() {
 
 int get_data_from_ringbuf(uint8_t *source, uint8_t *type, void *data, bool is_cmd) {
     size_t received = 0;
+    uint8_t header[2];
     k_spinlock_key_t key = k_spin_lock(&rx_ringbuf_lock);
-    received = ring_buf_get(&rx_ringbuf, source, sizeof(uint8_t));
-    received += ring_buf_get(&rx_ringbuf, type, sizeof(uint8_t));
-    k_spin_unlock(&rx_ringbuf_lock, key);
-    ssize_t data_size = get_payload_data_size_buf(*type, is_cmd);
-    if (data_size < 0) {
+    if (ring_buf_peek(&rx_ringbuf, header, 2) != 2) {
+        k_spin_unlock(&rx_ringbuf_lock, key);
+        return -EAGAIN;
+    }
+
+    if (header[0] >= CONFIG_ESB_PIPE_COUNT) {
+        k_spin_unlock(&rx_ringbuf_lock, key);
         return -ENOTSUP;
     }
-    key = k_spin_lock(&rx_ringbuf_lock);
+
+    ssize_t data_size = get_payload_data_size_buf(header[1], is_cmd);
+    if (data_size < 0) {
+        k_spin_unlock(&rx_ringbuf_lock, key);
+        return -ENOTSUP;
+    }
+
+    size_t packet_size = 2 + data_size;
+    if (ring_buf_size_get(&rx_ringbuf) < packet_size) {
+        k_spin_unlock(&rx_ringbuf_lock, key);
+        return -EAGAIN;
+    }
+
+    received = ring_buf_get(&rx_ringbuf, header, 2);
     received += ring_buf_get(&rx_ringbuf, data, data_size);
     k_spin_unlock(&rx_ringbuf_lock, key);
 
-    if (received != sizeof(uint8_t) + sizeof(uint8_t) + data_size) {
+    if (received != packet_size) {
         return -EIO;
     }
+
+    *source = header[0];
+    *type = header[1];
 
     return 0;
 }

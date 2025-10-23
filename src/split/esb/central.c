@@ -136,36 +136,31 @@ SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DE
 
 
 static void publish_events_thread() {
-    size_t error_count = 0;
-
     while (true)
     {
         k_sem_take(&rx_sem, K_FOREVER);
 
-        while (get_ringbuf_size() > 3) { // at least source(1) + type(1) + data(1)
+        while (true) {
             uint8_t source = 0xff;
             uint8_t type = 0xff;
-            struct zmk_split_transport_peripheral_event evt = {0};
+            struct zmk_split_transport_peripheral_event evt;
 
-            int ret = get_data_from_ringbuf(&source, &type, &evt.data, false);
-            if (ret < 0) {
-                error_count++;
-                LOG_DBG("get_data_from_ringbuf failed (ret %d)", ret);
-                continue;
+            int err = get_data_from_ringbuf(&source, &type, &evt.data, false);
+            if (err == -EAGAIN) {
+                break;
+            }
+
+            if (err < 0) {
+                LOG_ERR("get_data_from_ringbuf failed (err %d)", err);
+                reset_ringbuf();
+                break;
             }
             
             evt.type = (enum zmk_split_transport_peripheral_event_type)type;
-            ret = zmk_split_transport_central_peripheral_event_handler(&esb_central, (uint8_t)source, evt);
-            if (ret < 0) {
-                LOG_ERR("zmk_split_transport_central_peripheral_event_handler failed (ret %d)", ret);
-                error_count++;
+            err = zmk_split_transport_central_peripheral_event_handler(&esb_central, (uint8_t)source, evt);
+            if (err < 0) {
+                LOG_ERR("zmk_split_transport_central_peripheral_event_handler failed (ret %d)", err);
             }
-        }
-
-        if (error_count > 3) {
-            LOG_WRN("publish_events_thread encountered %d errors", error_count);
-            reset_ringbuf();
-            error_count = 0;
         }
     }
 }
