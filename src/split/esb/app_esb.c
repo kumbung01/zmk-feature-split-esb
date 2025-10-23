@@ -157,8 +157,9 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
             continue;
         }
 
-        if (now - env.timestamp > TIMEOUT_MS) {
-            LOG_DBG("dropping old event type %d timestamp %d", type, now - env.timestamp);
+        uint32_t timestamp = env->timestamp;
+        if (now - timestamp > TIMEOUT_MS) {
+            LOG_DBG("dropping old event type %d timestamp %d", type, now - timestamp);
             k_mem_slab_free(&tx_slab, (void *)env);
             continue;
         }

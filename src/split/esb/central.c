@@ -38,6 +38,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 extern struct k_work_q esb_work_q;
 
 extern struct k_sem rx_sem;
+extern struct k_mem_slab tx_slab;
 extern struct k_msgq tx_msgq;
 extern struct k_sem tx_sem;
 extern struct k_work tx_work;
@@ -54,13 +55,29 @@ static struct zmk_split_esb_async_state async_state = {
 
 static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd) {
-    struct esb_data_envelope env = { .source = source,
-                                     .timestamp = k_uptime_get(),
-                                     .command = cmd
-                                    };
+    // struct esb_data_envelope env = { .source = source,
+    //                                  .timestamp = k_uptime_get(),
+    //                                  .command = cmd
+    //                                 };
+
+    struct esb_data_envelope *env;
+    int ret = k_mem_slab_alloc(&tx_slab, (void **)&env, K_NO_WAIT);
+    if (ret < 0) {
+        LOG_ERR("k_mem_slab_alloc failed (err %d)", ret);
+        return ret;
+    }
+    
+    env->command = cmd;
+    env->source = source;
+    env->timestamp = k_uptime_get();
 
     if (k_msgq_put(&tx_msgq, &env, K_MSEC(TIMEOUT_MS)) == 0) {
         k_work_submit_to_queue(&esb_work_q, &tx_work);
+    }
+    else {
+        LOG_ERR("k_msgq_put failed");
+        k_mem_slab_free(&tx_slab, (void *)env);
+        return -EIO;
     }
 
     return 0;
