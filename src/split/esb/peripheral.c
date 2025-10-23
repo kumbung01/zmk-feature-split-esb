@@ -55,8 +55,9 @@ void zmk_split_esb_on_ptx_esb_callback(app_esb_event_t *event) {
 
 
 extern struct k_msgq tx_msgq;
+extern struct k_msgq rx_msgq;
 extern struct k_mem_slab tx_slab;
-// extern struct k_msgq rx_msgq;
+extern struct k_mem_slab rx_slab;
 extern struct k_sem tx_sem;
 extern struct k_work_q esb_work_q;
 

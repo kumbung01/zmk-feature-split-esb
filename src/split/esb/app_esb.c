@@ -102,7 +102,7 @@ static void event_handler(struct esb_evt const *event) {
         case ESB_EVENT_RX_RECEIVED:
             LOG_DBG("RX SUCCESS");
             m_event.evt_type = APP_ESB_EVT_RX;
-            struct esb_payload *rx_payload = NULL
+            struct esb_payload *rx_payload = NULL;
             if (k_mem_slab_alloc(&rx_slab, (void **)&rx_payload, K_NO_WAIT) != 0) {
                 LOG_ERR("Failed to allocate rx_slab");
                 break;
