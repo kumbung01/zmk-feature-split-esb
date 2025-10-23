@@ -379,6 +379,7 @@ int zmk_split_esb_init(app_esb_mode_t mode, app_esb_callback_t callback) {
     if (ret < 0) {
         LOG_ERR("esb_set_rf_channel failed: %d", ret);
     }
+    memset(nonce_before, (uint32_t)(-1), sizeof(nonce_before));
 
     return 0;
 }
@@ -430,7 +431,6 @@ static int app_esb_suspend(void) {
 static int app_esb_resume(void) {
     int err = 0;
 
-    memset(pids_before, (uint32_t)(-1), sizeof(pids_before));
     if(m_mode == APP_ESB_MODE_PTX) {
         err = esb_initialize(m_mode);
         m_active = true;
