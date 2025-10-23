@@ -103,6 +103,7 @@ static void event_handler(struct esb_evt const *event) {
             if (esb_read_rx_payload(&rx_payload) == 0) {
                 if (pids_before[rx_payload.pipe] == rx_payload.pid) {
                     LOG_DBG("RX on pipe %d with same pid %d", rx_payload.pipe, rx_payload.pid);
+                    pids_before[rx_payload.pipe] = -1; // reset to force next packet acceptance
                     break;
                 }
 
