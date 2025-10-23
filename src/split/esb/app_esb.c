@@ -149,6 +149,7 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
         LOG_DBG("dequeued ptr %p from tx_msgq", env);
         LOG_HEXDUMP_DBG(env, sizeof(*env), "dequeued ptr:");
 
+        uint8_t source = env->source;
         uint8_t type = env->buf.type;
         ssize_t data_size = get_payload_data_size_buf(type, m_mode == APP_ESB_MODE_PRX);
         if (data_size < 0) {
@@ -166,16 +167,18 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
 
         LOG_DBG("adding type %u size %u to packet", type, data_size);
 
-        payload->data[payload->length] = env->source;
+        payload->data[payload->length] = source;
         payload->length += sizeof(uint8_t);
-        memcpy(&payload->data[payload->length], &env->buf, sizeof(uint8_t) + data_size);
-        payload->length += sizeof(uint8_t) + data_size;
+        payload->data[payload->length] = type;
+        payload->length += sizeof(uint8_t);
+        memcpy(&payload->data[payload->length], env->buf.data, data_size);
+        payload->length += data_size;
         count++;
 
         k_mem_slab_free(&tx_slab, (void *)env);
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-        payload->pipe = env.source; // use the source as the ESB pipe number
+        payload->pipe = source; // use the source as the ESB pipe number
         break;
 #endif
 
