@@ -82,7 +82,7 @@ int service_init();
 uint32_t get_nonce();
 int process_payload(char* data, size_t length, uint32_t nonce);
 
-int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd);
+int handle_packet(struct zmk_split_esb_async_state* state);
 void reset_buffers();
 
 uint32_t get_u32_le(const uint8_t *src);

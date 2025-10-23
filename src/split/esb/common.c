@@ -9,8 +9,11 @@
 #include <zephyr/sys/crc.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
-#include <zmk/split/transport/peripheral.h>
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_ROLE_CENTRAL)
 #include <zmk/split/transport/central.h>
+#else
+#include <zmk/split/transport/peripheral.h>
+#endif
 #include <esb.h>
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
@@ -159,7 +162,7 @@ void reset_buffers() {
     }
 }
 
-int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd) {
+int handle_packet(struct zmk_split_esb_async_state* state) {
     int handled = 0;
 
     while (true) {
@@ -194,13 +197,11 @@ int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd) {
             evt.buf.type = type;
             memcpy(evt.buf.data, &data[offset + 1], data_size);
 
-            if (is_cmd) {
-                err = zmk_split_transport_peripheral_command_handler(state->peripheral_transport, evt.command);
-            } 
-            else {
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_ROLE_CENTRAL)
                 err = zmk_split_transport_central_peripheral_event_handler(state->central_transport, (uint8_t)source, evt.event);
-            }
-
+#else
+                err = zmk_split_transport_peripheral_command_handler(state->peripheral_transport, evt.command);
+#endif
             if (err < 0) {
                 LOG_ERR("zmk %s handler failed (ret %d)", (is_cmd ? "command" : "event"), err);
             }
