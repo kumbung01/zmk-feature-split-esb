@@ -49,6 +49,10 @@ void zmk_split_esb_on_ptx_esb_callback(app_esb_event_t *event) {
     zmk_split_esb_cb(event, &async_state);
 }
 
+static struct zmk_split_esb_async_state async_state = {
+    .process_tx_work = &process_tx_work,
+    .peripheral_transport = &esb_peripheral,
+};
 
 extern struct k_msgq tx_msgq;
 extern struct k_msgq rx_msgq;
@@ -95,7 +99,6 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
 }
 
 
-
 static int split_peripheral_esb_set_enabled(bool enabled) {
     is_enabled = enabled;
     return zmk_split_esb_set_enable(enabled);
@@ -125,10 +128,6 @@ static const struct zmk_split_transport_peripheral_api peripheral_api = {
 ZMK_SPLIT_TRANSPORT_PERIPHERAL_REGISTER(esb_peripheral, &peripheral_api,
                                         CONFIG_ZMK_SPLIT_ESB_PRIORITY);
 
-static struct zmk_split_esb_async_state async_state = {
-    .process_tx_work = &process_tx_work,
-    .peripheral_transport = &esb_peripheral,
-};
 
 static void notify_transport_status(void) {
     if (transport_status_cb) {

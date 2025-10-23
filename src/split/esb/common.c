@@ -157,7 +157,7 @@ void reset_buffers() {
     }
 }
 
-int handle_packet(zmk_split_esb_async_state* state, bool is_cmd) {
+int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd) {
     int handled = 0;
 
     while (true) {
@@ -169,10 +169,11 @@ int handle_packet(zmk_split_esb_async_state* state, bool is_cmd) {
         }
 
         int source = rx_payload->pipe;
-        uint8_t *data = rx_payload->data;
-        size_t length = rx_payload->length;
-        size_t count = data[0];
-        size_t offset = HEADER_SIZE;
+        struct payload_buffer *buf = rx_payload->data;
+        uint8_t *data = buf->body;
+        size_t length = rx_payload->length - HEADER_SIZE;
+        size_t count = buf->header.count;
+        size_t offset = 0;
 
         for (size_t i = 0; i < count; ++i) {
             struct esb_data_envelope evt = {0};

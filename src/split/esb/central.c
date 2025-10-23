@@ -50,6 +50,10 @@ static bool is_enabled = false;
 static void process_tx_work_handler(struct k_work *work) {}
 K_WORK_DEFINE(process_tx_work, process_tx_work_handler);
 
+static struct zmk_split_esb_async_state async_state = {
+    // .process_tx_work = &process_tx_work,
+    .central_transport = &esb_central,
+};
 
 static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd) {
@@ -97,7 +101,6 @@ static int split_central_esb_get_available_source_ids(uint8_t *sources) {
 }
 
 
-
 static int split_central_esb_set_enabled(bool enabled) {
     is_enabled = enabled;
 
@@ -127,11 +130,6 @@ static const struct zmk_split_transport_central_api central_api = {
 };
 
 ZMK_SPLIT_TRANSPORT_CENTRAL_REGISTER(esb_central, &central_api, CONFIG_ZMK_SPLIT_ESB_PRIORITY);
-
-static struct zmk_split_esb_async_state async_state = {
-    // .process_tx_work = &process_tx_work,
-    .central_transport = &esb_central,
-};
 
 static void notify_transport_status(void) {
     if (transport_status_cb) {
