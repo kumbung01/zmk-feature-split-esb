@@ -50,40 +50,38 @@ static bool is_enabled = false;
 static void process_tx_work_handler(struct k_work *work) {}
 K_WORK_DEFINE(process_tx_work, process_tx_work_handler);
 
-static struct zmk_split_esb_async_state async_state = {
-    // .process_tx_work = &process_tx_work,
-};
-
 
 static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd) {
     struct esb_data_envelope *env;
-    int ret = k_mem_slab_alloc(&tx_slab, (void **)&env, K_NO_WAIT);
-    if (ret < 0) {
-        LOG_ERR("k_mem_slab_alloc failed (err %d)", ret);
-        return -EAGAIN;
-    }
     
     ssize_t data_size = get_payload_data_size_cmd(cmd.type);
     if (data_size < 0) {
         LOG_ERR("get_payload_data_size_cmd failed (err %d)", data_size);
-        k_mem_slab_free(&tx_slab, (void *)env);
         return -ENOTSUP;
     }
 
-    env->buf.type = (uint8_t)cmd.type;
-    memcpy(env->buf.data, &cmd.data, data_size);
+    int ret = k_mem_slab_alloc(&tx_slab, (void **)&env, K_NO_WAIT);
+    if (ret < 0) {
+        LOG_ERR("k_mem_slab_alloc failed (err %d)", ret);
+        return -ENOMEM;
+    }
+
+    env->command = cmd;
     env->source = source;
     env->timestamp = k_uptime_get();
 
-    if (k_msgq_put(&tx_msgq, &env, K_MSEC(TIMEOUT_MS)) == 0) {
-        k_work_submit_to_queue(&esb_work_q, &tx_work);
-    }
-    else {
-        LOG_ERR("k_msgq_put failed");
+    ret = k_msgq_put(&tx_msgq, &env, K_MSEC(TIMEOUT_MS));
+    if (ret < 0) {
+        LOG_ERR("k_msgq_put failed (err %d)", ret);
         k_mem_slab_free(&tx_slab, (void *)env);
-        return -EIO;
+        return ret;
     }
+
+    LOG_DBG("Queued ptr %p to tx_msgq", env);
+    LOG_HEXDUMP_DBG(env, sizeof(*env), "ptr:");
+
+    k_work_submit_to_queue(&esb_work_q, &tx_work);
 
     return 0;
 }
@@ -130,6 +128,11 @@ static const struct zmk_split_transport_central_api central_api = {
 
 ZMK_SPLIT_TRANSPORT_CENTRAL_REGISTER(esb_central, &central_api, CONFIG_ZMK_SPLIT_ESB_PRIORITY);
 
+static struct zmk_split_esb_async_state async_state = {
+    // .process_tx_work = &process_tx_work,
+    .central_transport = &esb_central,
+};
+
 static void notify_transport_status(void) {
     if (transport_status_cb) {
         transport_status_cb(&esb_central, split_central_esb_get_status());
@@ -161,47 +164,7 @@ static void publish_events_thread() {
     while (true)
     {
         k_sem_take(&rx_sem, K_FOREVER);
-
-        while (true) {
-            struct esb_payload *rx_payload = NULL;
-            int err = k_msgq_get(&rx_msgq, &rx_payload, K_NO_WAIT);
-            if (err < 0) {
-                LOG_DBG("k_msgq_get failed (err %d)", err);
-                break;
-            }
-
-            int source = rx_payload->pipe;
-            uint8_t *data = rx_payload->data;
-            size_t length = rx_payload->length;
-            size_t count = data[0];
-            size_t offset = 5;
-
-            for (size_t i = 0; i < count; ++i) {
-                struct zmk_split_transport_peripheral_event evt = {0};
-                int type = data[offset];
-                ssize_t data_size = get_payload_data_size_evt((enum zmk_split_transport_peripheral_event_type)type);
-                if (data_size < 0) {
-                    LOG_ERR("Unknown event type %d", type);
-                    break;
-                }
-
-                if (length < data_size + offset) {
-                    LOG_ERR("Payload too small for event type %d", type);
-                    break;
-                }
-
-                evt.type = (enum zmk_split_transport_peripheral_event_type)type;
-                memcpy(&evt.data, &data[offset + 1], data_size);
-                err = zmk_split_transport_central_peripheral_event_handler(&esb_central, (uint8_t)source, evt);
-                if (err < 0) {
-                    LOG_ERR("zmk_split_transport_central_peripheral_event_handler failed (ret %d)", err);
-                }
-
-                offset += data_size + 1;
-            }
-
-            k_mem_slab_free(&rx_slab, (void *)rx_payload);
-        }
+        handle_packet(&async_state, false);
     }
 }
 

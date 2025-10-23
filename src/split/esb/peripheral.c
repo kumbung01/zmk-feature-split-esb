@@ -45,10 +45,6 @@ static const uint8_t peripheral_id = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID;
 static void process_tx_work_handler(struct k_work *work);
 K_WORK_DEFINE(process_tx_work, process_tx_work_handler);
 
-static struct zmk_split_esb_async_state async_state = {
-    .process_tx_work = &process_tx_work,
-};
-
 void zmk_split_esb_on_ptx_esb_callback(app_esb_event_t *event) {
     zmk_split_esb_cb(event, &async_state);
 }
@@ -67,28 +63,29 @@ static bool is_enabled = false;
 static int
 split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event) {
     struct esb_data_envelope *env;
+    ssize_t data_size = get_payload_data_size_evt(event->type);
+    if (data_size < 0) {
+        LOG_ERR("get_payload_data_size_evt failed (err %d)", data_size);
+        return -ENOTSUP;
+    }
+
     int ret = k_mem_slab_alloc(&tx_slab, (void **)&env, K_NO_WAIT);
     if (ret < 0) {
         LOG_ERR("Failed to allocate tx_slab (err %d)", ret);
         return -ENOMEM;
     }
 
+    env->event = *event;
     env->source = peripheral_id;
     env->timestamp = k_uptime_get();
-    env->buf.type = (uint8_t)event->type;
-    ssize_t data_size = get_payload_data_size_evt(event->type);
-    if (data_size < 0) {
-        LOG_ERR("get_payload_data_size_evt failed (err %d)", data_size);
-        k_mem_slab_free(&tx_slab, (void *)env);
-        return data_size;
-    }
-    memcpy(env->buf.data, &event->data, data_size);
+
     ret = k_msgq_put(&tx_msgq, &env, K_MSEC(TIMEOUT_MS));
     if (ret < 0) {
         LOG_ERR("k_msgq_put failed (err %d)", ret);
         k_mem_slab_free(&tx_slab, (void *)env);
         return ret;
     }
+
     LOG_DBG("Queued ptr %p to tx_msgq", env);
     LOG_HEXDUMP_DBG(env, sizeof(*env), "ptr:");
 
@@ -128,6 +125,11 @@ static const struct zmk_split_transport_peripheral_api peripheral_api = {
 ZMK_SPLIT_TRANSPORT_PERIPHERAL_REGISTER(esb_peripheral, &peripheral_api,
                                         CONFIG_ZMK_SPLIT_ESB_PRIORITY);
 
+static struct zmk_split_esb_async_state async_state = {
+    .process_tx_work = &process_tx_work,
+    .peripheral_transport = &esb_peripheral,
+};
+
 static void notify_transport_status(void) {
     if (transport_status_cb) {
         transport_status_cb(&esb_peripheral, split_peripheral_esb_get_status());
@@ -156,29 +158,5 @@ SYS_INIT(zmk_split_esb_peripheral_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY
 
 
 static void process_tx_work_handler(struct k_work *work) {
-    // while (true) {
-    //     uint8_t source = 0xff;
-    //     uint8_t type = 0xff;
-    //     struct zmk_split_transport_central_command cmd;
-
-    //     int ret = get_data_from_ringbuf(&source, &type, &cmd.data, true);
-    //     if (ret == -EAGAIN) {
-    //         break;
-    //     }
-
-    //     if (ret < 0) {
-    //         LOG_ERR("get_data_from_ringbuf failed (err %d)", ret);
-    //         reset_ringbuf();
-    //         break;
-    //     }
-
-    //     cmd.type = (enum zmk_split_transport_central_command_type)type;
-
-    //     LOG_DBG("TX command type %d to source %d", cmd.type, source);
-    //     ret = zmk_split_transport_peripheral_command_handler(&esb_peripheral, cmd);
-    //     if (ret < 0) {
-    //         LOG_ERR("zmk_split_transport_peripheral_command_handler failed (ret %d)", ret);
-    //         return;
-    //     }
-    // }
+    handle_packet(&async_state, true);
 }

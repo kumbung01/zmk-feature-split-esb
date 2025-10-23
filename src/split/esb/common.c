@@ -57,7 +57,7 @@ ssize_t get_payload_data_size_evt(enum zmk_split_transport_peripheral_event_type
 }
 
 
-ssize_t get_payload_data_size_buf(uint8_t _type, bool is_cmd) {
+ssize_t get_payload_data_size_buf(zmk_split_transport_buffer_type _type, bool is_cmd) {
     if (is_cmd) {
         return get_payload_data_size_cmd((enum zmk_split_transport_central_command_type)_type);
     } else {
@@ -155,4 +155,61 @@ void reset_buffers() {
             k_mem_slab_free(&rx_slab, data);
         }
     }
+}
+
+int handle_packet(zmk_split_esb_async_state* state, bool is_cmd) {
+    int handled = 0;
+
+    while (true) {
+        struct esb_payload *rx_payload = NULL;
+        int err = k_msgq_get(&rx_msgq, &rx_payload, K_NO_WAIT);
+        if (err < 0) {
+            LOG_DBG("k_msgq_get failed (err %d)", err);
+            break;
+        }
+
+        int source = rx_payload->pipe;
+        uint8_t *data = rx_payload->data;
+        size_t length = rx_payload->length;
+        size_t count = data[0];
+        size_t offset = HEADER_SIZE;
+
+        for (size_t i = 0; i < count; ++i) {
+            struct esb_data_envelope evt = {0};
+            int type = data[offset];
+            ssize_t data_size = get_payload_data_size_buf((uint8_t)type, is_cmd);
+            if (data_size < 0) {
+                LOG_ERR("Unknown event type %d", type);
+                break;
+            }
+
+            if (length < data_size + offset) {
+                LOG_ERR("Payload too small for event type %d", type);
+                break;
+            }
+
+            evt.buf.type = type;
+            memcpy(evt.buf.data, &data[offset + 1], data_size);
+
+            if (is_cmd) {
+                err = zmk_split_transport_peripheral_command_handler(state->esb_peripheral, evt.command);
+            } 
+            else {
+                err = zmk_split_transport_central_peripheral_event_handler(state->esb_central, (uint8_t)source, evt.event);
+            }
+
+            if (err < 0) {
+                LOG_ERR("zmk %s handler failed (ret %d)", (is_cmd ? "command" : "event"), err);
+            }
+
+            offset += data_size + 1;
+
+            if (err == 0)
+                handled++;
+        }
+
+        k_mem_slab_free(&rx_slab, (void *)rx_payload);
+    }
+
+    return handled;
 }

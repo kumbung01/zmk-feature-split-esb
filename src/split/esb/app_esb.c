@@ -135,36 +135,31 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     uint32_t now = k_uptime_get();
     uint32_t nonce = get_nonce();
     uint8_t count = 0;
+    uint8_t offset = 0;
+    struct payload_buffer *buf = payload->data;
+    size_t data_size_max = get_payload_data_size_max(m_mode == APP_ESB_MODE_PRX);
 
 #if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     payload->pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID; // use the peripheral_id as the ESB pipe number
 #endif
     payload->noack = !CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK;
 
-    if (k_msgq_num_used_get(msgq) == 0) {
-        return 0;
-    }
-
-    ssize_t data_size_max = get_payload_data_size_max(m_mode == APP_ESB_MODE_PRX);
-    put_u32_le(&payload->data[1], nonce); // put nonce at data[1..4]
-    payload->length = 5; // reserve space for count and nonce
-
-    while (k_msgq_num_used_get(msgq) > 0) {
-        if (payload->length + data_size_max > CONFIG_ESB_MAX_PAYLOAD_LENGTH) {
-            LOG_DBG("packet full (%d + %d > %d)", payload->length, data_size_max, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
+    while (true) {
+        if (HEADER_SIZE + offset + data_size_max > CONFIG_ESB_MAX_PAYLOAD_LENGTH) {
+            LOG_DBG("packet full (%d + %d + %d > %d)", HEADER_SIZE, offset, data_size_max, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
             break;
         }
 
         struct esb_data_envelope *env = NULL;
-        if (k_msgq_get(msgq, &env, K_NO_WAIT) != 0) {
-            continue;
+        int err = k_msgq_get(msgq, &env, K_NO_WAIT);
+        if (err != 0) {
+            LOG_DBG("k_msgq_get failed(%d).", err);
+            break;
         }
-
-        LOG_DBG("dequeued ptr %p from tx_msgq", env);
-        LOG_HEXDUMP_DBG(env, sizeof(*env), "dequeued ptr:");
 
         uint8_t source = env->source;
         uint8_t type = env->buf.type;
+
         ssize_t data_size = get_payload_data_size_buf(type, m_mode == APP_ESB_MODE_PRX);
         if (data_size < 0) {
             LOG_ERR("Invalid data size %zd for type %d", data_size, type);
@@ -172,6 +167,9 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
             continue;
         }
 
+        LOG_DBG("dequeued ptr %p from tx_msgq", env);
+        LOG_HEXDUMP_DBG(env, sizeof(*env), "dequeued ptr:");
+        
         uint32_t timestamp = env->timestamp;
         if (now - timestamp > TIMEOUT_MS) {
             LOG_DBG("dropping old event type %d timestamp %d", type, now - timestamp);
@@ -181,10 +179,9 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
 
         LOG_DBG("adding type %u size %u to packet", type, data_size);
 
-        // payload->data[payload->length++] = source;
-        payload->data[payload->length++] = type;
-        memcpy(&payload->data[payload->length], env->buf.data, data_size);
-        payload->length += data_size;
+        buf->body[offset++] = type;
+        memcpy(&buf->body[offset], env->buf.data, data_size);
+        offset += data_size;
         count++;
 
         k_mem_slab_free(&tx_slab, (void *)env);
@@ -199,7 +196,13 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
 #endif
     }
 
-    payload->data[0] = count;
+    // write header and length
+    if (count > 0) {
+        put_u32_le(&buf->header.nonce, nonce);
+        buf->header.count = count;
+
+        payload->length = offset + HEADER_SIZE;
+    }
 
     // process_payload((char*)&payload->data[5], payload->length - 5, nonce);
 
