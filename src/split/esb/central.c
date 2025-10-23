@@ -163,7 +163,7 @@ static void publish_events_thread() {
     while (true)
     {
         k_sem_take(&rx_sem, K_FOREVER);
-        handle_packet(&async_state, false);
+        handle_packet(&async_state);
     }
 }
 
