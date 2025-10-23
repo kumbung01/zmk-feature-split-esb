@@ -67,7 +67,14 @@ static int split_central_esb_send_command(uint8_t source,
         return ret;
     }
     
-    env->command = cmd;
+    env->buf.type = (uint8_t)cmd.type;
+    ssize_t data_size = get_payload_data_size_cmd(cmd.type);
+    if (data_size < 0) {
+        LOG_ERR("get_payload_data_size_cmd failed (err %d)", data_size);
+        k_mem_slab_free(&tx_slab, (void *)env);
+        return data_size;
+    }
+    memcpy(env->buf.data, &cmd.data, data_size);
     env->source = source;
     env->timestamp = k_uptime_get();
 

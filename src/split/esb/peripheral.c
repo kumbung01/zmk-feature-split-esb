@@ -74,7 +74,14 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
 
     env->source = peripheral_id;
     env->timestamp = k_uptime_get();
-    env->event = *event;
+    env->buf.type = (uint8_t)event->type;
+    ssize_t data_size = get_payload_data_size_evt(event->type);
+    if (data_size < 0) {
+        LOG_ERR("get_payload_data_size_evt failed (err %d)", data_size);
+        k_mem_slab_free(&tx_slab, (void *)env);
+        return data_size;
+    }
+    memcpy(env->buf.data, &event->data, data_size);
     ret = k_msgq_put(&tx_msgq, &env, K_MSEC(TIMEOUT_MS));
     if (ret < 0) {
         LOG_ERR("k_msgq_put failed (err %d)", ret);
