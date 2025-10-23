@@ -9,7 +9,7 @@
 #include <zephyr/sys/crc.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_ROLE_CENTRAL)
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 #include <zmk/split/transport/central.h>
 #else
 #include <zmk/split/transport/peripheral.h>
@@ -18,7 +18,7 @@
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_ROLE_CENTRAL)
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 #define RX_MSGQ_SIZE CONFIG_ZMK_SPLIT_ESB_EVENT_BUFFER_ITEMS
 #define TX_MSGQ_SIZE CONFIG_ZMK_SPLIT_ESB_CMD_BUFFER_ITEMS
 #else
@@ -183,7 +183,7 @@ int handle_packet(struct zmk_split_esb_async_state* state) {
         for (size_t i = 0; i < count; ++i) {
             struct esb_data_envelope evt = {0};
             int type = data[offset];
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_ROLE_CENTRAL)
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
             ssize_t data_size = get_payload_data_size_evt(type);
 #else
             ssize_t data_size = get_payload_data_size_cmd(type);
@@ -201,7 +201,7 @@ int handle_packet(struct zmk_split_esb_async_state* state) {
             evt.buf.type = type;
             memcpy(evt.buf.data, &data[offset + 1], data_size);
 
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_ROLE_CENTRAL)
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
                 err = zmk_split_transport_central_peripheral_event_handler(state->central_transport, (uint8_t)source, evt.event);
 #else
                 err = zmk_split_transport_peripheral_command_handler(state->peripheral_transport, evt.command);
