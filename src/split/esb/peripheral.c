@@ -47,13 +47,11 @@ K_WORK_DEFINE(process_tx_work, process_tx_work_handler);
 
 static struct zmk_split_esb_async_state async_state = {
     .process_tx_work = &process_tx_work,
-    .peripheral_transport = &esb_peripheral,
 };
 
 void zmk_split_esb_on_ptx_esb_callback(app_esb_event_t *event) {
     zmk_split_esb_cb(event, &async_state);
 }
-
 
 extern struct k_msgq tx_msgq;
 extern struct k_msgq rx_msgq;
@@ -141,6 +139,8 @@ static void notify_status_work_cb(struct k_work *_work) { notify_transport_statu
 static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
 static int zmk_split_esb_peripheral_init(void) {
+    async_state.peripheral_transport = &esb_peripheral;
+
     int ret = zmk_split_esb_init(APP_ESB_MODE_PTX, zmk_split_esb_on_ptx_esb_callback);
     if (ret < 0) {
         LOG_ERR("zmk_split_esb_init failed (ret %d)", ret);

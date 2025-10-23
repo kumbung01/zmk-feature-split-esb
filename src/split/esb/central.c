@@ -52,7 +52,6 @@ K_WORK_DEFINE(process_tx_work, process_tx_work_handler);
 
 static struct zmk_split_esb_async_state async_state = {
     // .process_tx_work = &process_tx_work,
-    .central_transport = &esb_central,
 };
 
 static int split_central_esb_send_command(uint8_t source,
@@ -143,6 +142,8 @@ static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
 
 static int zmk_split_esb_central_init(void) {
+    async_state.central_transport = &esb_central;
+
     int ret = zmk_split_esb_init(APP_ESB_MODE_PRX, zmk_split_esb_on_prx_esb_callback);
     if (ret) {
         LOG_ERR("zmk_split_esb_init failed (err %d)", ret);
