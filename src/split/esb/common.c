@@ -9,6 +9,8 @@
 #include <zephyr/sys/crc.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
+#include <zmk/split/transport/peripheral.h>
+#include <zmk/split/transport/central.h>
 #include <esb.h>
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
