@@ -141,3 +141,18 @@ void put_u32_le(uint8_t *dst, uint32_t v) {
     dst[3] = (uint8_t)((v >> 24) & 0xFF);
 }
 
+void reset_buffers() {
+    void *data;
+
+    while (k_msgq_num_used_get(&tx_msgq) > 0) {
+        if (k_msgq_get(&tx_msgq, &data, K_NO_WAIT) == 0) {
+            k_mem_slab_free(&tx_slab, data);
+        }
+    }
+
+    while (k_msgq_num_used_get(&rx_msgq) > 0) {
+        if (k_msgq_get(&rx_msgq, &data, K_NO_WAIT) == 0) {
+            k_mem_slab_free(&rx_slab, data);
+        }
+    }
+}

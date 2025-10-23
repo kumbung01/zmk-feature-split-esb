@@ -61,10 +61,7 @@ int service_init();
 uint32_t get_nonce();
 int process_payload(char* data, size_t length, uint32_t nonce);
 
-size_t get_ringbuf_size();
-void reset_ringbuf();
-int get_data_from_ringbuf(uint8_t *source, uint8_t *type, void *data, bool is_cmd);
-int put_data_to_ringbuf(void *data, size_t length);
+void reset_buffers();
 
 uint32_t get_u32_le(const uint8_t *src);
 void put_u32_le(uint8_t *dst, uint32_t val);
