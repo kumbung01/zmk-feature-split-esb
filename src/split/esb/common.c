@@ -183,7 +183,11 @@ int handle_packet(struct zmk_split_esb_async_state* state) {
         for (size_t i = 0; i < count; ++i) {
             struct esb_data_envelope evt = {0};
             int type = data[offset];
-            ssize_t data_size = get_payload_data_size_buf((uint8_t)type, is_cmd);
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_ROLE_CENTRAL)
+            ssize_t data_size = get_payload_data_size_evt(type);
+#else
+            ssize_t data_size = get_payload_data_size_cmd(type);
+#endif
             if (data_size < 0) {
                 LOG_ERR("Unknown event type %d", type);
                 break;
@@ -203,7 +207,7 @@ int handle_packet(struct zmk_split_esb_async_state* state) {
                 err = zmk_split_transport_peripheral_command_handler(state->peripheral_transport, evt.command);
 #endif
             if (err < 0) {
-                LOG_ERR("zmk %s handler failed (ret %d)", (is_cmd ? "command" : "event"), err);
+                LOG_ERR("zmk handler failed(%d)", err);
             }
 
             offset += data_size + 1;
