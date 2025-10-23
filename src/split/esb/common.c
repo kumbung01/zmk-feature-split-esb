@@ -193,10 +193,10 @@ int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd) {
             memcpy(evt.buf.data, &data[offset + 1], data_size);
 
             if (is_cmd) {
-                err = zmk_split_transport_peripheral_command_handler(state->esb_peripheral, evt.command);
+                err = zmk_split_transport_peripheral_command_handler(state->peripheral_transport, evt.command);
             } 
             else {
-                err = zmk_split_transport_central_peripheral_event_handler(state->esb_central, (uint8_t)source, evt.event);
+                err = zmk_split_transport_central_peripheral_event_handler(state->central_transport, (uint8_t)source, evt.event);
             }
 
             if (err < 0) {

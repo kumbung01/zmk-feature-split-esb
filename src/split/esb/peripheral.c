@@ -45,14 +45,15 @@ static const uint8_t peripheral_id = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID;
 static void process_tx_work_handler(struct k_work *work);
 K_WORK_DEFINE(process_tx_work, process_tx_work_handler);
 
-void zmk_split_esb_on_ptx_esb_callback(app_esb_event_t *event) {
-    zmk_split_esb_cb(event, &async_state);
-}
-
 static struct zmk_split_esb_async_state async_state = {
     .process_tx_work = &process_tx_work,
     .peripheral_transport = &esb_peripheral,
 };
+
+void zmk_split_esb_on_ptx_esb_callback(app_esb_event_t *event) {
+    zmk_split_esb_cb(event, &async_state);
+}
+
 
 extern struct k_msgq tx_msgq;
 extern struct k_msgq rx_msgq;

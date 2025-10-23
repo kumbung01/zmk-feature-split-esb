@@ -67,7 +67,7 @@ struct zmk_split_esb_async_state {
     union {
         struct zmk_split_transport_central *central_transport;
         struct zmk_split_transport_peripheral *peripheral_transport;
-    }
+    };
 };
 
 void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state);
