@@ -71,7 +71,7 @@ extern struct k_mem_slab tx_slab;
 extern struct k_msgq rx_msgq;
 extern struct k_mem_slab rx_slab;
 static volatile uint32_t tx_fail_count = 0;
-static int8_t pids_before[CONFIG_ESB_PIPE_COUNT];
+static uint32_t nonce_before[CONFIG_ESB_PIPE_COUNT];
 static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
     switch (event->evt_id) {
@@ -110,15 +110,15 @@ static void event_handler(struct esb_evt const *event) {
 
             if (esb_read_rx_payload(rx_payload) == 0) {
                 int pipe = rx_payload->pipe;
-                int pid = rx_payload->pid;
-                if (pids_before[pipe] == pid) {
-                    LOG_DBG("RX on pipe %d with same pid %d", pipe, pid);
-                    pids_before[pipe] = -1; // reset to force next packet acceptance
+                uint32_t nonce = get_u32_le(&rx_payload->data[1]); // nonce is at data[1..4]
+                if (nonce_before[pipe] == nonce) {
+                    LOG_DBG("RX on pipe %d with same nonce %u, dropping", pipe, nonce);
+                    nonce_before[pipe] = -1; // reset to force next packet acceptance
                     break;
                 }
 
-                LOG_DBG("RX on pipe %d with new pid %d (before %d)", pipe, pid, pids_before[pipe]);
-                pids_before[pipe] = pid;
+                LOG_DBG("RX on pipe %d with new pid %d (before %d)", pipe, nonce, nonce_before[pipe]);
+                nonce_before[pipe] = nonce;
                 if (k_msgq_put(&rx_msgq, &rx_payload, K_NO_WAIT) != 0) {
                     LOG_ERR("k_msgq_put failed");
                     k_mem_slab_free(&rx_slab, (void *)rx_payload);
@@ -133,7 +133,7 @@ static void event_handler(struct esb_evt const *event) {
 
 static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     uint32_t now = k_uptime_get();
-    // uint32_t nonce = get_nonce();
+    uint32_t nonce = get_nonce();
     uint8_t count = 0;
 
 #if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
@@ -146,7 +146,8 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     }
 
     ssize_t data_size_max = get_payload_data_size_max(m_mode == APP_ESB_MODE_PRX);
-    payload->length = 1; // reserve first byte for count
+    put_u32_le(&payload->data[1], nonce); // put nonce at data[1..4]
+    payload->length = 5; // reserve space for count and nonce
 
     while (k_msgq_num_used_get(msgq) > 0) {
         if (payload->length + data_size_max > CONFIG_ESB_MAX_PAYLOAD_LENGTH) {
@@ -429,7 +430,7 @@ static int app_esb_suspend(void) {
 static int app_esb_resume(void) {
     int err = 0;
 
-    memset(pids_before, -1, sizeof(pids_before));
+    memset(pids_before, (uint32_t)(-1), sizeof(pids_before));
     if(m_mode == APP_ESB_MODE_PTX) {
         err = esb_initialize(m_mode);
         m_active = true;

@@ -174,7 +174,7 @@ static void publish_events_thread() {
             uint8_t *data = rx_payload->data;
             size_t length = rx_payload->length;
             size_t count = data[0];
-            size_t offset = 1;
+            size_t offset = 5;
 
             for (size_t i = 0; i < count; ++i) {
                 struct zmk_split_transport_peripheral_event evt = {0};
