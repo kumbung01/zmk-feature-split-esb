@@ -54,6 +54,8 @@ _Static_assert(sizeof(struct payload_buffer) == CONFIG_ESB_MAX_PAYLOAD_LENGTH,
 
 // #define ESB_MSG_EXTRA_SIZE (sizeof(struct esb_msg_prefix) + sizeof(struct esb_msg_postfix))
 
+typedef int (*zmk_split_transport_data_handler)(struct esb_data_envelope* env);
+
 typedef void (*zmk_split_esb_process_tx_callback_t)(void);
 struct zmk_split_esb_async_state {
     atomic_t state;
@@ -64,10 +66,7 @@ struct zmk_split_esb_async_state {
     struct k_work *process_tx_work;
     const struct gpio_dt_spec *dir_gpio;
 
-    union {
-        struct zmk_split_transport_central *central_transport;
-        struct zmk_split_transport_peripheral *peripheral_transport;
-    };
+    zmk_split_transport_data_handler handler;
 };
 
 void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state);
@@ -82,7 +81,7 @@ int service_init();
 uint32_t get_nonce();
 int process_payload(char* data, size_t length, uint32_t nonce);
 
-int handle_packet(struct zmk_split_esb_async_state* state);
+int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd);
 void reset_buffers();
 
 uint32_t get_u32_le(const uint8_t *src);

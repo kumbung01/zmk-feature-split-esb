@@ -50,8 +50,10 @@ static bool is_enabled = false;
 static void process_tx_work_handler(struct k_work *work) {}
 K_WORK_DEFINE(process_tx_work, process_tx_work_handler);
 
+static int central_handler(struct esb_data_envelope *env);
+
 static struct zmk_split_esb_async_state async_state = {
-    // .process_tx_work = &process_tx_work,
+    .handler = central_handler,
 };
 
 static int split_central_esb_send_command(uint8_t source,
@@ -163,7 +165,7 @@ static void publish_events_thread() {
     while (true)
     {
         k_sem_take(&rx_sem, K_FOREVER);
-        handle_packet(&async_state);
+        handle_packet(&async_state, false);
     }
 }
 
@@ -172,3 +174,6 @@ K_THREAD_DEFINE(publish_events_thread_id, STACKSIZE,
         -1, 0, 0);
 
 
+static int central_handler(struct esb_data_envelope *env) {
+    return zmk_split_transport_central_peripheral_event_handler(&esb_central, env->source, env->event);
+}

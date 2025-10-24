@@ -162,7 +162,7 @@ void reset_buffers() {
     }
 }
 
-int handle_packet(struct zmk_split_esb_async_state* state) {
+int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd) {
     int handled = 0;
 
     while (true) {
@@ -181,13 +181,10 @@ int handle_packet(struct zmk_split_esb_async_state* state) {
         size_t offset = 0;
 
         for (size_t i = 0; i < count; ++i) {
-            struct esb_data_envelope evt = {0};
+            struct esb_data_envelope env = {0};
             int type = data[offset];
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-            ssize_t data_size = get_payload_data_size_evt(type);
-#else
-            ssize_t data_size = get_payload_data_size_cmd(type);
-#endif
+
+            ssize_t data_size = get_payload_data_size_buf(type, is_cmd);
             if (data_size < 0) {
                 LOG_ERR("Unknown event type %d", type);
                 break;
@@ -198,14 +195,11 @@ int handle_packet(struct zmk_split_esb_async_state* state) {
                 break;
             }
 
-            evt.buf.type = type;
-            memcpy(evt.buf.data, &data[offset + 1], data_size);
+            env.source = source;
+            env.buf.type = type;
+            memcpy(env.buf.data, &data[offset + 1], data_size);
 
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-                err = zmk_split_transport_central_peripheral_event_handler(state->central_transport, (uint8_t)source, evt.event);
-#else
-                err = zmk_split_transport_peripheral_command_handler(state->peripheral_transport, evt.command);
-#endif
+            err = state->handler(&env);
             if (err < 0) {
                 LOG_ERR("zmk handler failed(%d)", err);
             }
