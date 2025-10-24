@@ -109,12 +109,11 @@ static void event_handler(struct esb_evt const *event) {
             }
 
             if (esb_read_rx_payload(rx_payload) == 0) {
-                struct payload_buffer *buf = rx_payload->data;
                 int pipe = rx_payload->pipe;
-                uint32_t nonce = get_u32_le(&buf->header.nonce);
+                uint32_t nonce = get_u32_le(&((struct payload_buffer*)(rx_payload->data))->header.nonce);
                 if (nonce_before[pipe] == nonce) {
                     LOG_DBG("RX on pipe %d with same nonce %u, dropping", pipe, nonce);
-                    nonce_before[pipe] = -1; // reset to force next packet acceptance
+                    k_mem_slab_free(&rx_slab, (void *)rx_payload);
                     break;
                 }
 
