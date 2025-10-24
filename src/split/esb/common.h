@@ -39,7 +39,7 @@ struct esb_data_envelope {
 
 struct payload_header {
     uint8_t count;
-    uint32_t nonce;
+    // uint32_t nonce;
 } __packed;
 
 #define HEADER_SIZE sizeof(struct payload_header)
