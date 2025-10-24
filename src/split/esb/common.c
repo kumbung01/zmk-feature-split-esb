@@ -183,7 +183,7 @@ int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd) {
         if (pid_before[source] == pid) {
             LOG_DBG("RX on pipe %d with same pid %u, dropping", source, pid);
             k_mem_slab_free(&rx_slab, (void *)rx_payload);
-            break;
+            continue;
         }
 
         LOG_DBG("RX on pipe %d with new pid %d (before %d)", source, pid, pid_before[source]);
