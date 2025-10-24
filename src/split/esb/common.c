@@ -174,10 +174,9 @@ int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd) {
         }
 
         int source = rx_payload->pipe;
-        struct payload_buffer *buf = rx_payload->data;
-        uint8_t *data = buf->body;
+        uint8_t *data = ((struct payload_buffer*)(rx_payload->data))->body;
+        size_t count  = ((struct payload_buffer*)(rx_payload->data))->header.count;
         size_t length = rx_payload->length - HEADER_SIZE;
-        size_t count = buf->header.count;
         size_t offset = 0;
 
         for (size_t i = 0; i < count; ++i) {
@@ -198,16 +197,15 @@ int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd) {
             env.source = source;
             env.buf.type = type;
             memcpy(env.buf.data, &data[offset + 1], data_size);
+            offset += data_size + 1;
 
             err = state->handler(&env);
             if (err < 0) {
                 LOG_ERR("zmk handler failed(%d)", err);
+                continue;
             }
 
-            offset += data_size + 1;
-
-            if (err == 0)
-                handled++;
+            handled++;
         }
 
         k_mem_slab_free(&rx_slab, (void *)rx_payload);
