@@ -31,7 +31,6 @@ K_MSGQ_DEFINE(tx_msgq, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MEM_SLAB_DEFINE(rx_slab, sizeof(struct esb_payload), RX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(rx_msgq, sizeof(void*), RX_MSGQ_SIZE, 4);
 
-static uint8_t pid_before[CONFIG_ESB_PIPE_COUNT];
 
 ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type _type) {
     switch (_type) {
@@ -89,7 +88,6 @@ int service_init(void) {
         .name = "Split Peripheral Notification Queue"};
     k_work_queue_start(&esb_work_q, esb_work_q_stack, K_THREAD_STACK_SIZEOF(esb_work_q_stack),
                        5, &queue_config);
-    memset(pid_before, -1, sizeof(pid_before));
 
     return 0;
 }
@@ -178,17 +176,6 @@ int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd) {
         }
 
         int source = rx_payload->pipe;
-        uint8_t pid = rx_payload->pid;
-
-        if (pid_before[source] == pid) {
-            LOG_DBG("RX on pipe %d with same pid %u, dropping", source, pid);
-            k_mem_slab_free(&rx_slab, (void *)rx_payload);
-            continue;
-        }
-
-        LOG_DBG("RX on pipe %d with new pid %d (before %d)", source, pid, pid_before[source]);
-        pid_before[source] = pid;
-
         uint8_t *data = ((struct payload_buffer*)(rx_payload->data))->body;
         size_t count  = ((struct payload_buffer*)(rx_payload->data))->header.count;
         size_t length = rx_payload->length - HEADER_SIZE;
