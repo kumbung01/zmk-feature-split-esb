@@ -70,8 +70,7 @@ extern struct k_msgq tx_msgq;
 extern struct k_mem_slab tx_slab;
 extern struct k_msgq rx_msgq;
 extern struct k_mem_slab rx_slab;
-static volatile uint8_t tx_fail_count = 0;
-uint8_t pid_before[CONFIG_ESB_PIPE_COUNT];
+static volatile int tx_fail_count = 0;
 static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
     switch (event->evt_id) {

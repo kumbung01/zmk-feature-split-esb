@@ -176,8 +176,9 @@ int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd) {
         }
 
         int source = rx_payload->pipe;
-        uint8_t *data = ((struct payload_buffer*)(rx_payload->data))->body;
-        size_t count  = ((struct payload_buffer*)(rx_payload->data))->header.count;
+        struct payload_buffer *buf = (struct payload_buffer*)(rx_payload->data);
+        uint8_t *data = buf->body;
+        size_t count  = buf->header.count;
         size_t length = rx_payload->length - HEADER_SIZE;
         size_t offset = 0;
 
