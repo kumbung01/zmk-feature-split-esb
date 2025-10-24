@@ -76,7 +76,6 @@ static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
-   
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
             tx_fail_count = 0;
@@ -86,7 +85,7 @@ static void event_handler(struct esb_evt const *event) {
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
             LOG_WRN("ESB_EVENT_TX_FAILED");
-            if (m_mode == APP_ESB_MODE_PTX) {
+#if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
                 if (tx_fail_count > 0) {
                     esb_pop_tx();
                     esb_start_tx();
@@ -98,7 +97,7 @@ static void event_handler(struct esb_evt const *event) {
                     esb_reuse_pid(CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID);
                     esb_start_tx();
                 }
-            }
+#endif
             break;
         case ESB_EVENT_RX_RECEIVED:
             LOG_DBG("RX SUCCESS");
