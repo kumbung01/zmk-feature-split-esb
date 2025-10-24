@@ -180,14 +180,14 @@ int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd) {
         int source = rx_payload->pipe;
         uint8_t pid = rx_payload->pid;
 
-        if (pid_before[pipe] == pid) {
-            LOG_DBG("RX on pipe %d with same pid %u, dropping", pipe, pid);
+        if (pid_before[source] == pid) {
+            LOG_DBG("RX on pipe %d with same pid %u, dropping", source, pid);
             k_mem_slab_free(&rx_slab, (void *)rx_payload);
             break;
         }
 
-        LOG_DBG("RX on pipe %d with new pid %d (before %d)", pipe, pid, pid_before[pipe]);
-        pid_before[pipe] = pid;
+        LOG_DBG("RX on pipe %d with new pid %d (before %d)", source, pid, pid_before[source]);
+        pid_before[source] = pid;
 
         uint8_t *data = ((struct payload_buffer*)(rx_payload->data))->body;
         size_t count  = ((struct payload_buffer*)(rx_payload->data))->header.count;
