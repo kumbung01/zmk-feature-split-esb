@@ -94,7 +94,6 @@ static void event_handler(struct esb_evt const *event) {
                 }
                 else {
                     tx_fail_count++;
-                    esb_reuse_pid(CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID);
                     esb_start_tx();
                 }
 #endif
