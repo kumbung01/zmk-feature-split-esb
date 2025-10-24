@@ -71,7 +71,7 @@ extern struct k_mem_slab tx_slab;
 extern struct k_msgq rx_msgq;
 extern struct k_mem_slab rx_slab;
 static volatile uint8_t tx_fail_count = 0;
-static uint8_t pid_before[CONFIG_ESB_PIPE_COUNT];
+uint8_t pid_before[CONFIG_ESB_PIPE_COUNT];
 static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
     switch (event->evt_id) {
@@ -109,16 +109,6 @@ static void event_handler(struct esb_evt const *event) {
             }
 
             if (esb_read_rx_payload(rx_payload) == 0) {
-                int pipe = rx_payload->pipe;
-                uint8_t pid = rx_payload->pid;
-                if (pid_before[pipe] == pid) {
-                    LOG_DBG("RX on pipe %d with same pid %u, dropping", pipe, pid);
-                    k_mem_slab_free(&rx_slab, (void *)rx_payload);
-                    break;
-                }
-
-                LOG_DBG("RX on pipe %d with new pid %d (before %d)", pipe, pid, pid_before[pipe]);
-                pid_before[pipe] = pid;
                 if (k_msgq_put(&rx_msgq, &rx_payload, K_NO_WAIT) != 0) {
                     LOG_ERR("k_msgq_put failed");
                     k_mem_slab_free(&rx_slab, (void *)rx_payload);
@@ -382,7 +372,6 @@ int zmk_split_esb_init(app_esb_mode_t mode, app_esb_callback_t callback) {
     if (ret < 0) {
         LOG_ERR("esb_set_rf_channel failed: %d", ret);
     }
-    memset(pid_before, -1, sizeof(pid_before));
 
     return 0;
 }
