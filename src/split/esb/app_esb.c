@@ -111,7 +111,7 @@ static void event_handler(struct esb_evt const *event) {
 
             if (esb_read_rx_payload(rx_payload) == 0) {
                 int pipe = rx_payload->pipe;
-                uint8_t pid = payload->pid;
+                uint8_t pid = rx_payload->pid;
                 if (pid_before[pipe] == pid) {
                     LOG_DBG("RX on pipe %d with same pid %u, dropping", pipe, pid);
                     k_mem_slab_free(&rx_slab, (void *)rx_payload);
