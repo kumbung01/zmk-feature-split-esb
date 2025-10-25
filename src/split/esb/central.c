@@ -76,15 +76,12 @@ static int split_central_esb_send_command(uint8_t source,
     env->source = source;
     env->timestamp = k_uptime_get();
 
-    ret = k_msgq_put(&tx_msgq, &env, K_MSEC(TIMEOUT_MS));
+    ret = k_msgq_put(&tx_msgq, &env, K_NO_WAIT);
     if (ret < 0) {
         LOG_ERR("k_msgq_put failed (err %d)", ret);
         k_mem_slab_free(&tx_slab, (void *)env);
         return ret;
     }
-
-    LOG_DBG("Queued ptr %p to tx_msgq", env);
-    LOG_HEXDUMP_DBG(env, sizeof(*env), "ptr:");
 
     k_work_submit_to_queue(&esb_work_q, &tx_work);
 

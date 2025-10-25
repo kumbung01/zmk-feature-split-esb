@@ -192,7 +192,7 @@ int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd) {
                 break;
             }
 
-            if (length < data_size + offset) {
+            if (length < data_size + offset + 1) {
                 LOG_ERR("Payload too small for event type %d", type);
                 break;
             }

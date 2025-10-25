@@ -121,11 +121,10 @@ static void event_handler(struct esb_evt const *event) {
 
 static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     uint32_t now = k_uptime_get();
-    // uint32_t nonce = get_nonce();
     uint8_t count = 0;
     uint8_t offset = 0;
     struct payload_buffer *buf = payload->data;
-    size_t data_size_max = get_payload_data_size_max(m_mode == APP_ESB_MODE_PRX);
+    size_t data_size_max = sizeof(struct zmk_split_transport_buffer);
 
 #if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     payload->pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID; // use the peripheral_id as the ESB pipe number
@@ -145,7 +144,6 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
             break;
         }
 
-        uint8_t source = env->source;
         uint8_t type = env->buf.type;
 
         ssize_t data_size = get_payload_data_size_buf(type, m_mode == APP_ESB_MODE_PRX);
@@ -154,9 +152,6 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
             k_mem_slab_free(&tx_slab, (void *)env);
             continue;
         }
-
-        LOG_DBG("dequeued ptr %p from tx_msgq", env);
-        LOG_HEXDUMP_DBG(env, sizeof(*env), "dequeued ptr:");
         
         uint32_t timestamp = env->timestamp;
         if (now - timestamp > TIMEOUT_MS) {
@@ -175,7 +170,7 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
         k_mem_slab_free(&tx_slab, (void *)env);
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-        payload->pipe = source; // use the source as the ESB pipe number
+        payload->pipe = env->source; // use the source as the ESB pipe number
         break;
 #endif
 
@@ -188,18 +183,17 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     if (count > 0) {
         // put_u32_le(&buf->header.nonce, nonce);
         buf->header.count = count;
-
         payload->length = offset + HEADER_SIZE;
     }
 
-    // process_payload((char*)&payload->data[5], payload->length - 5, nonce);
+    // process_payload((char*)&payload->data[5], payload->length - HEADER_SIZE, nonce);
 
     return count;
 }
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 void tx_work_handler() {
-    while (k_msgq_num_used_get(&tx_msgq) > 0) {
+    while (true) {
         struct esb_payload payload = {0};
         int ret = 0;
         size_t count = 0;
@@ -224,10 +218,6 @@ K_WORK_DEFINE(tx_work, tx_work_handler);
 void tx_thread() {
     while (true)
     {
-        struct esb_payload payload = {0};
-        int ret = 0;
-        size_t count = 0;
-
         k_sem_take(&tx_sem, K_FOREVER);
         LOG_DBG("tx thread awake");
 
@@ -236,26 +226,28 @@ void tx_thread() {
             continue;
         }
 
-        while (k_msgq_num_used_get(&tx_msgq) > 0) {
+        while (true) {
             if (esb_tx_full()) {
                 LOG_DBG("esb tx full, wait for next tx event");
                 break;
             }
 
-            count = make_packet(&tx_msgq, &payload);
-            if (count == 0) {
+            struct esb_payload payload = {0};
+            if (make_packet(&tx_msgq, &payload) == 0) {
                 LOG_DBG("no packet to send");
+                break;
             }
 
-            LOG_WRN("TX packet with %d events on pipe %d", count, payload.pipe);
-            ret = esb_write_payload(&payload);
+            int ret = esb_write_payload(&payload);
             if (ret != 0) {
-                LOG_DBG("esb_write_payload returned %d", ret);
+                LOG_WRN("esb_write_payload returned %d", ret);
+                break;
             }
 
             ret = esb_start_tx();
             if (ret != 0) {
                 LOG_WRN("esb_start_tx returned %d", ret);
+                break;
             }
         }
     }
@@ -316,7 +308,6 @@ static int esb_initialize(app_esb_mode_t mode) {
     config.mode = (mode == APP_ESB_MODE_PTX) ? ESB_MODE_PTX : ESB_MODE_PRX;
     config.tx_mode = ESB_TXMODE_MANUAL_START;
     config.selective_auto_ack = true;
-    config.tx_output_power = -4;
 
     err = esb_init(&config);
 
@@ -344,8 +335,6 @@ static int esb_initialize(app_esb_mode_t mode) {
     if (mode == APP_ESB_MODE_PRX) {
         esb_start_rx();
     }
-
-    tx_fail_count = 0;
 
     return 0;
 }
@@ -452,22 +441,11 @@ static int on_activity_state(const zmk_event_t *eh) {
         return 0;
     }
 
-    switch(state_ev->state) {
-        case ZMK_ACTIVITY_ACTIVE:
-            LOG_DBG("state: ACTIVE");
-            break;
-        case ZMK_ACTIVITY_IDLE:
-            LOG_DBG("state: IDLE");
-            break;
-        case ZMK_ACTIVITY_SLEEP:
-            LOG_DBG("state: SLEEP");
-            break;
-    }
-
     if (m_mode == APP_ESB_MODE_PTX) {
         if (state_ev->state != ZMK_ACTIVITY_ACTIVE && m_enabled) {
             zmk_split_esb_set_enable(false);
             reset_buffers();
+            tx_fail_count = 0;
         }
         else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !m_enabled) {
             zmk_split_esb_set_enable(true);

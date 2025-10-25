@@ -85,16 +85,13 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     env->source = peripheral_id;
     env->timestamp = k_uptime_get();
 
-    ret = k_msgq_put(&tx_msgq, &env, K_MSEC(TIMEOUT_MS));
+    ret = k_msgq_put(&tx_msgq, &env, K_NO_WAIT);
     if (ret < 0) {
         LOG_ERR("k_msgq_put failed (err %d)", ret);
         k_mem_slab_free(&tx_slab, (void *)env);
         return ret;
     }
-
-    LOG_DBG("Queued ptr %p to tx_msgq", env);
-    LOG_HEXDUMP_DBG(env, sizeof(*env), "ptr:");
-
+    
     k_sem_give(&tx_sem);
 
     return 0;
