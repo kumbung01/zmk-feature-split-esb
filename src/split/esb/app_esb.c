@@ -124,7 +124,7 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     uint8_t count = 0;
     uint8_t offset = 0;
     struct payload_buffer *buf = payload->data;
-
+    const size_t body_size = sizeof(buf->body);
 #if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     payload->pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID; // use the peripheral_id as the ESB pipe number
 #endif
@@ -146,8 +146,8 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
             continue;
         }
 
-        if (HEADER_SIZE + offset + (data_size + 1) > CONFIG_ESB_MAX_PAYLOAD_LENGTH) {
-            LOG_DBG("packet full (%d + %d + %d > %d)", HEADER_SIZE, offset, (data_size + 1), CONFIG_ESB_MAX_PAYLOAD_LENGTH);
+        if (offset + (data_size + sizeof(type)) > body_size) {
+            LOG_DBG("packet full (%u + %u > %d)", offset, (data_size + sizeof(type)), body_size);
             k_msgq_put(msgq, &env, K_NO_WAIT);
             // do not free memory
             break;
