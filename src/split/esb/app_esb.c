@@ -124,7 +124,6 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     uint8_t count = 0;
     uint8_t offset = 0;
     struct payload_buffer *buf = payload->data;
-    size_t data_size_max = sizeof(struct zmk_split_transport_buffer);
 
 #if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     payload->pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID; // use the peripheral_id as the ESB pipe number
@@ -132,11 +131,6 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     payload->noack = !CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK;
 
     while (true) {
-        if (HEADER_SIZE + offset + data_size_max > CONFIG_ESB_MAX_PAYLOAD_LENGTH) {
-            LOG_DBG("packet full (%d + %d + %d > %d)", HEADER_SIZE, offset, data_size_max, CONFIG_ESB_MAX_PAYLOAD_LENGTH);
-            break;
-        }
-
         struct esb_data_envelope *env = NULL;
         int err = k_msgq_get(msgq, &env, K_NO_WAIT);
         if (err != 0) {
@@ -145,12 +139,18 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
         }
 
         uint8_t type = env->buf.type;
-
         ssize_t data_size = get_payload_data_size_buf(type, m_mode == APP_ESB_MODE_PRX);
         if (data_size < 0) {
             LOG_ERR("Invalid data size %zd for type %d", data_size, type);
             k_mem_slab_free(&tx_slab, (void *)env);
             continue;
+        }
+
+        if (HEADER_SIZE + offset + (data_size + 1) > CONFIG_ESB_MAX_PAYLOAD_LENGTH) {
+            LOG_DBG("packet full (%d + %d + %d > %d)", HEADER_SIZE, offset, (data_size + 1), CONFIG_ESB_MAX_PAYLOAD_LENGTH);
+            k_msgq_put(msgq, &env, K_NO_WAIT);
+            // do not free memory
+            break;
         }
         
         uint32_t timestamp = env->timestamp;
