@@ -72,14 +72,6 @@ ssize_t get_payload_data_size_buf(zmk_split_transport_buffer_type _type, bool is
 }
 
 
-ssize_t get_payload_data_size_max(bool is_cmd) {
-    if (is_cmd) {
-        return sizeof(((struct zmk_split_transport_central_command*)0)->data);
-    } else {
-        return sizeof(((struct zmk_split_transport_peripheral_event*)0)->data);
-    }
-}
-
 struct k_work_q esb_work_q;
 K_THREAD_STACK_DEFINE(esb_work_q_stack, 1300);
 
@@ -183,7 +175,7 @@ int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd) {
         size_t offset = 0;
 
         for (size_t i = 0; i < count; ++i) {
-            struct esb_data_envelope env = {0};
+            struct esb_data_envelope env;
             int type = data[offset];
 
             ssize_t data_size = get_payload_data_size_buf(type, is_cmd);

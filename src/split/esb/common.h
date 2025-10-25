@@ -74,7 +74,7 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
 ssize_t get_payload_data_size_evt(enum zmk_split_transport_peripheral_event_type _type);
 ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type _type);
 ssize_t get_payload_data_size_buf(zmk_split_transport_buffer_type _type, bool is_cmd);
-ssize_t get_payload_data_size_max(bool is_cmd);
+
 
 int service_init();
 

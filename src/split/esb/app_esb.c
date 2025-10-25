@@ -232,7 +232,7 @@ void tx_thread() {
                 break;
             }
 
-            struct esb_payload payload = {0};
+            struct esb_payload payload;
             if (make_packet(&tx_msgq, &payload) == 0) {
                 LOG_DBG("no packet to send");
                 break;

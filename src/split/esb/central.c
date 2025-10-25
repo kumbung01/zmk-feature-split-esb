@@ -47,8 +47,6 @@ extern struct k_work tx_work;
 static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
 
-static void process_tx_work_handler(struct k_work *work) {}
-K_WORK_DEFINE(process_tx_work, process_tx_work_handler);
 
 static int central_handler(struct esb_data_envelope *env);
 
