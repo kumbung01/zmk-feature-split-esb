@@ -245,9 +245,9 @@ void tx_thread() {
             }
 
             ret = esb_start_tx();
-            if (ret != 0) {
-                LOG_WRN("esb_start_tx returned %d", ret);
-                break;
+            if (ret != -EBUSY) {
+                LOG_DBG("esb_start_tx() returned (%d)", ret);
+                break; // break if not busy but error
             }
         }
     }
