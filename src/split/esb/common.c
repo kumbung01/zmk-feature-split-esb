@@ -202,9 +202,9 @@ int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd) {
             memcpy(env.buf.data, &data[offset + 1], data_size);
             offset += data_size + 1;
 
-            unsigned int key = irq_lock();
+            k_sched_lock();
             err = state->handler(&env);
-            irq_unlock(key);
+            k_sched_unlock();
             if (err < 0) {
                 LOG_ERR("zmk handler failed(%d)", err);
                 continue;
