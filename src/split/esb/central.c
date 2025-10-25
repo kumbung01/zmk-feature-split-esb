@@ -166,7 +166,7 @@ static void publish_events_thread() {
 
 K_THREAD_DEFINE(publish_events_thread_id, STACKSIZE,
         publish_events_thread, NULL, NULL, NULL,
-        -1, 0, 0);
+        0, 0, 0);
 
 
 static int central_handler(struct esb_data_envelope *env) {
