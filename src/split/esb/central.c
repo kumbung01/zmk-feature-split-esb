@@ -138,8 +138,7 @@ static int zmk_split_esb_central_init(void) {
     msgqs[ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_INVOKE_BEHAVIOR]     = &msgq_invoke_behavior;
     msgqs[ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_PHYSICAL_LAYOUT] = &msgq_set_physical_layout;
     msgqs[ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_HID_INDICATORS]  = &msgq_set_hid_indicators;
-    tx_msgq = msgqs;
-    tx_msgq_cnt = 4;
+    tx_msgq_init(msgqs, ARRAY_SIZE(msgqs));
 
     int ret = zmk_split_esb_init(APP_ESB_MODE_PRX, zmk_split_esb_on_prx_esb_callback);
     if (ret) {

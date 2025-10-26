@@ -203,6 +203,15 @@ int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd) {
     return handled;
 }
 
+int tx_msgq_init(struct k_msgq **msgqs, size_t _count) {
+    if (msgqs == NULL || _count == 0) {
+        return -ENOBUFS;
+    }
+
+    tx_msgq = msgqs;
+    tx_msgq_count = _count;
+}
+
 struct k_msgq* tx_msgq_ready() {
     if (!tx_msgq || tx_msgq_cnt == 0 || !_type) {
         return NULL;

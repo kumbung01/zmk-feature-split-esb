@@ -94,11 +94,13 @@ int process_payload(char* data, size_t length, uint32_t nonce);
 int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd);
 void reset_buffers();
 
-struct k_msgq* tx_msgq_ready(struct k_msgq **msgqs, size_t cnt, int* _type);
 
 uint32_t get_u32_le(const uint8_t *src);
 void put_u32_le(uint8_t *dst, uint32_t val);
 
+
+int tx_msgq_init(struct k_msgq **msgqs, size_t _count);
+struct k_msgq* tx_msgq_ready(struct k_msgq **msgqs, size_t cnt, int* _type);
 int tx_alloc(void *ptr);
 int rx_alloc(void *ptr);
 int tx_free(void *ptr);
