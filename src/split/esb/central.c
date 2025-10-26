@@ -140,7 +140,7 @@ static int zmk_split_esb_central_init(void) {
     msgqs[ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_HID_INDICATORS]  = &msgq_set_hid_indicators;
     int ret = tx_msgq_init(msgqs, ARRAY_SIZE(msgqs));
     if (ret) {
-        LOG_ERR("tx_msgq_init faied(%d)", ret);
+        LOG_ERR("tx_msgq_init failed(%d)", ret);
         return ret;
     }
 

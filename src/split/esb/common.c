@@ -210,6 +210,8 @@ int tx_msgq_init(struct k_msgq **msgqs, size_t _count) {
 
     tx_msgq = msgqs;
     tx_msgq_cnt = _count;
+
+    return 0;
 }
 
 struct k_msgq *tx_msgq_ready(int *_type) {
