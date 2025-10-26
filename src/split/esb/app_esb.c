@@ -57,8 +57,8 @@ uint8_t esb_addr_prefix[8] = DT_INST_PROP(0, addr_prefix);
 
 static app_esb_callback_t m_callback;
 
-K_SEM_DEFINE(tx_sem, 0, 1);
-K_SEM_DEFINE(rx_sem, 0, 1);
+K_SEM_DEFINE(tx_sem, 1, 1);
+K_SEM_DEFINE(rx_sem, 1, 1);
 
 static app_esb_mode_t m_mode;
 static bool m_active = false;
