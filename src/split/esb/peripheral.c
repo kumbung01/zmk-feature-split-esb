@@ -82,6 +82,8 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     env->source = peripheral_id;
     env->timestamp = k_uptime_get();
 
+    LOG_DBG("enqueueing msgq (%p), type (%d)", msgqs[event->type], event->type);
+    
     ret = k_msgq_put(msgqs[event->type], &env, K_NO_WAIT);
     if (ret < 0) {
         LOG_ERR("k_msgq_put failed (err %d)", ret);
@@ -89,8 +91,8 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
         return ret;
     }
     
-    // if (is_esb_active())
-    //     k_sem_give(&tx_sem);
+    if (is_esb_active())
+        k_sem_give(&tx_sem);
 
     return 0;
 }

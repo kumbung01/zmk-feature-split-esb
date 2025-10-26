@@ -231,6 +231,8 @@ void tx_thread() {
                 break;
             }
 
+            LOG_DBG("dequeueing msgq (%p), type (%d)", msgq, type);
+
             struct esb_payload payload;
             int packet_count = make_packet(&msgq, &payload, type);
             if (packet_count == 0) {
@@ -408,15 +410,8 @@ static int app_esb_suspend(void) {
 }
 
 static int app_esb_resume(void) {
-    int err = 0;
-    err = esb_initialize(m_mode);
+    int err = esb_initialize(m_mode);
     m_active = true;
-#if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-        k_sem_give(&tx_sem);
-#else
-        k_work_submit_to_queue(&esb_work_q, &tx_work);
-#endif
-
     return err;
 }
 
@@ -446,6 +441,11 @@ static int on_activity_state(const zmk_event_t *eh) {
         }
         else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !m_enabled) {
             zmk_split_esb_set_enable(true);
+#if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+            k_sem_give(&tx_sem);
+#else
+            k_work_submit_to_queue(&esb_work_q, &tx_work);
+#endif
         }
     }
 
