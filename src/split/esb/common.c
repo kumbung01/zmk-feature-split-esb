@@ -215,7 +215,7 @@ int tx_msgq_init(struct k_msgq *msgqs[], size_t _count) {
 }
 
 struct k_msgq *tx_msgq_ready(int *_type) {
-    if (!_type) {
+    if (!_type || !tx_msgq || tx_msgq_cnt == 0) {
         return NULL;
     }
 
