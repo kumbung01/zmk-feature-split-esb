@@ -42,7 +42,7 @@ static struct k_msgq* msgqs[4] = {
     [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_POLL_EVENTS]          = &msgq_poll_events,
     [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_INVOKE_BEHAVIOR]      = &msgq_invoke_behavior,
     [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_PHYSICAL_LAYOUT]  = &msgq_set_physical_layout,
-    [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_HID_INDICATORS]   = &msgq_set_hid_indcicators,
+    [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_HID_INDICATORS]   = &msgq_set_hid_indicators,
 };
 
 static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
