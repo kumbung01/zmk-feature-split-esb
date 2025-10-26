@@ -60,14 +60,7 @@ K_MSGQ_DEFINE(msgq_key, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq_input, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq_sensor, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq_battery, sizeof(void*), TX_MSGQ_SIZE, 4);
-static struct k_msgq* msgqs[4];
-extern struct k_msgq **tx_msgq;
-extern size_t tx_msgq_cnt;
-extern struct k_mem_slab tx_slab;
-extern struct k_msgq rx_msgq;
-extern struct k_mem_slab rx_slab;
-extern struct k_sem tx_sem;
-extern struct k_work_q esb_work_q;
+
 
 static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;

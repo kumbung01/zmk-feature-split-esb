@@ -22,6 +22,14 @@
 
 #define TIMEOUT_MS CONFIG_ZMK_SPLIT_ESB_KEYBOARD_EVENT_TIMEOUT_MS
 
+static struct k_msgq* msgqs[4];
+extern struct k_msgq **tx_msgq;
+extern size_t tx_msgq_cnt;
+extern struct k_mem_slab tx_slab;
+extern struct k_mem_slab rx_slab;
+extern struct k_msgq rx_msgq;
+extern struct k_work_q esb_work_q;
+
 typedef enum zmk_split_transport_peripheral_event_type zmk_split_transport_buffer_type;
 #define ZMK_DATA_SIZE (size_t)(sizeof(struct zmk_split_transport_peripheral_event) > sizeof(struct zmk_split_transport_central_command) ? \
                                sizeof(struct zmk_split_transport_peripheral_event) : \

@@ -63,15 +63,9 @@ K_SEM_DEFINE(rx_sem, 0, 1);
 static app_esb_mode_t m_mode;
 static bool m_active = false;
 static bool m_enabled = false;
-
-
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
-extern struct k_msgq **tx_msgq;
-extern size_t tx_msgq_cnt;
-extern struct k_mem_slab tx_slab;
-extern struct k_msgq rx_msgq;
-extern struct k_mem_slab rx_slab;
 static volatile int tx_fail_count = 0;
+
 static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
     switch (event->evt_id) {
