@@ -104,5 +104,5 @@ int tx_msgq_init(struct k_msgq **msgqs, size_t _count);
 struct k_msgq *tx_msgq_ready(int *_type);
 int tx_alloc(void *ptr);
 int rx_alloc(void *ptr);
-int tx_free(void *ptr);
-int rx_free(void *ptr);
+void tx_free(void *ptr);
+void rx_free(void *ptr);
