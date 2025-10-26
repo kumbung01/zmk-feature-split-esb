@@ -405,17 +405,13 @@ static int app_esb_suspend(void) {
 
 static int app_esb_resume(void) {
     int err = 0;
-
-    if(m_mode == APP_ESB_MODE_PTX) {
-        err = esb_initialize(m_mode);
-        m_active = true;
+    err = esb_initialize(m_mode);
+    m_active = true;
+#if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
         k_sem_give(&tx_sem);
-    }
-    else {
-        err = esb_initialize(m_mode);
-        m_active = true;
+#else
         k_work_submit_to_queue(&esb_work_q, &tx_work);
-    }
+#endif
 
     return err;
 }
