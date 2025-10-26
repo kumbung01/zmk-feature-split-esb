@@ -234,7 +234,7 @@ void tx_thread() {
             LOG_DBG("dequeueing msgq (%p), type (%d)", msgq, type);
 
             struct esb_payload payload;
-            int packet_count = make_packet(&msgq, &payload, type);
+            int packet_count = make_packet(msgq, &payload, type);
             if (packet_count == 0) {
                 LOG_DBG("no packet to send");
                 break;
