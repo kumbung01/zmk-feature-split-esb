@@ -84,8 +84,7 @@ static int split_central_esb_send_command(uint8_t source,
         return ret;
     }
 
-    if (is_esb_active())
-        k_work_submit_to_queue(&esb_work_q, &tx_work);
+    k_work_submit_to_queue(&esb_work_q, &tx_work);
 
     return 0;
 }
