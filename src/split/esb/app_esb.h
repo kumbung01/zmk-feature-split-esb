@@ -6,7 +6,7 @@
 
 #ifndef __APP_ESB_H
 #define __APP_ESB_H
-#include "common.h"
+
 #include <zephyr/kernel.h>
 #include <esb.h>
 

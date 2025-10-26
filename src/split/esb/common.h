@@ -8,7 +8,7 @@
 
 #include <zephyr/sys/ring_buffer.h>
 #include <zephyr/device.h>
-
+#include "app_esb.h"
 #include <zmk/split/transport/types.h>
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
