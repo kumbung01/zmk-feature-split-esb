@@ -34,19 +34,13 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #define MPSL_THREAD_PRIO             CONFIG_MPSL_THREAD_COOP_PRIO
 #define STACKSIZE                    CONFIG_MAIN_STACK_SIZE
 
-K_MSGQ_DEFINE(msgq_poll_events, sizeof(void*), TX_MSGQ_SIZE, 4);
-K_MSGQ_DEFINE(msgq_invoke_behavior, sizeof(void*), TX_MSGQ_SIZE, 4);
-K_MSGQ_DEFINE(msgq_set_physical_layout, sizeof(void*), TX_MSGQ_SIZE, 4);
-K_MSGQ_DEFINE(msgq_set_hid_indicators, sizeof(void*), TX_MSGQ_SIZE, 4);
-static struct k_msgq* msgqs[4] = {
-    [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_POLL_EVENTS]          = &msgq_poll_events,
-    [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_INVOKE_BEHAVIOR]      = &msgq_invoke_behavior,
-    [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_PHYSICAL_LAYOUT]  = &msgq_set_physical_layout,
-    [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_HID_INDICATORS]   = &msgq_set_hid_indicators,
-};
-
-static int idx_to_type[4];
-static int type_to_idx[4] = {
+K_MSGQ_DEFINE(msgq0, sizeof(void*), TX_MSGQ_SIZE, 4);
+K_MSGQ_DEFINE(msgq1, sizeof(void*), TX_MSGQ_SIZE, 4);
+K_MSGQ_DEFINE(msgq2, sizeof(void*), TX_MSGQ_SIZE, 4);
+K_MSGQ_DEFINE(msgq3, sizeof(void*), TX_MSGQ_SIZE, 4);
+static struct k_msgq* msgqs[] = {msgq0, msgq1, msgq2, msgq3};
+static int idx_to_type[ARRAY_SIZE(msgqs)];
+static int type_to_idx[] = {
     [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_POLL_EVENTS]          = 0,
     [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_INVOKE_BEHAVIOR]      = 1,
     [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_PHYSICAL_LAYOUT]  = 2,

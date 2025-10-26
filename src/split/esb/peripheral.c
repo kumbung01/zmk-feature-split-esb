@@ -51,18 +51,12 @@ void zmk_split_esb_on_ptx_esb_callback(app_esb_event_t *event) {
     zmk_split_esb_cb(event, &async_state);
 }
 
-K_MSGQ_DEFINE(msgq_key_position_event, sizeof(void*), TX_MSGQ_SIZE, 4);
-K_MSGQ_DEFINE(msgq_input_event, sizeof(void*), TX_MSGQ_SIZE, 4);
-K_MSGQ_DEFINE(msgq_sensor_event, sizeof(void*), TX_MSGQ_SIZE, 4);
-K_MSGQ_DEFINE(msgq_battery_event, sizeof(void*), TX_MSGQ_SIZE, 4);
-static struct k_msgq* msgqs[4] = {
-    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT]  = &msgq_key_position_event,
-    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT]         = &msgq_input_event,
-    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT]        = &msgq_sensor_event,
-    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT]       = &msgq_battery_event,
-};
-
-static int idx_to_type[4]; // for reverse mapping
+K_MSGQ_DEFINE(msgq0, sizeof(void*), TX_MSGQ_SIZE, 4);
+K_MSGQ_DEFINE(msgq1, sizeof(void*), TX_MSGQ_SIZE, 4);
+K_MSGQ_DEFINE(msgq2, sizeof(void*), TX_MSGQ_SIZE, 4);
+K_MSGQ_DEFINE(msgq3, sizeof(void*), TX_MSGQ_SIZE, 4);
+static struct k_msgq* msgqs[] = {msgq0, msgq1, msgq2, msgq3};
+static int idx_to_type[ARRAY_SIZE(msgqs)];
 static int type_to_idx[4] = {
     [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT]  = 0,
     [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT]         = 1,
