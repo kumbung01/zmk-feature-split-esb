@@ -56,9 +56,15 @@ void zmk_split_esb_on_ptx_esb_callback(app_esb_event_t *event) {
     zmk_split_esb_cb(event, &async_state);
 }
 
-extern struct k_msgq tx_msgq;
-extern struct k_msgq rx_msgq;
+K_MSGQ_DEFINE(msgq_key, sizeof(void*), TX_MSGQ_SIZE, 4);
+K_MSGQ_DEFINE(msgq_input, sizeof(void*), TX_MSGQ_SIZE, 4);
+K_MSGQ_DEFINE(msgq_sensor, sizeof(void*), TX_MSGQ_SIZE, 4);
+K_MSGQ_DEFINE(msgq_battery, sizeof(void*), TX_MSGQ_SIZE, 4);
+static struct k_msgq* msgqs[4];
+extern struct k_msgq **tx_msgq;
+extern size_t tx_msgq_cnt;
 extern struct k_mem_slab tx_slab;
+extern struct k_msgq rx_msgq;
 extern struct k_mem_slab rx_slab;
 extern struct k_sem tx_sem;
 extern struct k_work_q esb_work_q;
@@ -85,7 +91,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     env->source = peripheral_id;
     env->timestamp = k_uptime_get();
 
-    ret = k_msgq_put(&tx_msgq, &env, K_NO_WAIT);
+    ret = k_msgq_put(tx_msgq[event->type], &env, K_NO_WAIT);
     if (ret < 0) {
         LOG_ERR("k_msgq_put failed (err %d)", ret);
         k_mem_slab_free(&tx_slab, (void *)env);
@@ -139,6 +145,13 @@ static void notify_status_work_cb(struct k_work *_work) { notify_transport_statu
 static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
 static int zmk_split_esb_peripheral_init(void) {
+    msgqs[ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT] = &msgq_input;
+    msgqs[ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT] = &msgq_key;
+    msgqs[ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT] = &msgq_sensor;
+    msgqs[ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT] = &msgq_battery;
+    tx_msgq = msgqs;
+    tx_msgq_cnt = 4;
+
     int ret = zmk_split_esb_init(APP_ESB_MODE_PTX, zmk_split_esb_on_ptx_esb_callback);
     if (ret < 0) {
         LOG_ERR("zmk_split_esb_init failed (ret %d)", ret);

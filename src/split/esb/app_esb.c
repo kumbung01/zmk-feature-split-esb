@@ -66,7 +66,8 @@ static bool m_enabled = false;
 
 
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
-extern struct k_msgq tx_msgq;
+extern struct k_msgq **tx_msgq;
+extern size_t tx_msgq_cnt;
 extern struct k_mem_slab tx_slab;
 extern struct k_msgq rx_msgq;
 extern struct k_mem_slab rx_slab;
@@ -119,37 +120,28 @@ static void event_handler(struct esb_evt const *event) {
     }
 }
 
-static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
-    uint32_t now = k_uptime_get();
-    uint8_t count = 0;
+static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t type) {
+    const uint32_t now = k_uptime_get();
+    size_t count = 0;
     uint8_t offset = 0;
     struct payload_buffer *buf = payload->data;
     const size_t body_size = sizeof(buf->body);
+    const size_t data_size = get_payload_data_size_buf(type, m_mode == APP_ESB_MODE_PRX);
 #if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     payload->pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID; // use the peripheral_id as the ESB pipe number
 #endif
     payload->noack = !CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK;
 
     while (true) {
+        if (offset + (data_size + sizeof(type)) > body_size) {
+            LOG_DBG("packet full (%u + %u > %d)", offset, (data_size + sizeof(type)), body_size);
+            break;
+        }
+
         struct esb_data_envelope *env = NULL;
         int err = k_msgq_get(msgq, &env, K_NO_WAIT);
         if (err != 0) {
             LOG_DBG("k_msgq_get failed(%d).", err);
-            break;
-        }
-
-        uint8_t type = env->buf.type;
-        ssize_t data_size = get_payload_data_size_buf(type, m_mode == APP_ESB_MODE_PRX);
-        if (data_size < 0) {
-            LOG_ERR("Invalid data size %zd for type %d", data_size, type);
-            k_mem_slab_free(&tx_slab, (void *)env);
-            continue;
-        }
-
-        if (offset + (data_size + sizeof(type)) > body_size) {
-            LOG_DBG("packet full (%u + %u > %d)", offset, (data_size + sizeof(type)), body_size);
-            k_msgq_put(msgq, &env, K_NO_WAIT);
-            // do not free memory
             break;
         }
         
@@ -162,7 +154,6 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
 
         LOG_DBG("adding type %u size %u to packet", type, data_size);
 
-        buf->body[offset++] = type;
         memcpy(&buf->body[offset], env->buf.data, data_size);
         offset += data_size;
         count++;
@@ -182,7 +173,7 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload) {
     // write header and length
     if (count > 0) {
         // put_u32_le(&buf->header.nonce, nonce);
-        buf->header.count = count;
+        buf->header.type = type;
         payload->length = offset + HEADER_SIZE;
     }
 
@@ -198,17 +189,24 @@ void tx_work_handler() {
         int ret = 0;
         size_t count = 0;
 
-        count = make_packet(&tx_msgq, &payload);
-        if (count == 0) {
+        int type = -1;
+        struct k_msgq *msgq = get_msgq(tx_msgq, tx_msgq_cnt, &type);
+        if (msgq == NULL) {
+            break;
+        }
+
+        struct esb_payload payload;
+        int packet_count = make_packet(&msgq, &payload);
+        if (packet_count == 0) {
             LOG_DBG("no packet to send");
-            return;
+            break;
         }
 
         LOG_WRN("TX packet with %d events on pipe %d", count, payload.pipe);
         ret = esb_write_payload(&payload);
         if (ret != 0) {
             LOG_DBG("esb_write_payload returned %d", ret);
-            return;
+            break;
         }
     }
 }
@@ -232,8 +230,15 @@ void tx_thread() {
                 break;
             }
 
+            int type = -1;
+            struct k_msgq *msgq = get_msgq(tx_msgq, tx_msgq_cnt, &type);
+            if (msgq == NULL) {
+                break;
+            }
+
             struct esb_payload payload;
-            if (make_packet(&tx_msgq, &payload) == 0) {
+            int packet_count = make_packet(&msgq, &payload, type);
+            if (packet_count == 0) {
                 LOG_DBG("no packet to send");
                 break;
             }

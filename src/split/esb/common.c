@@ -27,7 +27,8 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #endif
 
 K_MEM_SLAB_DEFINE(tx_slab, sizeof(struct esb_data_envelope), TX_MSGQ_SIZE, 4);
-K_MSGQ_DEFINE(tx_msgq, sizeof(void*), TX_MSGQ_SIZE, 4);
+struct k_msgq **tx_msgq;
+size_t tx_msgq_cnt;
 K_MEM_SLAB_DEFINE(rx_slab, sizeof(struct esb_payload), RX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(rx_msgq, sizeof(void*), RX_MSGQ_SIZE, 4);
 
@@ -167,32 +168,31 @@ int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd) {
             break;
         }
 
-        int source = rx_payload->pipe;
         struct payload_buffer *buf = (struct payload_buffer*)(rx_payload->data);
         uint8_t *data = buf->body;
-        size_t count  = buf->header.count;
+        int type = buf->header.type;
         size_t length = rx_payload->length - HEADER_SIZE;
         size_t offset = 0;
 
+        ssize_t data_size = get_payload_data_size_buf(type, is_cmd);
+        if (data_size < 0) {
+            LOG_ERR("Unknown event type %d", type);
+            break;
+        }
+        
+        size_t count = length / data_size;
+        struct esb_data_envelope env = { .buf.type = type, 
+                                         .source = rx_payload->pipe,
+                                        };
+
         for (size_t i = 0; i < count; ++i) {
-            struct esb_data_envelope env;
-            int type = data[offset];
-
-            ssize_t data_size = get_payload_data_size_buf(type, is_cmd);
-            if (data_size < 0) {
-                LOG_ERR("Unknown event type %d", type);
-                break;
-            }
-
-            if (length < data_size + offset + 1) {
+            if (length < data_size + offset) {
                 LOG_ERR("Payload too small for event type %d", type);
                 break;
             }
 
-            env.source = source;
-            env.buf.type = type;
-            memcpy(env.buf.data, &data[offset + 1], data_size);
-            offset += data_size + 1;
+            memcpy(env.buf.data, &data[offset], data_size);
+            offset += data_size;
 
             err = state->handler(&env);
             if (err < 0) {
@@ -207,4 +207,23 @@ int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd) {
     }
 
     return handled;
+}
+
+struct k_msgq* get_msgq(struct k_msgq **msgqs, size_t cnt, int* _type) {
+    if (!msgqs || cnt == 0 || !_type) {
+        return NULL;
+    }
+
+    for (int i = 0; i < cnt; ++i) {
+        if (msgqs[i] == NULL)
+            continue;
+
+        if (k_msgq_num_used_get(msgqs[i]) > 0) {
+            *_type = i;
+            return msgqs[i];
+        }
+
+    }
+
+    return NULL;
 }

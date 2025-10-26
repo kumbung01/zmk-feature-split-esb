@@ -36,12 +36,17 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 
 extern struct k_work_q esb_work_q;
-
+K_MSGQ_DEFINE(msgq_poll_events, sizeof(void*), TX_MSGQ_SIZE, 4);
+K_MSGQ_DEFINE(msgq_invoke_behavior, sizeof(void*), TX_MSGQ_SIZE, 4);
+K_MSGQ_DEFINE(msgq_set_physical_layout, sizeof(void*), TX_MSGQ_SIZE, 4);
+K_MSGQ_DEFINE(msgq_set_hid_indicators, sizeof(void*), TX_MSGQ_SIZE, 4);
+static struct k_msgq* msgqs[4];
+extern struct k_msgq **tx_msgq;
+extern size_t tx_msgq_cnt;
 extern struct k_sem tx_sem;
 extern struct k_sem rx_sem;
 extern struct k_mem_slab tx_slab;
 extern struct k_mem_slab rx_slab;
-extern struct k_msgq tx_msgq;
 extern struct k_msgq rx_msgq;
 extern struct k_work tx_work;
 static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
@@ -139,6 +144,13 @@ static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
 
 static int zmk_split_esb_central_init(void) {
+    msgqs[ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_POLL_EVENTS] = msgq_poll_events;
+    msgqs[ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_INVOKE_BEHAVIOR] = msgq_invoke_behavior;
+    msgqs[ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_PHYSICAL_LAYOUT] = msgq_set_physical_layout;
+    msgqs[ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_HID_INDICATORS] = msgq_set_hid_indicators;
+    tx_msgq = msgqs;
+    tx_msgq_cnt = 4;
+
     int ret = zmk_split_esb_init(APP_ESB_MODE_PRX, zmk_split_esb_on_prx_esb_callback);
     if (ret) {
         LOG_ERR("zmk_split_esb_init failed (err %d)", ret);
