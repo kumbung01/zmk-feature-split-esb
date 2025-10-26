@@ -140,6 +140,8 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t
         }
 
         LOG_WRN("end of the test, type is (%d)", type);
+        tx_free(env);
+        break;
         
         uint32_t timestamp = env->timestamp;
         if (now - timestamp > TIMEOUT_MS) {
