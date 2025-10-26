@@ -20,10 +20,10 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 
 K_MEM_SLAB_DEFINE(tx_slab, sizeof(struct esb_data_envelope), TX_MSGQ_SIZE, 4);
-struct k_msgq **tx_msgq;
-size_t tx_msgq_cnt;
 K_MEM_SLAB_DEFINE(rx_slab, sizeof(struct esb_payload), RX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(rx_msgq, sizeof(void*), RX_MSGQ_SIZE, 4);
+struct k_msgq **tx_msgq;
+size_t tx_msgq_cnt;
 
 
 ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type _type) {
@@ -170,7 +170,8 @@ int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd) {
         ssize_t data_size = get_payload_data_size_buf(type, is_cmd);
         if (data_size < 0) {
             LOG_ERR("Unknown event type %d", type);
-            break;
+            rx_free(rx_payload);
+            continue;
         }
         
         size_t count = length / data_size;
@@ -196,27 +197,43 @@ int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd) {
             handled++;
         }
 
-        k_mem_slab_free(&rx_slab, (void *)rx_payload);
+        rx_free(rx_payload);
     }
 
     return handled;
 }
 
-struct k_msgq* get_msgq(struct k_msgq **msgqs, size_t cnt, int* _type) {
-    if (!msgqs || cnt == 0 || !_type) {
+struct k_msgq* tx_msgq_ready() {
+    if (!tx_msgq || tx_msgq_cnt == 0 || !_type) {
         return NULL;
     }
 
-    for (int i = 0; i < cnt; ++i) {
-        if (msgqs[i] == NULL)
+    for (int i = 0; i < tx_msgq_cnt; ++i) {
+        if (tx_msgq[i] == NULL)
             continue;
 
-        if (k_msgq_num_used_get(msgqs[i]) > 0) {
+        if (k_msgq_num_used_get(tx_msgq[i]) > 0) {
             *_type = i;
-            return msgqs[i];
+            return tx_msgq[i];
         }
 
     }
 
     return NULL;
+}
+
+int tx_alloc(void *ptr) {
+    return k_mem_slab_alloc(&tx_slab, &ptr, K_NO_WAIT);
+}
+
+void tx_free(void *ptr) {
+    k_mem_slab_free(&tx_slab, ptr);
+}
+
+int rx_alloc(void *ptr) {
+    return k_mem_slab_alloc(&rx_slab, &ptr, K_NO_WAIT);
+}
+
+void rx_free(void *ptr) {
+    k_mem_slab_free(&rx_slab, ptr);
 }

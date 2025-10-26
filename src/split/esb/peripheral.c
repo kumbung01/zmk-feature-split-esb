@@ -60,7 +60,7 @@ K_MSGQ_DEFINE(msgq_key, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq_input, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq_sensor, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq_battery, sizeof(void*), TX_MSGQ_SIZE, 4);
-
+static struct k_msgq* msgqs[4];
 
 static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
@@ -74,7 +74,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
         return -ENOTSUP;
     }
 
-    int ret = k_mem_slab_alloc(&tx_slab, (void **)&env, K_NO_WAIT);
+    int ret = tx_alloc(env);
     if (ret < 0) {
         LOG_ERR("Failed to allocate tx_slab (err %d)", ret);
         return -ENOMEM;
@@ -84,10 +84,10 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     env->source = peripheral_id;
     env->timestamp = k_uptime_get();
 
-    ret = k_msgq_put(tx_msgq[event->type], &env, K_NO_WAIT);
+    ret = k_msgq_put(msgqs[event->type], &env, K_NO_WAIT);
     if (ret < 0) {
         LOG_ERR("k_msgq_put failed (err %d)", ret);
-        k_mem_slab_free(&tx_slab, (void *)env);
+        tx_free(env);
         return ret;
     }
     

@@ -38,6 +38,7 @@ K_MSGQ_DEFINE(msgq_poll_events, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq_invoke_behavior, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq_set_physical_layout, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq_set_hid_indicators, sizeof(void*), TX_MSGQ_SIZE, 4);
+static struct k_msgq* msgqs[4];
 
 static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
@@ -58,7 +59,7 @@ static int split_central_esb_send_command(uint8_t source,
         return -ENOTSUP;
     }
 
-    int ret = k_mem_slab_alloc(&tx_slab, (void **)&env, K_NO_WAIT);
+    int ret = tx_alloc(env);
     if (ret < 0) {
         LOG_ERR("k_mem_slab_alloc failed (err %d)", ret);
         return -ENOMEM;
@@ -68,10 +69,10 @@ static int split_central_esb_send_command(uint8_t source,
     env->source = source;
     env->timestamp = k_uptime_get();
 
-    ret = k_msgq_put(&tx_msgq, &env, K_NO_WAIT);
+    ret = k_msgq_put(msgqs[cmd.type], &env, K_NO_WAIT);
     if (ret < 0) {
         LOG_ERR("k_msgq_put failed (err %d)", ret);
-        k_mem_slab_free(&tx_slab, (void *)env);
+        tx_free(env);
         return ret;
     }
 

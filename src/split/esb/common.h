@@ -22,12 +22,6 @@
 
 #define TIMEOUT_MS CONFIG_ZMK_SPLIT_ESB_KEYBOARD_EVENT_TIMEOUT_MS
 
-static struct k_msgq* msgqs[4];
-extern struct k_msgq **tx_msgq;
-extern size_t tx_msgq_cnt;
-extern struct k_mem_slab tx_slab;
-extern struct k_mem_slab rx_slab;
-extern struct k_msgq rx_msgq;
 extern struct k_work_q esb_work_q;
 
 typedef enum zmk_split_transport_peripheral_event_type zmk_split_transport_buffer_type;
@@ -100,7 +94,12 @@ int process_payload(char* data, size_t length, uint32_t nonce);
 int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd);
 void reset_buffers();
 
-struct k_msgq* get_msgq(struct k_msgq **msgqs, size_t cnt, int* _type);
+struct k_msgq* tx_msgq_ready(struct k_msgq **msgqs, size_t cnt, int* _type);
 
 uint32_t get_u32_le(const uint8_t *src);
 void put_u32_le(uint8_t *dst, uint32_t val);
+
+int tx_alloc(void *ptr);
+int rx_alloc(void *ptr);
+int tx_free(void *ptr);
+int rx_free(void *ptr);

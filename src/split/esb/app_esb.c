@@ -142,7 +142,7 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t
         uint32_t timestamp = env->timestamp;
         if (now - timestamp > TIMEOUT_MS) {
             LOG_DBG("dropping old event type %d timestamp %d", type, now - timestamp);
-            k_mem_slab_free(&tx_slab, (void *)env);
+            tx_free(env);
             continue;
         }
 
@@ -152,7 +152,7 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t
         offset += data_size;
         count++;
 
-        k_mem_slab_free(&tx_slab, (void *)env);
+        tx_free(env);
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
         payload->pipe = env->source; // use the source as the ESB pipe number
@@ -181,7 +181,7 @@ void tx_work_handler() {
     while (true) {
 
         int type = -1;
-        struct k_msgq *msgq = get_msgq(tx_msgq, tx_msgq_cnt, &type);
+        struct k_msgq *msgq = tx_msgq_ready(&type);
         if (msgq == NULL) {
             break;
         }
@@ -222,7 +222,7 @@ void tx_thread() {
             }
 
             int type = -1;
-            struct k_msgq *msgq = get_msgq(tx_msgq, tx_msgq_cnt, &type);
+            struct k_msgq *msgq = tx_msgq_ready(&type);
             if (msgq == NULL) {
                 break;
             }
