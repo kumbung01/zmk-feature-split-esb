@@ -230,16 +230,16 @@ struct k_msgq *tx_msgq_ready(int *_type) {
     return NULL;
 }
 
-int tx_alloc(void *ptr) {
-    return k_mem_slab_alloc(&tx_slab, &ptr, K_NO_WAIT);
+int tx_alloc(void **ptr) {
+    return k_mem_slab_alloc(&tx_slab, ptr, K_NO_WAIT);
 }
 
 void tx_free(void *ptr) {
     k_mem_slab_free(&tx_slab, ptr);
 }
 
-int rx_alloc(void *ptr) {
-    return k_mem_slab_alloc(&rx_slab, &ptr, K_NO_WAIT);
+int rx_alloc(void **ptr) {
+    return k_mem_slab_alloc(&rx_slab, ptr, K_NO_WAIT);
 }
 
 void rx_free(void *ptr) {

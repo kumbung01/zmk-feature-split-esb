@@ -72,7 +72,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     }
 
     struct esb_data_envelope *env;
-    int ret = tx_alloc(env);
+    int ret = tx_alloc(&env);
     if (ret < 0) {
         LOG_ERR("Failed to allocate tx_slab (err %d)", ret);
         return -ENOMEM;
