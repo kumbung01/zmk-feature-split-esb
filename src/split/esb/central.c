@@ -38,7 +38,7 @@ K_MSGQ_DEFINE(msgq0, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq1, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq2, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq3, sizeof(void*), TX_MSGQ_SIZE, 4);
-static struct k_msgq* msgqs[] = {msgq0, msgq1, msgq2, msgq3};
+static struct k_msgq* msgqs[] = {&msgq0, &msgq1, &msgq2, &msgq3};
 static int idx_to_type[ARRAY_SIZE(msgqs)];
 static int type_to_idx[] = {
     [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_POLL_EVENTS]          = 0,

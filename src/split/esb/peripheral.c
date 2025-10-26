@@ -55,7 +55,7 @@ K_MSGQ_DEFINE(msgq0, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq1, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq2, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq3, sizeof(void*), TX_MSGQ_SIZE, 4);
-static struct k_msgq* msgqs[] = {msgq0, msgq1, msgq2, msgq3};
+static struct k_msgq* msgqs[] = {&msgq0, &msgq1, &msgq2, &msgq3};
 static int idx_to_type[ARRAY_SIZE(msgqs)];
 static int type_to_idx[4] = {
     [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT]  = 0,
