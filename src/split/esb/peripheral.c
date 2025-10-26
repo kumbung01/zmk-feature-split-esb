@@ -142,9 +142,13 @@ static int zmk_split_esb_peripheral_init(void) {
     msgqs[ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT] = &msgq_key;
     msgqs[ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT]       = &msgq_sensor;
     msgqs[ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT]      = &msgq_battery;
-    tx_msgq_init(msgqs, ARRAY_SIZE(msgqs));
+    int ret = tx_msgq_init(msgqs, ARRAY_SIZE(msgqs));
+    if (ret) {
+        LOG_ERR("tx_msgq_init faied(%d)", ret);
+        return ret;
+    }
 
-    int ret = zmk_split_esb_init(APP_ESB_MODE_PTX, zmk_split_esb_on_ptx_esb_callback);
+    ret = zmk_split_esb_init(APP_ESB_MODE_PTX, zmk_split_esb_on_ptx_esb_callback);
     if (ret < 0) {
         LOG_ERR("zmk_split_esb_init failed (ret %d)", ret);
         return ret;
