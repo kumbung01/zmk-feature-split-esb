@@ -436,16 +436,12 @@ static int on_activity_state(const zmk_event_t *eh) {
     if (m_mode == APP_ESB_MODE_PTX) {
         if (state_ev->state != ZMK_ACTIVITY_ACTIVE && m_enabled) {
             zmk_split_esb_set_enable(false);
-            reset_buffers();
+            // reset_buffers();
             tx_fail_count = 0;
         }
         else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !m_enabled) {
             zmk_split_esb_set_enable(true);
-#if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
             k_sem_give(&tx_sem);
-#else
-            k_work_submit_to_queue(&esb_work_q, &tx_work);
-#endif
         }
     }
 
