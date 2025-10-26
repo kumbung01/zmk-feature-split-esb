@@ -5,7 +5,7 @@
  */
 
 #include "app_esb.h"
-#include "common.h"
+
 #include "timeslot.h"
 #include <zephyr/drivers/clock_control.h>
 #include <zephyr/drivers/clock_control/nrf_clock_control.h>
@@ -65,6 +65,7 @@ static bool m_active = false;
 static bool m_enabled = false;
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 static volatile int tx_fail_count = 0;
+static struct zmk_split_esb_async_state *m_state;
 
 static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
@@ -120,7 +121,7 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t
     uint8_t offset = 0;
     struct payload_buffer *buf = payload->data;
     const size_t body_size = sizeof(buf->body);
-    const size_t data_size = get_payload_data_size_buf(type, m_mode == APP_ESB_MODE_PRX);
+    const size_t data_size = m_state->get_data_size_tx(type);
 #if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     payload->pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID; // use the peripheral_id as the ESB pipe number
 #endif
@@ -338,10 +339,11 @@ static int esb_initialize(app_esb_mode_t mode) {
 #define ESB_TX_FIFO_REQUE_MAX (CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS \
                                * CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT)
 
-int zmk_split_esb_init(app_esb_mode_t mode, app_esb_callback_t callback) {
+int zmk_split_esb_init(app_esb_mode_t mode, app_esb_callback_t callback, struct zmk_split_esb_async_state *state) {
     int ret;
     m_callback = callback;
     m_mode = mode;
+    m_state = state;
     ret = clocks_start();
     if (ret < 0) {
         return ret;

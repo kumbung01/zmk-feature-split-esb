@@ -145,7 +145,7 @@ static int zmk_split_esb_peripheral_init(void) {
         return ret;
     }
 
-    ret = zmk_split_esb_init(APP_ESB_MODE_PTX, zmk_split_esb_on_ptx_esb_callback);
+    ret = zmk_split_esb_init(APP_ESB_MODE_PTX, zmk_split_esb_on_ptx_esb_callback, &async_state);
     if (ret < 0) {
         LOG_ERR("zmk_split_esb_init failed (ret %d)", ret);
         return ret;

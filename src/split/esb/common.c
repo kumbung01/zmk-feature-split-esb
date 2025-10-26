@@ -57,15 +57,6 @@ ssize_t get_payload_data_size_evt(enum zmk_split_transport_peripheral_event_type
 }
 
 
-ssize_t get_payload_data_size_buf(zmk_split_transport_buffer_type _type, bool is_cmd) {
-    if (is_cmd) {
-        return get_payload_data_size_cmd((enum zmk_split_transport_central_command_type)_type);
-    } else {
-        return get_payload_data_size_evt((enum zmk_split_transport_peripheral_event_type)_type);
-    }
-}
-
-
 struct k_work_q esb_work_q;
 K_THREAD_STACK_DEFINE(esb_work_q_stack, 1300);
 

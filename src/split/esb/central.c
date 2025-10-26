@@ -147,7 +147,7 @@ static int zmk_split_esb_central_init(void) {
         return ret;
     }
 
-    ret = zmk_split_esb_init(APP_ESB_MODE_PRX, zmk_split_esb_on_prx_esb_callback);
+    ret = zmk_split_esb_init(APP_ESB_MODE_PRX, zmk_split_esb_on_prx_esb_callback, &async_state);
     if (ret) {
         LOG_ERR("zmk_split_esb_init failed (err %d)", ret);
         return ret;
