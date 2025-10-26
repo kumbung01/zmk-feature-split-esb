@@ -161,7 +161,7 @@ static int zmk_split_esb_central_init(void) {
         LOG_ERR("tx_msgq_init failed(%d)", ret);
         return ret;
     }
-    set_handle_thread(publish_events_thread_id);
+    set_thread_id(publish_events_thread_id);
 
     ret = zmk_split_esb_init(APP_ESB_MODE_PRX, zmk_split_esb_on_prx_esb_callback, &async_state);
     if (ret) {
