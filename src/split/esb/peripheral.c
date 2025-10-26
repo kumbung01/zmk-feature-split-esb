@@ -33,13 +33,6 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #define MPSL_THREAD_PRIO             CONFIG_MPSL_THREAD_COOP_PRIO
 #define STACKSIZE                    CONFIG_MAIN_STACK_SIZE
 
-#define TX_BUFFER_SIZE                                                                             \
-    ((sizeof(struct esb_event_envelope) + sizeof(struct esb_msg_postfix)) *                        \
-     CONFIG_ZMK_SPLIT_ESB_EVENT_BUFFER_ITEMS) + 4
-#define RX_BUFFER_SIZE                                                                             \
-    ((sizeof(struct esb_command_envelope) + sizeof(struct esb_msg_postfix)) *                      \
-     CONFIG_ZMK_SPLIT_ESB_CMD_BUFFER_ITEMS) + 4
-
 static const uint8_t peripheral_id = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID;
 
 static void process_tx_work_handler(struct k_work *work);
@@ -89,15 +82,15 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     env->source = peripheral_id;
     env->timestamp = k_uptime_get();
 
-    ret = k_msgq_put(msgqs[event->type], &env, K_NO_WAIT);
-    if (ret < 0) {
-        LOG_ERR("k_msgq_put failed (err %d)", ret);
-        tx_free(env);
-        return ret;
-    }
+    // ret = k_msgq_put(msgqs[event->type], &env, K_NO_WAIT);
+    // if (ret < 0) {
+    //     LOG_ERR("k_msgq_put failed (err %d)", ret);
+    //     tx_free(env);
+    //     return ret;
+    // }
     
-    if (is_esb_active())
-        k_sem_give(&tx_sem);
+    // if (is_esb_active())
+    //     k_sem_give(&tx_sem);
 
     return 0;
 }
