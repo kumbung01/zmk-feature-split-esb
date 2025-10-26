@@ -136,16 +136,14 @@ void put_u32_le(uint8_t *dst, uint32_t v) {
 void reset_buffers() {
     void *data;
 
-    while (k_msgq_num_used_get(&tx_msgq) > 0) {
-        if (k_msgq_get(&tx_msgq, &data, K_NO_WAIT) == 0) {
-            k_mem_slab_free(&tx_slab, data);
+    for (int i = 0; i < tx_msgq_cnt; ++i) {
+        while (k_msgq_get(tx_msgq[i], &data, K_NO_WAIT) == 0) {
+            tx_free(data);
         }
     }
 
-    while (k_msgq_num_used_get(&rx_msgq) > 0) {
-        if (k_msgq_get(&rx_msgq, &data, K_NO_WAIT) == 0) {
-            k_mem_slab_free(&rx_slab, data);
-        }
+    while (k_msgq_get(&rx_msgq, &data, K_NO_WAIT) == 0) {
+        rx_free(data);
     }
 }
 
