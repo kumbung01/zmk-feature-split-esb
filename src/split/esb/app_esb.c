@@ -127,8 +127,8 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t
     payload->noack = !CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK;
 
     while (true) {
-        if (offset + (data_size + sizeof(type)) > body_size) {
-            LOG_DBG("packet full (%u + %u > %d)", offset, (data_size + sizeof(type)), body_size);
+        if (offset + data_size > body_size) {
+            LOG_DBG("packet full (%u + %u > %d)", offset, data_size, body_size);
             break;
         }
 
@@ -138,6 +138,8 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t
             LOG_DBG("k_msgq_get failed(%d).", err);
             break;
         }
+
+        LOG_WRN("end of the test, type is (%d)", type);
         
         uint32_t timestamp = env->timestamp;
         if (now - timestamp > TIMEOUT_MS) {
@@ -226,9 +228,6 @@ void tx_thread() {
             if (msgq == NULL) {
                 break;
             }
-
-            LOG_WRN("end of the test, type is (%d)", type);
-            break;
 
             struct esb_payload payload;
             int packet_count = make_packet(&msgq, &payload, type);
