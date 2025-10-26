@@ -22,8 +22,8 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 K_MEM_SLAB_DEFINE_STATIC(tx_slab, sizeof(struct esb_data_envelope), TX_MSGQ_SIZE, 4);
 K_MEM_SLAB_DEFINE_STATIC(rx_slab, sizeof(struct esb_payload), RX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(rx_msgq, sizeof(void*), RX_MSGQ_SIZE, 4);
-static struct k_msgq **tx_msgq;
-static size_t tx_msgq_cnt;
+static struct k_msgq **tx_msgq = NULL;
+static size_t tx_msgq_cnt = 0;
 
 
 ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type _type) {
