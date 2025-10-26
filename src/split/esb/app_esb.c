@@ -414,6 +414,7 @@ static int app_esb_resume(void) {
     else {
         err = esb_initialize(m_mode);
         m_active = true;
+        k_work_submit_to_queue(&esb_work_q, &tx_work);
     }
 
     return err;

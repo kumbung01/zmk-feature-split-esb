@@ -19,11 +19,11 @@
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 
-K_MEM_SLAB_DEFINE(tx_slab, sizeof(struct esb_data_envelope), TX_MSGQ_SIZE, 4);
-K_MEM_SLAB_DEFINE(rx_slab, sizeof(struct esb_payload), RX_MSGQ_SIZE, 4);
+K_MEM_SLAB_DEFINE_STATIC(tx_slab, sizeof(struct esb_data_envelope), TX_MSGQ_SIZE, 4);
+K_MEM_SLAB_DEFINE_STATIC(rx_slab, sizeof(struct esb_payload), RX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(rx_msgq, sizeof(void*), RX_MSGQ_SIZE, 4);
-struct k_msgq **tx_msgq;
-size_t tx_msgq_cnt;
+static struct k_msgq **tx_msgq;
+static size_t tx_msgq_cnt;
 
 
 ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type _type) {
@@ -203,7 +203,7 @@ int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd) {
     return handled;
 }
 
-int tx_msgq_init(struct k_msgq **msgqs, size_t _count) {
+int tx_msgq_init(struct k_msgq *msgqs[], size_t _count) {
     if (msgqs == NULL || _count == 0) {
         return -ENOBUFS;
     }
@@ -227,7 +227,6 @@ struct k_msgq *tx_msgq_ready(int *_type) {
             *_type = i;
             return tx_msgq[i];
         }
-
     }
 
     return NULL;
