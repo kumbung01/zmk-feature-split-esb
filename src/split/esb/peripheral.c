@@ -56,24 +56,29 @@ void zmk_split_esb_on_ptx_esb_callback(app_esb_event_t *event) {
     zmk_split_esb_cb(event, &async_state);
 }
 
-K_MSGQ_DEFINE(msgq_key, sizeof(void*), TX_MSGQ_SIZE, 4);
-K_MSGQ_DEFINE(msgq_input, sizeof(void*), TX_MSGQ_SIZE, 4);
-K_MSGQ_DEFINE(msgq_sensor, sizeof(void*), TX_MSGQ_SIZE, 4);
-K_MSGQ_DEFINE(msgq_battery, sizeof(void*), TX_MSGQ_SIZE, 4);
-static struct k_msgq* msgqs[4];
+K_MSGQ_DEFINE(msgq_key_position_event, sizeof(void*), TX_MSGQ_SIZE, 4);
+K_MSGQ_DEFINE(msgq_input_event, sizeof(void*), TX_MSGQ_SIZE, 4);
+K_MSGQ_DEFINE(msgq_sensor_event, sizeof(void*), TX_MSGQ_SIZE, 4);
+K_MSGQ_DEFINE(msgq_battery_event, sizeof(void*), TX_MSGQ_SIZE, 4);
+static struct k_msgq* msgqs[4] = {
+    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT]         = &msgq_input_event,
+    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT]  = &msgq_key_position_event,
+    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT]        = &msgq_sensor_event,
+    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT]       = &msgq_battery_event,
+};
 
 static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
 
 static int
 split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event) {
-    struct esb_data_envelope *env;
     ssize_t data_size = get_payload_data_size_evt(event->type);
     if (data_size < 0) {
         LOG_ERR("get_payload_data_size_evt failed (err %d)", data_size);
         return -ENOTSUP;
     }
 
+    struct esb_data_envelope *env;
     int ret = tx_alloc(env);
     if (ret < 0) {
         LOG_ERR("Failed to allocate tx_slab (err %d)", ret);
@@ -138,10 +143,6 @@ static void notify_status_work_cb(struct k_work *_work) { notify_transport_statu
 static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
 static int zmk_split_esb_peripheral_init(void) {
-    msgqs[ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT]        = &msgq_input;
-    msgqs[ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT] = &msgq_key;
-    msgqs[ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT]       = &msgq_sensor;
-    msgqs[ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT]      = &msgq_battery;
     int ret = tx_msgq_init(msgqs, ARRAY_SIZE(msgqs));
     if (ret) {
         LOG_ERR("tx_msgq_init faied(%d)", ret);

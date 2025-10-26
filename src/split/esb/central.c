@@ -38,7 +38,12 @@ K_MSGQ_DEFINE(msgq_poll_events, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq_invoke_behavior, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq_set_physical_layout, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq_set_hid_indicators, sizeof(void*), TX_MSGQ_SIZE, 4);
-static struct k_msgq* msgqs[4];
+static struct k_msgq* msgqs[4] = {
+    [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_POLL_EVENTS]          = &msgq_poll_events,
+    [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_INVOKE_BEHAVIOR]      = &msgq_invoke_behavior,
+    [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_PHYSICAL_LAYOUT]  = &msgq_set_physical_layout,
+    [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_HID_INDICATORS]   = &msgq_set_hid_indcicators,
+};
 
 static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
@@ -51,14 +56,13 @@ static struct zmk_split_esb_async_state async_state = {
 
 static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd) {
-    struct esb_data_envelope *env;
-    
     ssize_t data_size = get_payload_data_size_cmd(cmd.type);
     if (data_size < 0) {
         LOG_ERR("get_payload_data_size_cmd failed (err %d)", data_size);
         return -ENOTSUP;
     }
 
+    struct esb_data_envelope *env;
     int ret = tx_alloc(env);
     if (ret < 0) {
         LOG_ERR("k_mem_slab_alloc failed (err %d)", ret);
@@ -134,10 +138,6 @@ static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
 
 static int zmk_split_esb_central_init(void) {
-    msgqs[ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_POLL_EVENTS]         = &msgq_poll_events;
-    msgqs[ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_INVOKE_BEHAVIOR]     = &msgq_invoke_behavior;
-    msgqs[ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_PHYSICAL_LAYOUT] = &msgq_set_physical_layout;
-    msgqs[ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_HID_INDICATORS]  = &msgq_set_hid_indicators;
     int ret = tx_msgq_init(msgqs, ARRAY_SIZE(msgqs));
     if (ret) {
         LOG_ERR("tx_msgq_init failed(%d)", ret);
