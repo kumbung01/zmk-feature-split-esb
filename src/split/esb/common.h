@@ -10,7 +10,6 @@
 #include <zephyr/device.h>
 
 #include <zmk/split/transport/types.h>
-#include "app_esb.h"
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 #define RX_MSGQ_SIZE CONFIG_ZMK_SPLIT_ESB_EVENT_BUFFER_ITEMS

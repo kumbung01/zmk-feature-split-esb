@@ -51,7 +51,7 @@ struct esb_simple_addr {
     uint8_t base_1[4];
     uint8_t prefix[8];
 };
-
+struct zmk_split_esb_async_state;
 int zmk_split_esb_init(app_esb_mode_t mode, app_esb_callback_t callback, struct zmk_split_esb_async_state *state);
 
 int zmk_split_esb_set_enable(bool enabled);
