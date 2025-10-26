@@ -5,7 +5,7 @@
  */
 
 #include "app_esb.h"
-
+#include "common.h"
 #include "timeslot.h"
 #include <zephyr/drivers/clock_control.h>
 #include <zephyr/drivers/clock_control/nrf_clock_control.h>
