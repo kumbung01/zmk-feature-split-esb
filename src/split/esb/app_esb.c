@@ -179,9 +179,6 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 void tx_work_handler() {
     while (true) {
-        struct esb_payload payload = {0};
-        int ret = 0;
-        size_t count = 0;
 
         int type = -1;
         struct k_msgq *msgq = get_msgq(tx_msgq, tx_msgq_cnt, &type);
@@ -190,14 +187,14 @@ void tx_work_handler() {
         }
 
         struct esb_payload payload;
-        int packet_count = make_packet(&msgq, &payload);
+        int packet_count = make_packet(&msgq, &payload, type);
         if (packet_count == 0) {
             LOG_DBG("no packet to send");
             break;
         }
 
-        LOG_WRN("TX packet with %d events on pipe %d", count, payload.pipe);
-        ret = esb_write_payload(&payload);
+        LOG_WRN("TX packet with %d events on pipe %d", packet_count, payload.pipe);
+        int ret = esb_write_payload(&payload);
         if (ret != 0) {
             LOG_DBG("esb_write_payload returned %d", ret);
             break;
