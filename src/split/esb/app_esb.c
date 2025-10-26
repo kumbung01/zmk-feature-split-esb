@@ -96,7 +96,7 @@ static void event_handler(struct esb_evt const *event) {
             LOG_DBG("RX SUCCESS");
             m_event.evt_type = APP_ESB_EVT_RX;
             struct esb_payload *rx_payload = NULL;
-            if (k_mem_slab_alloc(&rx_slab, (void **)&rx_payload, K_NO_WAIT) != 0) {
+            if (rx_alloc(rx_payload) != 0) {
                 LOG_ERR("Failed to allocate rx_slab");
                 break;
             }
@@ -104,7 +104,7 @@ static void event_handler(struct esb_evt const *event) {
             if (esb_read_rx_payload(rx_payload) == 0) {
                 if (k_msgq_put(&rx_msgq, &rx_payload, K_NO_WAIT) != 0) {
                     LOG_ERR("k_msgq_put failed");
-                    k_mem_slab_free(&rx_slab, (void *)rx_payload);
+                    rx_free(rx_payload);
                     break;
                 }
                 k_sem_give(&rx_sem);
