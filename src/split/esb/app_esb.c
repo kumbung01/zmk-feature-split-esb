@@ -227,6 +227,9 @@ void tx_thread() {
                 break;
             }
 
+            LOG_WRN("end of the test, type is (%d)", type);
+            break;
+
             struct esb_payload payload;
             int packet_count = make_packet(&msgq, &payload, type);
             if (packet_count == 0) {
