@@ -138,10 +138,6 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t
             LOG_DBG("k_msgq_get failed(%d).", err);
             break;
         }
-
-        LOG_WRN("end of the test, type is (%d)", type);
-        tx_free(env);
-        break;
         
         uint32_t timestamp = env->timestamp;
         if (now - timestamp > TIMEOUT_MS) {
@@ -191,7 +187,7 @@ void tx_work_handler() {
         }
 
         struct esb_payload payload;
-        int packet_count = make_packet(&msgq, &payload, type);
+        int packet_count = make_packet(msgq, &payload, type);
         if (packet_count == 0) {
             LOG_DBG("no packet to send");
             break;
@@ -230,8 +226,6 @@ void tx_thread() {
             if (msgq == NULL) {
                 break;
             }
-
-            LOG_DBG("dequeueing msgq (%p), type (%d)", msgq, type);
 
             struct esb_payload payload;
             int packet_count = make_packet(msgq, &payload, type);
