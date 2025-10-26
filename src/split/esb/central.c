@@ -52,6 +52,8 @@ static int central_handler(struct esb_data_envelope *env);
 
 static struct zmk_split_esb_async_state async_state = {
     .handler = central_handler,
+    .get_data_size_rx = get_payload_data_size_evt,
+    .get_data_size_tx = get_payload_data_size_cmd,
 };
 
 static int split_central_esb_send_command(uint8_t source,
@@ -164,7 +166,7 @@ static void publish_events_thread() {
     while (true)
     {
         k_sem_take(&rx_sem, K_FOREVER);
-        handle_packet(&async_state, false);
+        handle_packet(&async_state);
     }
 }
 

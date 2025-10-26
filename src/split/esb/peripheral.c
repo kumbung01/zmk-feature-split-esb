@@ -43,6 +43,8 @@ static int peripheral_handler(struct esb_data_envelope* env);
 static struct zmk_split_esb_async_state async_state = {
     .process_tx_work = &process_tx_work,
     .handler = peripheral_handler,
+    .get_data_size_rx = get_payload_data_size_cmd,
+    .get_data_size_tx = get_payload_data_size_evt,
 };
 
 void zmk_split_esb_on_ptx_esb_callback(app_esb_event_t *event) {
@@ -159,7 +161,7 @@ SYS_INIT(zmk_split_esb_peripheral_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY
 
 
 static void process_tx_work_handler(struct k_work *work) {
-    handle_packet(&async_state, true);
+    handle_packet(&async_state);
 }
 
 static int peripheral_handler(struct esb_data_envelope* env) {

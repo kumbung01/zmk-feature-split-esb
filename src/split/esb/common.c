@@ -148,7 +148,7 @@ void reset_buffers() {
 }
 
 
-int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd) {
+int handle_packet(struct zmk_split_esb_async_state* state) {
     int handled = 0;
 
     while (true) {
@@ -165,7 +165,7 @@ int handle_packet(struct zmk_split_esb_async_state* state, bool is_cmd) {
         size_t length = rx_payload->length - HEADER_SIZE;
         size_t offset = 0;
 
-        ssize_t data_size = get_payload_data_size_buf(type, is_cmd);
+        ssize_t data_size = state->get_data_size_rx(type);
         if (data_size < 0) {
             LOG_ERR("Unknown event type %d", type);
             rx_free(rx_payload);
