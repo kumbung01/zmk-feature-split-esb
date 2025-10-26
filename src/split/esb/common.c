@@ -25,7 +25,7 @@ K_MSGQ_DEFINE(rx_msgq, sizeof(void*), RX_MSGQ_SIZE, 4);
 static struct k_msgq **tx_msgq = NULL;
 static size_t tx_msgq_cnt = 0;
 static int *idx_to_type;
-
+static k_tid_t handle_thread = NULL;
 ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type _type) {
     switch (_type) {
     case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_POLL_EVENTS:
@@ -141,7 +141,7 @@ void reset_buffers() {
 
 int handle_packet(struct zmk_split_esb_async_state* state) {
     int handled = 0;
-
+    int prio = 0;
     while (true) {
         struct esb_payload *rx_payload = NULL;
         int err = k_msgq_get(&rx_msgq, &rx_payload, K_NO_WAIT);
@@ -176,10 +176,15 @@ int handle_packet(struct zmk_split_esb_async_state* state) {
 
             memcpy(env.buf.data, &data[offset], data_size);
             offset += data_size;
-
-            k_sched_lock();
+            if (handle_thread) {
+                prio = k_thread_priority_get(handle_thread);
+                k_thread_priority_set(handle_thread, -1);
+            }
             err = state->handler(&env);
-            k_sched_unlock();
+            if (handle_thread) {
+                k_thread_priority_set(handle_thread, prio);
+            }
+
             if (err < 0) {
                 LOG_ERR("zmk handler failed(%d)", err);
                 continue;
@@ -242,4 +247,8 @@ int rx_alloc(void **ptr) {
 
 void rx_free(void *ptr) {
     k_mem_slab_free(&rx_slab, ptr);
+}
+
+void set_thread_id(k_tid_t thread) {
+    handle_thread = thread;
 }

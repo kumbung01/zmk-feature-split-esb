@@ -142,12 +142,26 @@ static void notify_status_work_cb(struct k_work *_work) { notify_transport_statu
 static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
 
+static void publish_events_thread() {
+    while (true)
+    {
+        k_sem_take(&rx_sem, K_FOREVER);
+        handle_packet(&async_state);
+    }
+}
+
+K_THREAD_DEFINE(publish_events_thread_id, STACKSIZE,
+        publish_events_thread, NULL, NULL, NULL,
+        -1, 0, 0);
+
+
 static int zmk_split_esb_central_init(void) {
     int ret = tx_msgq_init(msgqs, ARRAY_SIZE(msgqs), type_to_idx, idx_to_type);
     if (ret) {
         LOG_ERR("tx_msgq_init failed(%d)", ret);
         return ret;
     }
+    set_handle_thread(publish_events_thread_id);
 
     ret = zmk_split_esb_init(APP_ESB_MODE_PRX, zmk_split_esb_on_prx_esb_callback, &async_state);
     if (ret) {
@@ -162,19 +176,6 @@ static int zmk_split_esb_central_init(void) {
 }
 
 SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
-
-
-static void publish_events_thread() {
-    while (true)
-    {
-        k_sem_take(&rx_sem, K_FOREVER);
-        handle_packet(&async_state);
-    }
-}
-
-K_THREAD_DEFINE(publish_events_thread_id, STACKSIZE,
-        publish_events_thread, NULL, NULL, NULL,
-        0, 0, 0);
 
 
 static int central_handler(struct esb_data_envelope *env) {

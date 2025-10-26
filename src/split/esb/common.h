@@ -108,3 +108,4 @@ int tx_alloc(void **ptr);
 int rx_alloc(void **ptr);
 void tx_free(void *ptr);
 void rx_free(void *ptr);
+void set_thread_id(k_tid_t thread);
