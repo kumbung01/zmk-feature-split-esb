@@ -45,6 +45,14 @@ static struct k_msgq* msgqs[4] = {
     [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_HID_INDICATORS]   = &msgq_set_hid_indicators,
 };
 
+static int idx_to_type[4];
+static int type_to_idx[4] = {
+    [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_POLL_EVENTS]          = 0,
+    [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_INVOKE_BEHAVIOR]      = 1,
+    [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_PHYSICAL_LAYOUT]  = 2,
+    [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_HID_INDICATORS]   = 3,
+};
+
 static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
 
@@ -141,7 +149,7 @@ static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
 
 static int zmk_split_esb_central_init(void) {
-    int ret = tx_msgq_init(msgqs, ARRAY_SIZE(msgqs));
+    int ret = tx_msgq_init(msgqs, ARRAY_SIZE(msgqs), type_to_idx, idx_to_type);
     if (ret) {
         LOG_ERR("tx_msgq_init failed(%d)", ret);
         return ret;

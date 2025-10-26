@@ -56,10 +56,18 @@ K_MSGQ_DEFINE(msgq_input_event, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq_sensor_event, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq_battery_event, sizeof(void*), TX_MSGQ_SIZE, 4);
 static struct k_msgq* msgqs[4] = {
-    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT]         = &msgq_input_event,
     [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT]  = &msgq_key_position_event,
+    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT]         = &msgq_input_event,
     [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT]        = &msgq_sensor_event,
     [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT]       = &msgq_battery_event,
+};
+
+static int idx_to_type[4]; // for reverse mapping
+static int type_to_idx[4] = {
+    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT]  = 0,
+    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT]         = 1,
+    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT]        = 2,
+    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT]       = 3
 };
 
 static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
@@ -84,7 +92,9 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     env->source = peripheral_id;
     env->timestamp = k_uptime_get();
 
-    ret = k_msgq_put(msgqs[event->type], &env, K_NO_WAIT);
+    int idx = type_to_idx[event->type];
+
+    ret = k_msgq_put(msgqs[idx], &env, K_NO_WAIT);
     if (ret < 0) {
         LOG_ERR("k_msgq_put failed (err %d)", ret);
         tx_free(env);
@@ -139,7 +149,7 @@ static void notify_status_work_cb(struct k_work *_work) { notify_transport_statu
 static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
 static int zmk_split_esb_peripheral_init(void) {
-    int ret = tx_msgq_init(msgqs, ARRAY_SIZE(msgqs));
+    int ret = tx_msgq_init(msgqs, ARRAY_SIZE(msgqs), type_to_idx, idx_to_type);
     if (ret) {
         LOG_ERR("tx_msgq_init faied(%d)", ret);
         return ret;

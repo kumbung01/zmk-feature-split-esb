@@ -24,7 +24,7 @@ K_MEM_SLAB_DEFINE_STATIC(rx_slab, sizeof(struct esb_payload), RX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(rx_msgq, sizeof(void*), RX_MSGQ_SIZE, 4);
 static struct k_msgq **tx_msgq = NULL;
 static size_t tx_msgq_cnt = 0;
-
+static int *idx_to_type;
 
 ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type _type) {
     switch (_type) {
@@ -192,13 +192,18 @@ int handle_packet(struct zmk_split_esb_async_state* state) {
     return handled;
 }
 
-int tx_msgq_init(struct k_msgq *msgqs[], size_t _count) {
+int tx_msgq_init(struct k_msgq *msgqs[], size_t _count, const int* type_to_idx, int* _idx_to_type) {
     if (msgqs == NULL || _count == 0) {
         return -ENOBUFS;
     }
 
     tx_msgq = msgqs;
     tx_msgq_cnt = _count;
+    idx_to_type = _idx_to_type;
+    for (int i = 0; i < tx_msgq_cnt; ++i) {
+        int idx = type_to_idx[i];
+        idx_to_type[idx] = i;
+    }
 
     return 0;
 }
@@ -213,7 +218,7 @@ struct k_msgq *tx_msgq_ready(int *_type) {
             continue;
 
         if (k_msgq_num_used_get(tx_msgq[i]) > 0) {
-            *_type = i;
+            *_type = idx_to_type[i];
             return tx_msgq[i];
         }
     }
