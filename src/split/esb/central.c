@@ -48,6 +48,23 @@ K_MSGQ_DEFINE(msgq2, sizeof(void*), SAFE_DIV(TX_MSGQ_SIZE, 4), 4);
 K_MSGQ_DEFINE(msgq3, sizeof(void*), SAFE_DIV(TX_MSGQ_SIZE, 8), 4);
 static struct k_msgq* msgqs[] = {&msgq0, &msgq1, &msgq2, &msgq3};
 
+#if IS_ENABLED(CONFIG_ZMK_BATTERY_REPORT_INTERVAL)
+#define PERIPHERAL_REPORT_INTERVAL CONFIG_ZMK_BATTERY_REPORT_INTERVAL
+#else
+#define PERIPHERAL_REPORT_INTERVAL 60
+#endif
+
+enum peripheral_slot_state {
+    PERIPHERAL_DOWN,
+    PERIPHERAL_UP,
+};
+
+struct peripheral_slot {
+    enum peripheral_slot_state state;
+    int64_t last_reported;
+}
+
+static struct peripheral_slot peripherals[CONFIG_ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS];
 
 static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
@@ -100,9 +117,16 @@ void zmk_split_esb_on_prx_esb_callback(app_esb_event_t *event) {
 }
 
 static int split_central_esb_get_available_source_ids(uint8_t *sources) {
-    sources[0] = 0;
+    int count = 0;
+    for (int i = 0; i < ARRAY_SIZE(peripherals); i++) {
+        if (peripherals[i].state != PERIPHERAL_UP) {
+            continue;
+        }
 
-    return 1;
+        sources[count++] = i;
+    }
+
+    return count;
 }
 
 
@@ -119,10 +143,34 @@ split_central_esb_set_status_callback(zmk_split_transport_central_status_changed
 }
 
 static struct zmk_split_transport_status split_central_esb_get_status() {
+    int64_t now = k_uptime_get();
+    size_t peripherals_connected = 0;
+    enum zmk_split_transport_connections_status conn;
+    for (int i = 0; i < ARRAY_SIZE(peripherals); ++i) {
+        if (now - peripherals[i].last_reported >= PERIPHERAL_REPORT_INTERVAL) {
+            peripherals[i].state = PERIPHERAL_DOWN;
+            continue;
+        }
+
+        peripherals_connected++;
+    }
+
+    switch(peripherals_connected) {
+    case 0:
+        conn = ZMK_SPLIT_TRANSPORT_CONNECTIONS_STATUS_DISCONNECTED;
+        break;
+    case CONFIG_ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS:
+        conn = ZMK_SPLIT_TRANSPORT_CONNECTIONS_STATUS_ALL_CONNECTED;
+        break;
+    default:
+        conn = ZMK_SPLIT_TRANSPORT_CONNECTIONS_STATUS_SOME_CONNECTED;
+        break;
+    }
+
     return (struct zmk_split_transport_status){
         .available = true,
         .enabled = is_enabled,
-        .connections = ZMK_SPLIT_TRANSPORT_CONNECTIONS_STATUS_ALL_CONNECTED,
+        .connections = conn,
     };
 }
 
@@ -146,17 +194,13 @@ static void notify_status_work_cb(struct k_work *_work) { notify_transport_statu
 
 static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
-extern size_t handled;
+
 static void publish_events_thread() {
     int64_t time = k_uptime_get();
 
     while (true)
     {
         k_sem_take(&rx_sem, K_FOREVER);
-        if (k_uptime_delta(&time) >= TIMEOUT_MS) {
-            handled = 0;
-        }
-
         handle_packet(&async_state);
     }
 }
@@ -189,5 +233,9 @@ SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DE
 
 
 static int central_handler(struct esb_data_envelope *env) {
-    return zmk_split_transport_central_peripheral_event_handler(&esb_central, env->source, env->event);
+    uint8_t source = env->source;
+    peripherals[source].state = PERIPHERAL_UP;
+    peripherals[source].last_updated = k_uptime_get();
+    
+    return zmk_split_transport_central_peripheral_event_handler(&esb_central, source, env->event);
 }

@@ -156,8 +156,6 @@ void reset_buffers() {
 }
 
 
-size_t handled = 0;
-static const size_t can_handle = TX_MSGQ_SIZE / 2;
 void handle_packet(struct zmk_split_esb_async_state* state) {
 
     while (true) {
@@ -173,6 +171,13 @@ void handle_packet(struct zmk_split_esb_async_state* state) {
         int type = buf->header.type;
         size_t length = rx_payload->length - HEADER_SIZE;
         size_t offset = 0;
+        size_t source = payload->pipe;
+
+        if (source >= CONFIG_ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS) {
+            LOG_ERR("invalid source (%u)", source);
+            rx_free(rx_payload);
+            continue;
+        }
 
         ssize_t data_size = state->get_data_size_rx(type);
         if (data_size < 0) {
@@ -183,7 +188,7 @@ void handle_packet(struct zmk_split_esb_async_state* state) {
         
         size_t count = length / data_size;
         struct esb_data_envelope env = { .buf.type = type, 
-                                         .source = rx_payload->pipe,
+                                         .source = source,
                                         };
 
         for (size_t i = 0; i < count; ++i) {
@@ -199,13 +204,6 @@ void handle_packet(struct zmk_split_esb_async_state* state) {
             if (err < 0) {
                 LOG_ERR("zmk handler failed(%d)", err);
             }
-
-#if IS_CENTRAL
-            if (++handled >= can_handle) {
-                handled = 0;
-                k_yield();
-            }
-#endif
         }
 
         rx_free(rx_payload);
