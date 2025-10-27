@@ -252,3 +252,13 @@ void rx_free(void *ptr) {
 void set_thread_id(k_tid_t thread) {
     handle_thread = thread;
 }
+
+
+static bool is_queued = false;
+void set_tx_queued(bool _queued) {
+    is_queued = _queued;
+}
+
+bool is_tx_queued() {
+    return is_queued;
+}

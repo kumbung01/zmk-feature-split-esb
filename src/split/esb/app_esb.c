@@ -216,6 +216,11 @@ void tx_thread() {
             continue;
         }
 
+        if (!is_tx_queued()) {
+            LOG_DBG("tx not queued");
+            continue;
+        }
+
         while (true) {
             if (esb_tx_full()) {
                 LOG_DBG("esb tx full, wait for next tx event");
@@ -225,6 +230,7 @@ void tx_thread() {
             int type = -1;
             struct k_msgq *msgq = tx_msgq_ready(&type);
             if (msgq == NULL) {
+                set_tx_queued(false);
                 break;
             }
 
@@ -416,6 +422,7 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) 
     switch (type) {
         case APP_TS_STARTED:
             app_esb_resume();
+            k_sem_give(&tx_sem);
             break;
         case APP_TS_STOPPED:
             app_esb_suspend();
@@ -437,7 +444,6 @@ static int on_activity_state(const zmk_event_t *eh) {
         }
         else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !m_enabled) {
             zmk_split_esb_set_enable(true);
-            k_sem_give(&tx_sem);
         }
     }
 

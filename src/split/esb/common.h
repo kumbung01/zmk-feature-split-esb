@@ -109,3 +109,6 @@ int rx_alloc(void **ptr);
 void tx_free(void *ptr);
 void rx_free(void *ptr);
 void set_thread_id(k_tid_t thread);
+
+void set_tx_queued(bool _queued);
+bool is_tx_queued();
