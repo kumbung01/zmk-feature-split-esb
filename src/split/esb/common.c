@@ -103,7 +103,7 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
     }
 }
 
-
+#if 0
 // encrption
 static uint32_t nonce = 0;
 #define ENCRYPTION_KEY CONFIG_ZMK_SPLIT_ESB_ENCRYPTION_KEY
@@ -147,6 +147,7 @@ void reset_buffers() {
         rx_free(data);
     }
 }
+#endif
 
 
 void handle_packet(struct zmk_split_esb_async_state* state) {
