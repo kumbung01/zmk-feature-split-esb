@@ -147,6 +147,7 @@ static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
 static void publish_events_thread() {
     size_t handled = 0;
+    size_t can_handle = RX_MSGQ_SIZE / 2;
     int64_t time = k_uptime_get();
 
     while (true)
@@ -157,7 +158,7 @@ static void publish_events_thread() {
         }
 
         handled += handle_packet(&async_state);
-        if (handled > RX_MSGQ_SIZE) {
+        if (handled > can_handle) {
             handled = 0;
             k_msleep(1);
         }
