@@ -90,7 +90,7 @@ static void event_handler(struct esb_evt const *event) {
             struct esb_payload *rx_payload = NULL;
             if (rx_alloc(&rx_payload) != 0) {
                 LOG_ERR("Failed to allocate rx_slab");
-                break;
+                return;
             }
 
             if (esb_read_rx_payload(rx_payload) == 0) {
@@ -101,9 +101,10 @@ static void event_handler(struct esb_evt const *event) {
                 }
                 k_sem_give(&rx_sem);
             }
-            m_callback(&m_event);
             break;
     }
+
+    m_callback(&m_event);
 }
 
 static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t type) {
