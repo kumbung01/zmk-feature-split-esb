@@ -155,7 +155,11 @@ SYS_INIT(zmk_split_esb_peripheral_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY
 
 
 static void process_tx_work_handler(struct k_work *work) {
-    handle_packet(&async_state);
+    while (true) {
+        if (handle_packet(&async_state) == 0) {
+            break;
+        }
+    }
 }
 
 static int peripheral_handler(struct esb_data_envelope* env) {
