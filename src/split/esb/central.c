@@ -195,9 +195,12 @@ static void publish_events_thread() {
     while (true)
     {
         k_sem_take(&rx_sem, K_FOREVER);
-        if (is_tx_queued())
+        if (handle_packet(&async_state) > 0) {
+            continue;
+        }
+        else {
             esb_tx_app();
-        handle_packet(&async_state);
+        }
     }
 }
 

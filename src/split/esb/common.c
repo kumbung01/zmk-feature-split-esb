@@ -160,68 +160,67 @@ void reset_buffers() {
 #endif
 
 
-void handle_packet(struct zmk_split_esb_async_state* state) {
+size_t handle_packet(struct zmk_split_esb_async_state* state) {
+    size_t handled = 0;
+    struct esb_payload *rx_payload = NULL;
+    int err = k_msgq_get(&rx_msgq, &rx_payload, K_NO_WAIT);
+    if (err < 0) {
+        LOG_DBG("k_msgq_get failed (err %d)", err);
+        return 0;
+    }
 
-    while (true) {
-        struct esb_payload *rx_payload = NULL;
-        int err = k_msgq_get(&rx_msgq, &rx_payload, K_NO_WAIT);
-        if (err < 0) {
-            LOG_DBG("k_msgq_get failed (err %d)", err);
+    struct payload_buffer *buf = (struct payload_buffer*)(rx_payload->data);
+    uint8_t *data = buf->body;
+    int type = buf->header.type;
+    size_t length = rx_payload->length - HEADER_SIZE;
+    size_t offset = 0;
+    size_t source = rx_payload->pipe;
+#if IS_CENTRAL
+    if (source >= CONFIG_ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS)
+#else
+    if (source != PERIPHERAL_ID)
+#endif
+    {
+        LOG_WRN("invalid source (%u)", source);
+        goto CLEANUP;
+    }
+
+    ssize_t data_size = state->get_data_size_rx(type);
+    if (data_size < 0) {
+        LOG_WRN("Unknown event type %d", type);
+        goto CLEANUP;
+    }
+    
+    size_t count = length / data_size;
+    if (count * data_size != length) {
+        LOG_WRN("data_size * count != length");
+        goto CLEANUP;
+    }
+
+    struct esb_data_envelope env = { .buf.type = type, 
+                                        .source = source,
+                                    };
+
+    for (size_t i = 0; i < count; ++i) {
+        if (length < data_size + offset) {
+            LOG_WRN("Payload too small for event type %d", type);
             break;
         }
 
-        struct payload_buffer *buf = (struct payload_buffer*)(rx_payload->data);
-        uint8_t *data = buf->body;
-        int type = buf->header.type;
-        size_t length = rx_payload->length - HEADER_SIZE;
-        size_t offset = 0;
-        size_t source = rx_payload->pipe;
-#if IS_CENTRAL
-        if (source >= CONFIG_ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS)
-#else
-        if (source != PERIPHERAL_ID)
-#endif
-        {
-            LOG_WRN("invalid source (%u)", source);
-            rx_free(rx_payload);
-            continue;
-        }
+        memcpy(env.buf.data, &data[offset], data_size);
+        offset += data_size;
 
-        ssize_t data_size = state->get_data_size_rx(type);
-        if (data_size < 0) {
-            LOG_WRN("Unknown event type %d", type);
-            rx_free(rx_payload);
-            continue;
+        err = state->handler(&env);
+        if (err < 0) {
+            LOG_WRN("zmk handler failed(%d)", err);
         }
         
-        size_t count = length / data_size;
-        if (count * data_size != length) {
-            LOG_WRN("data_size * count != length");
-            rx_free(rx_payload);
-            continue;
-        }
-
-        struct esb_data_envelope env = { .buf.type = type, 
-                                         .source = source,
-                                        };
-
-        for (size_t i = 0; i < count; ++i) {
-            if (length < data_size + offset) {
-                LOG_WRN("Payload too small for event type %d", type);
-                break;
-            }
-
-            memcpy(env.buf.data, &data[offset], data_size);
-            offset += data_size;
-
-            err = state->handler(&env);
-            if (err < 0) {
-                LOG_WRN("zmk handler failed(%d)", err);
-            }
-        }
-
-        rx_free(rx_payload);
+        handled++;
     }
+
+CLEANUP:
+    rx_free(rx_payload);
+    return handled;
 }
 
 int tx_msgq_init(int *type_to_idx) {
