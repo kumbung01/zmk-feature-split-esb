@@ -149,7 +149,7 @@ static void publish_events_thread() {
     while (true)
     {
         k_sem_take(&rx_sem, K_FOREVER);
-        if (k_uptime_delta(&time) > TIMEOUT_MS) {
+        if (k_uptime_delta(&time) >= TIMEOUT_MS) {
             handled = 0;
         }
 
