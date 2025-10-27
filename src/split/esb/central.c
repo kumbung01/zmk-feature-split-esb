@@ -144,14 +144,19 @@ static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
 static void publish_events_thread() {
     size_t handled = 0;
+    int64_t time = k_uptime_get();
 
     while (true)
     {
         k_sem_take(&rx_sem, K_FOREVER);
+        if (k_uptime_delta(&time) > TIMEOUT_MS) {
+            handled = 0;
+        }
+
         handled += handle_packet(&async_state);
         if (handled > 10) {
             handled = 0;
-            k_yield();
+            k_msleep(1);
         }
     }
 }
