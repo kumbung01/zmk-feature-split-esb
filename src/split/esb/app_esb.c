@@ -108,7 +108,7 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t
     struct payload_buffer *buf = (struct payload_buffer *)payload->data;
     const size_t body_size = sizeof(buf->body);
     const size_t data_size = m_state->get_data_size_tx(type);
-#if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+#if IS_PERIPHERAL
     payload->pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID; // use the peripheral_id as the ESB pipe number
 #endif
     payload->noack = !CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK;
@@ -141,7 +141,7 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t
 
         tx_free(env);
 
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+#if IS_CENTRAL
         payload->pipe = env->source; // use the source as the ESB pipe number
         break;
 #endif
@@ -163,7 +163,7 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t
     return count;
 }
 
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+#if IS_CENTRAL
 void tx_work_handler() {
     while (true) {
 
