@@ -64,7 +64,6 @@ static app_esb_mode_t m_mode;
 static bool m_active = false;
 static bool m_enabled = false;
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
-static volatile int tx_fail_count = 0;
 static struct zmk_split_esb_async_state *m_state;
 
 static void event_handler(struct esb_evt const *event) {
@@ -73,7 +72,6 @@ static void event_handler(struct esb_evt const *event) {
         case ESB_EVENT_TX_SUCCESS:
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
-            tx_fail_count = 0;
             k_sem_give(&tx_sem);
             break;
         case ESB_EVENT_TX_FAILED:
@@ -81,16 +79,9 @@ static void event_handler(struct esb_evt const *event) {
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
             LOG_WRN("ESB_EVENT_TX_FAILED");
 #if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-                if (tx_fail_count > 0) {
-                    esb_pop_tx();
-                    esb_start_tx();
-                    tx_fail_count = 0;
-                    k_sem_give(&tx_sem);
-                }
-                else {
-                    tx_fail_count++;
-                    esb_start_tx();
-                }
+            esb_pop_tx();
+            esb_start_tx();
+            k_sem_give(&tx_sem);
 #endif
             break;
         case ESB_EVENT_RX_RECEIVED:
@@ -440,8 +431,6 @@ static int on_activity_state(const zmk_event_t *eh) {
     if (m_mode == APP_ESB_MODE_PTX) {
         if (state_ev->state != ZMK_ACTIVITY_ACTIVE && m_enabled) {
             zmk_split_esb_set_enable(false);
-            // reset_buffers();
-            tx_fail_count = 0;
         }
         else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !m_enabled) {
             zmk_split_esb_set_enable(true);
