@@ -198,7 +198,6 @@ void handle_packet(struct zmk_split_esb_async_state* state) {
             err = state->handler(&env);
             if (err < 0) {
                 LOG_ERR("zmk handler failed(%d)", err);
-                continue;
             }
 
 #if IS_CENTRAL
