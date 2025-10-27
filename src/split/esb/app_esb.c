@@ -116,7 +116,7 @@ static void event_handler(struct esb_evt const *event) {
 }
 
 static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t type) {
-    const uint32_t now = k_uptime_get();
+    const int64_t now = k_uptime_get();
     size_t count = 0;
     uint8_t offset = 0;
     struct payload_buffer *buf = payload->data;
@@ -140,7 +140,7 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t
             break;
         }
         
-        uint32_t timestamp = env->timestamp;
+        int64_t timestamp = env->timestamp;
         if (now - timestamp > TIMEOUT_MS) {
             LOG_DBG("dropping old event type %d timestamp %d", type, now - timestamp);
             tx_free(env);

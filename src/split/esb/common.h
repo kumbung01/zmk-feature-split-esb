@@ -38,14 +38,14 @@ _Static_assert(sizeof(struct zmk_split_transport_buffer) == ZMK_DATA_SIZE,
                "zmk_split_transport_buffer size mismatch");
 
 struct esb_data_envelope {
-    uint32_t timestamp;
+    int64_t timestamp;
     uint8_t source;
     union {
         struct zmk_split_transport_peripheral_event event;
         struct zmk_split_transport_central_command command;
         struct zmk_split_transport_buffer buf;
     };
-} __packed;
+};
 
 struct payload_header {
     uint8_t type;
