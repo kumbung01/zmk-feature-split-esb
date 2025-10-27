@@ -27,7 +27,7 @@
 #define TIMEOUT_MS CONFIG_ZMK_SPLIT_ESB_KEYBOARD_EVENT_TIMEOUT_MS
 #define SAFE_DIV(x, y) ((x) / (y) > 0 ? (x) / (y) : 1)
 
-extern struct k_work_q esb_work_q;
+
 extern struct k_msgq rx_msgq;
 
 typedef enum zmk_split_transport_peripheral_event_type zmk_split_transport_buffer_type;
@@ -100,7 +100,7 @@ int service_init();
 uint32_t get_nonce();
 int process_payload(char* data, size_t length, uint32_t nonce);
 
-void handle_packet(struct zmk_split_esb_async_state* state);
+size_t handle_packet(struct zmk_split_esb_async_state* state);
 void reset_buffers();
 
 
