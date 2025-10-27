@@ -137,7 +137,7 @@ void put_u32_le(uint8_t *dst, uint32_t v) {
 void reset_buffers() {
     void *data;
 
-    for (int i = 0; i < tx_msgq_cnt; ++i) {
+    for (int i = 0; i < tx_msgq->count; ++i) {
         while (k_msgq_get(tx_msgq->msgqs[i], &data, K_NO_WAIT) == 0) {
             tx_free(data);
         }
