@@ -176,15 +176,8 @@ int handle_packet(struct zmk_split_esb_async_state* state) {
 
             memcpy(env.buf.data, &data[offset], data_size);
             offset += data_size;
-            if (handle_thread) {
-                prio = k_thread_priority_get(handle_thread);
-                k_thread_priority_set(handle_thread, -1);
-            }
+            
             err = state->handler(&env);
-            if (handle_thread) {
-                k_thread_priority_set(handle_thread, prio);
-            }
-
             if (err < 0) {
                 LOG_ERR("zmk handler failed(%d)", err);
                 continue;
