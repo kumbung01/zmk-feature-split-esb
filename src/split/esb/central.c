@@ -198,8 +198,6 @@ static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
 
 static void publish_events_thread() {
-    int64_t time = k_uptime_get();
-
     while (true)
     {
         k_sem_take(&rx_sem, K_FOREVER);
