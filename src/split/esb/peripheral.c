@@ -55,7 +55,7 @@ void zmk_split_esb_on_ptx_esb_callback(app_esb_event_t *event) {
 
 static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
-
+extern struct k_work_q esb_work_q;
 static int
 split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event) {
     ssize_t data_size = get_payload_data_size_evt(event->type);
