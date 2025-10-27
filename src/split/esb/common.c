@@ -157,7 +157,7 @@ void reset_buffers() {
 
 
 size_t handled = 0;
-static const size_t can_handle = TX_MSGQ_SIZE - 1;
+static const size_t can_handle = TX_MSGQ_SIZE / 2;
 void handle_packet(struct zmk_split_esb_async_state* state) {
 
     while (true) {
@@ -201,8 +201,7 @@ void handle_packet(struct zmk_split_esb_async_state* state) {
             }
 
 #if IS_CENTRAL
-            handled++;
-            if (handled >= can_handle) {
+            if (++handled >= can_handle) {
                 handled = 0;
                 k_msleep(1);
             }
