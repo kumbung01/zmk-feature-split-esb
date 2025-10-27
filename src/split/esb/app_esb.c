@@ -67,9 +67,9 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 static struct zmk_split_esb_async_state *m_state;
 
 static void event_handler(struct esb_evt const *event) {
-    app_esb_event_t m_event = {.mode = m_mode,};
+    app_esb_event_t m_event = {0};
     struct esb_payload *rx_payload = NULL;
-    
+
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
             // Forward an event to the application
@@ -242,9 +242,9 @@ void tx_thread() {
     }
 }
 
-K_THREAD_DEFINE(tx_thread_id, 1600,
+K_THREAD_DEFINE(tx_thread_id, 1024,
         tx_thread, NULL, NULL, NULL,
-        0, 0, 0);
+        3, 0, 0);
 #endif
 
 
