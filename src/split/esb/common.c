@@ -203,7 +203,7 @@ void handle_packet(struct zmk_split_esb_async_state* state) {
 #if IS_CENTRAL
             if (++handled >= can_handle) {
                 handled = 0;
-                k_msleep(1);
+                k_yield();
             }
 #endif
         }
