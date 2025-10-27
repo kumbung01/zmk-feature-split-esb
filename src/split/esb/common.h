@@ -23,6 +23,7 @@
 #define IS_PERIPHERAL !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 
 #define TIMEOUT_MS CONFIG_ZMK_SPLIT_ESB_KEYBOARD_EVENT_TIMEOUT_MS
+#define SAFE_DIV(x, y) ((x) / (y) > 0 ? (x) / (y) : 1)
 
 extern struct k_work_q esb_work_q;
 extern struct k_msgq rx_msgq;
