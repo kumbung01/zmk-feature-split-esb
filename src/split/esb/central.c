@@ -216,8 +216,6 @@ static int zmk_split_esb_central_init(void) {
         return ret;
     }
 
-    // service_init();
-
     k_work_submit(&notify_status_work);
     return 0;
 }

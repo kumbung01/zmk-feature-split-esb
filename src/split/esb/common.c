@@ -62,7 +62,7 @@ ssize_t get_payload_data_size_evt(enum zmk_split_transport_peripheral_event_type
     }
 }
 
-
+#if IS_PERIPHERAL
 struct k_work_q esb_work_q;
 K_THREAD_STACK_DEFINE(esb_work_q_stack, 1300);
 
@@ -74,6 +74,7 @@ int service_init(void) {
 
     return 0;
 }
+#endif
 
 static size_t tx_fail_count = 0;
 void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state) {
