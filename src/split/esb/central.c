@@ -235,7 +235,7 @@ SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DE
 static int central_handler(struct esb_data_envelope *env) {
     uint8_t source = env->source;
     peripherals[source].state = PERIPHERAL_UP;
-    peripherals[source].last_updated = k_uptime_get();
+    peripherals[source].last_reported = k_uptime_get();
     
     return zmk_split_transport_central_peripheral_event_handler(&esb_central, source, env->event);
 }
