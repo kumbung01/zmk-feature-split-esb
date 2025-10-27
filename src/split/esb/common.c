@@ -171,7 +171,7 @@ void handle_packet(struct zmk_split_esb_async_state* state) {
         int type = buf->header.type;
         size_t length = rx_payload->length - HEADER_SIZE;
         size_t offset = 0;
-        size_t source = payload->pipe;
+        size_t source = rx_payload->pipe;
 
         if (source >= CONFIG_ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS) {
             LOG_ERR("invalid source (%u)", source);
