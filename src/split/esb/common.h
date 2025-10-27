@@ -90,7 +90,7 @@ struct zmk_split_esb_async_state {
 
 struct zmk_split_esb_msgq {
     size_t count;
-    struct k_msgq **msgqs;
+    struct k_msgq **msgq;
     size_t *type_to_idx;
     size_t *idx_to_type;
 };

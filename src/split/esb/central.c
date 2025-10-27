@@ -52,7 +52,7 @@ static struct zmk_split_esb_msgq tx_msgq = {
     .type_to_idx = type_to_idx,
     .idx_to_type = idx_to_type,
     .count = ARRAY_SIZE(type_to_idx),
-    .msgqs = msgqs,
+    .msgq = msgqs,
 };
 
 #if IS_ENABLED(CONFIG_ZMK_BATTERY_REPORT_INTERVAL)

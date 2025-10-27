@@ -65,7 +65,7 @@ static struct zmk_split_esb_msgq tx_msgq = {
     .type_to_idx = type_to_idx,
     .idx_to_type = idx_to_type,
     .count = ARRAY_SIZE(type_to_idx),
-    .msgqs = msgqs,
+    .msgq = msgqs,
 };
 
 static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
