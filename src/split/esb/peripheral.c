@@ -39,7 +39,7 @@ K_WORK_DEFINE(process_tx_work, process_tx_work_handler);
 static int peripheral_handler(struct esb_data_envelope* env);
 
 static struct zmk_split_esb_async_state async_state = {
-    .process_tx_work = &process_tx_work,
+    .peripheral_rx_work = &process_tx_work,
     .handler = peripheral_handler,
     .get_data_size_rx = get_payload_data_size_cmd,
     .get_data_size_tx = get_payload_data_size_evt,

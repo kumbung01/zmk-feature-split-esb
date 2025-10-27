@@ -75,6 +75,8 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
         case APP_ESB_EVT_TX_SUCCESS:
 #if IS_PERIPHERAL
             k_sem_give(&tx_sem);
+#else
+            k_work_submit_to_queue(&esb_work_q, state->central_tx_work);
 #endif
             break;
         case APP_ESB_EVT_TX_FAIL:
@@ -82,17 +84,14 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
             esb_pop_tx();
             esb_start_tx();
             k_sem_give(&tx_sem);
+#else
+            esb_pop_tx();
+            k_work_submit_to_queue(&esb_work_q, state->central_tx_work);
 #endif
             break;
         case APP_ESB_EVT_RX:
 #if IS_PERIPHERAL
-           if (state->process_tx_callback) {
-                state->process_tx_callback();
-            } 
-            
-            else if (state->process_tx_work) {
-                k_work_submit_to_queue(&esb_work_q, state->process_tx_work);
-            }
+            k_work_submit_to_queue(&esb_work_q, state->peripheral_rx_work);
 #else
             k_sem_give(&rx_sem);
 #endif

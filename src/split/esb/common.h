@@ -74,10 +74,9 @@ typedef void (*zmk_split_esb_process_tx_callback_t)(void);
 struct zmk_split_esb_async_state {
     atomic_t state;
 
-    zmk_split_esb_process_tx_callback_t process_tx_callback;
-
     struct k_work_delayable restart_rx_work;
-    struct k_work *process_tx_work;
+    struct k_work *peripheral_rx_work;
+    struct k_work *central_tx_work;
     const struct gpio_dt_spec *dir_gpio;
 
     get_data_size get_data_size_rx;
