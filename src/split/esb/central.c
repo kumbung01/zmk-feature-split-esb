@@ -87,7 +87,7 @@ static int split_central_esb_send_command(uint8_t source,
     }
 
     struct esb_data_envelope *env;
-    int ret = tx_alloc(env);
+    int ret = tx_alloc(&env);
     if (ret < 0) {
         LOG_ERR("k_mem_slab_alloc failed (err %d)", ret);
         return -ENOMEM;
@@ -97,7 +97,9 @@ static int split_central_esb_send_command(uint8_t source,
     env->source = source;
     env->timestamp = k_uptime_get();
 
-    ret = k_msgq_put(msgqs[cmd.type], &env, K_NO_WAIT);
+    int idx = type_to_idx[event->type];
+
+    ret = k_msgq_put(msgqs[idx], &env, K_NO_WAIT);
     if (ret < 0) {
         LOG_ERR("k_msgq_put failed (err %d)", ret);
         tx_free(env);
