@@ -48,6 +48,13 @@ K_MSGQ_DEFINE(msgq2, sizeof(void*), SAFE_DIV(TX_MSGQ_SIZE, 4), 4);
 K_MSGQ_DEFINE(msgq3, sizeof(void*), SAFE_DIV(TX_MSGQ_SIZE, 8), 4);
 static struct k_msgq* msgqs[] = {&msgq0, &msgq1, &msgq2, &msgq3};
 
+static struct zmk_split_esb_msgq tx_msgq = {
+    .type_to_idx = type_to_idx,
+    .idx_to_type = idx_to_type,
+    .count = ARRAY_SIZE(type_to_idx),
+    .msgqs = msgqs,
+};
+
 #if IS_ENABLED(CONFIG_ZMK_BATTERY_REPORT_INTERVAL)
 #define PERIPHERAL_REPORT_INTERVAL CONFIG_ZMK_BATTERY_REPORT_INTERVAL
 #else
@@ -211,7 +218,7 @@ K_THREAD_DEFINE(publish_events_thread_id, STACKSIZE,
 
 
 static int zmk_split_esb_central_init(void) {
-    int ret = tx_msgq_init(msgqs, ARRAY_SIZE(msgqs), type_to_idx, idx_to_type);
+    int ret = tx_msgq_init(&tx_msgq);
     if (ret) {
         LOG_ERR("tx_msgq_init failed(%d)", ret);
         return ret;

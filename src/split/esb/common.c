@@ -22,10 +22,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 K_MEM_SLAB_DEFINE_STATIC(tx_slab, sizeof(struct esb_data_envelope), TX_MSGQ_SIZE, 4);
 K_MEM_SLAB_DEFINE_STATIC(rx_slab, sizeof(struct esb_payload), RX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(rx_msgq, sizeof(void*), RX_MSGQ_SIZE, 4);
-static struct k_msgq **tx_msgq = NULL;
-static size_t tx_msgq_cnt = 0;
-static int *idx_to_type;
-static k_tid_t handle_thread = NULL;
+static struct zmk_split_esb_msgq *tx_msgq;
 ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type _type) {
     switch (_type) {
     case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_POLL_EVENTS:
@@ -141,7 +138,7 @@ void reset_buffers() {
     void *data;
 
     for (int i = 0; i < tx_msgq_cnt; ++i) {
-        while (k_msgq_get(tx_msgq[i], &data, K_NO_WAIT) == 0) {
+        while (k_msgq_get(tx_msgq->msgqs[i], &data, K_NO_WAIT) == 0) {
             tx_free(data);
         }
     }
@@ -216,34 +213,32 @@ void handle_packet(struct zmk_split_esb_async_state* state) {
     }
 }
 
-int tx_msgq_init(struct k_msgq *msgqs[], size_t _count, const int* type_to_idx, int* _idx_to_type) {
-    if (msgqs == NULL || _count == 0) {
+int tx_msgq_init(struct zmk_split_esb_msgq *msgqs) {
+    if (msgqs == NULL) {
         return -ENOBUFS;
     }
 
     tx_msgq = msgqs;
-    tx_msgq_cnt = _count;
-    idx_to_type = _idx_to_type;
-    for (int i = 0; i < tx_msgq_cnt; ++i) {
-        int idx = type_to_idx[i];
-        idx_to_type[idx] = i;
+    for (int i = 0; i < tx_msgq->count; ++i) {
+        int idx = tx_msgq->type_to_idx[i];
+        tx_msgq->idx_to_type[idx] = i;
     }
 
     return 0;
 }
 
 struct k_msgq *tx_msgq_ready(int *_type) {
-    if (!_type || !tx_msgq || tx_msgq_cnt == 0) {
+    if (!_type || !tx_msgq) {
         return NULL;
     }
 
-    for (int i = 0; i < tx_msgq_cnt; ++i) {
-        if (tx_msgq[i] == NULL)
+    for (int i = 0; i < tx_msgq->count; ++i) {
+        if (tx_msgq->msgq[i] == NULL)
             continue;
 
-        if (k_msgq_num_used_get(tx_msgq[i]) > 0) {
-            *_type = idx_to_type[i];
-            return tx_msgq[i];
+        if (k_msgq_num_used_get(tx_msgq->msgq[i]) > 0) {
+            *_type = tx_msgq->idx_to_type[i];
+            return tx_msgq->msgq[i];
         }
     }
 
