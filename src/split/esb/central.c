@@ -143,10 +143,16 @@ static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
 
 static void publish_events_thread() {
+    size_t handled = 0;
+
     while (true)
     {
         k_sem_take(&rx_sem, K_FOREVER);
-        handle_packet(&async_state);
+        handled += handle_packet(&async_state);
+        if (handled > 10) {
+            handled = 0;
+            k_yield();
+        }
     }
 }
 
