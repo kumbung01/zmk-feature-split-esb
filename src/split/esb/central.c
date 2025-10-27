@@ -79,6 +79,8 @@ static int split_central_esb_send_command(uint8_t source,
         return -ENOTSUP;
     }
 
+    LOG_DBG("sending packet type (%d)", cmd.type);
+
     struct esb_data_envelope *env;
     int ret = tx_alloc(&env);
     if (ret < 0) {
