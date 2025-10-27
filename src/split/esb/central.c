@@ -154,7 +154,7 @@ static void publish_events_thread() {
         }
 
         handled += handle_packet(&async_state);
-        if (handled > 10) {
+        if (handled > RX_MSGQ_SIZE)
             handled = 0;
             k_msleep(1);
         }
