@@ -109,6 +109,7 @@ void put_u32_le(uint8_t *dst, uint32_t val);
 
 
 int tx_msgq_init(int *type_to_idx);
+struct k_msgq *get_tx_msgq(size_t idx);
 struct k_msgq *tx_msgq_ready(int *_type);
 int tx_alloc(void **ptr);
 int rx_alloc(void **ptr);

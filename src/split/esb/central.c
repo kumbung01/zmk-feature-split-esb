@@ -92,7 +92,7 @@ static int split_central_esb_send_command(uint8_t source,
 
     int idx = type_to_idx[cmd.type];
 
-    ret = k_msgq_put(msgqs[idx], &env, K_NO_WAIT);
+    ret = k_msgq_put(get_tx_msgq(idx), &env, K_NO_WAIT);
     if (ret < 0) {
         LOG_ERR("k_msgq_put failed (err %d)", ret);
         tx_free(env);

@@ -248,6 +248,12 @@ struct k_msgq *tx_msgq_ready(int *_type) {
     return NULL;
 }
 
+struct k_msgq *get_tx_msgq(size_t idx) {
+    __ASSERT(idx >= 0 && idx < tx_msgq_cnt, "idx out of valid range");
+
+    return tx_msgq[idx];
+}
+
 int tx_alloc(void **ptr) {
     return k_mem_slab_alloc(&tx_slab, ptr, K_NO_WAIT);
 }

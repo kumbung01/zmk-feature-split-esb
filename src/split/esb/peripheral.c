@@ -77,7 +77,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
 
     int idx = type_to_idx[event->type];
 
-    ret = k_msgq_put(msgqs[idx], &env, K_NO_WAIT);
+    ret = k_msgq_put(get_tx_msgq(idx), &env, K_NO_WAIT);
     if (ret < 0) {
         LOG_ERR("k_msgq_put failed (err %d)", ret);
         tx_free(env);
