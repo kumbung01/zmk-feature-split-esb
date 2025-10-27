@@ -73,11 +73,21 @@ int service_init(void) {
 void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state) {
     switch(event->evt_type) {
         case APP_ESB_EVT_TX_SUCCESS:
+#if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+            k_sem_give(&tx_sem);
+#endif
             break;
         case APP_ESB_EVT_TX_FAIL:
+#if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+            esb_pop_tx();
+            esb_start_tx();
+            k_sem_give(&tx_sem);
+#endif
             break;
         case APP_ESB_EVT_RX:
-            // LOG_DBG("RX + %3d and now buffer is %3d", received, ring_buf_size_get(state->rx_buf));
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+            k_sem_give(&rx_sem);
+#else
             if (state->process_tx_callback) {
                 state->process_tx_callback();
             } 
@@ -85,6 +95,7 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
             else if (state->process_tx_work) {
                 k_work_submit_to_queue(&esb_work_q, state->process_tx_work);
             }
+#endif
 
             break;
         default:

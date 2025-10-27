@@ -27,7 +27,7 @@ typedef enum {
 
 typedef struct {
     app_esb_event_type_t evt_type;
-    struct esb_payload*  payload;
+    app_esb_mode_t       mode;
 } app_esb_event_t;
 
 typedef struct {

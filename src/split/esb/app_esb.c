@@ -67,27 +67,22 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 static struct zmk_split_esb_async_state *m_state;
 
 static void event_handler(struct esb_evt const *event) {
-    app_esb_event_t m_event = {0};
+    app_esb_event_t m_event = {.mode = m_mode,};
+    struct esb_payload *rx_payload = NULL;
+    
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
-            k_sem_give(&tx_sem);
             break;
         case ESB_EVENT_TX_FAILED:
             // Forward an event to the application
             m_event.evt_type = APP_ESB_EVT_TX_FAIL;
             LOG_WRN("ESB_EVENT_TX_FAILED");
-#if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-            esb_pop_tx();
-            esb_start_tx();
-            k_sem_give(&tx_sem);
-#endif
             break;
         case ESB_EVENT_RX_RECEIVED:
             LOG_DBG("RX SUCCESS");
             m_event.evt_type = APP_ESB_EVT_RX;
-            struct esb_payload *rx_payload = NULL;
             if (rx_alloc(&rx_payload) != 0) {
                 LOG_ERR("Failed to allocate rx_slab");
                 return;
@@ -97,9 +92,8 @@ static void event_handler(struct esb_evt const *event) {
                 if (k_msgq_put(&rx_msgq, &rx_payload, K_NO_WAIT) != 0) {
                     LOG_ERR("k_msgq_put failed");
                     rx_free(rx_payload);
-                    break;
+                    return;
                 }
-                k_sem_give(&rx_sem);
             }
             break;
     }
