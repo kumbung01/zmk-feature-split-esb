@@ -62,7 +62,7 @@ enum peripheral_slot_state {
 struct peripheral_slot {
     enum peripheral_slot_state state;
     int64_t last_reported;
-}
+};
 
 static struct peripheral_slot peripherals[CONFIG_ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS];
 
