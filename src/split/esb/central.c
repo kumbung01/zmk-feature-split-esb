@@ -102,7 +102,7 @@ static int split_central_esb_send_command(uint8_t source,
     set_tx_queued(true);
 
     if (is_esb_active())
-        k_work_submit_to_queue(&esb_work_q, &tx_work);
+        k_work_submit(&tx_work);
 
     return 0;
 }
@@ -216,9 +216,9 @@ static int zmk_split_esb_central_init(void) {
         return ret;
     }
 
-    service_init();
+    // service_init();
 
-    k_work_submit_to_queue(&esb_work_q, &notify_status_work);
+    k_work_submit(&notify_status_work);
     return 0;
 }
 
