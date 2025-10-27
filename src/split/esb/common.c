@@ -253,13 +253,7 @@ void rx_free(void *ptr) {
     k_mem_slab_free(&rx_slab, ptr);
 }
 
-void set_thread_id(k_tid_t thread) {
-    handle_thread = thread;
-}
-
-
 static atomic_t is_queued = ATOMIC_INIT(0);
-
 void set_tx_queued(bool _queued) {
     atomic_set(&is_queued, _queued ? 1 : 0);
 }

@@ -57,14 +57,22 @@ K_SEM_DEFINE(tx_sem, 1, 1);
 K_SEM_DEFINE(rx_sem, 1, 1);
 
 static app_esb_mode_t m_mode;
-static bool m_active = false;
+
+static atomic_t m_is_active = ATOMIC_INIT(0);
+void set_esb_active(bool is_active) {
+    atomic_set(&m_is_active, is_active ? 1 : 0);
+}
+
+bool is_esb_active(void) {
+    return atomic_get(&m_is_active) ? true : false;
+}
+
 static bool m_enabled = false;
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 static struct zmk_split_esb_async_state *m_state;
 
 static void event_handler(struct esb_evt const *event) {
     app_esb_event_t m_event = {0};
-    struct esb_payload *rx_payload = NULL;
 
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
@@ -79,6 +87,7 @@ static void event_handler(struct esb_evt const *event) {
         case ESB_EVENT_RX_RECEIVED:
             LOG_DBG("RX SUCCESS");
             m_event.evt_type = APP_ESB_EVT_RX;
+            struct esb_payload *rx_payload = NULL;
             if (rx_alloc(&rx_payload) != 0) {
                 LOG_ERR("Failed to allocate rx_slab");
                 return;
@@ -361,7 +370,7 @@ int zmk_split_esb_set_enable(bool enabled) {
 }
 
 static int app_esb_suspend(void) {
-    m_active = false;
+    set_esb_active(false);
     if(m_mode == APP_ESB_MODE_PTX) {
         uint32_t irq_key = irq_lock();
 
@@ -395,7 +404,7 @@ static int app_esb_suspend(void) {
 
 static int app_esb_resume(void) {
     int err = esb_initialize(m_mode);
-    m_active = true;
+    set_esb_active(true);
     return err;
 }
 
@@ -431,9 +440,7 @@ static int on_activity_state(const zmk_event_t *eh) {
     return 0;
 }
 
-bool is_esb_active(void) {
-    return m_active;
-}
+
 
 ZMK_LISTENER(zmk_split_esb_idle_sleeper, on_activity_state);
 ZMK_SUBSCRIPTION(zmk_split_esb_idle_sleeper, zmk_activity_state_changed);
