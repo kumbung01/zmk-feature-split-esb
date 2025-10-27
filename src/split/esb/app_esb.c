@@ -422,7 +422,8 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) 
     switch (type) {
         case APP_TS_STARTED:
             app_esb_resume();
-            k_sem_give(&tx_sem);
+            if (is_tx_queued())
+                k_sem_give(&tx_sem);
             break;
         case APP_TS_STOPPED:
             app_esb_suspend();
