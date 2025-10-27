@@ -166,7 +166,7 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t
 }
 
 #if IS_CENTRAL
-void tx_work_handler() {
+void tx_work_handler(struct k_work *work) {
     while (true) {
         if (!is_tx_queued()) {
             LOG_DBG("nothing queued");
