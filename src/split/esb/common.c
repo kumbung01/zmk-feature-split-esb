@@ -172,8 +172,11 @@ void handle_packet(struct zmk_split_esb_async_state* state) {
         size_t length = rx_payload->length - HEADER_SIZE;
         size_t offset = 0;
         size_t source = rx_payload->pipe;
-
+#if IS_CENTRAL
         if (source >= CONFIG_ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS) {
+#else
+        if (source != PERIPHERAL_ID) {
+#endif
             LOG_ERR("invalid source (%u)", source);
             rx_free(rx_payload);
             continue;
