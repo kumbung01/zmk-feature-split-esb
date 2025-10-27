@@ -178,21 +178,21 @@ void handle_packet(struct zmk_split_esb_async_state* state) {
         if (source != PERIPHERAL_ID)
 #endif
         {
-            LOG_ERR("invalid source (%u)", source);
+            LOG_WRN("invalid source (%u)", source);
             rx_free(rx_payload);
             continue;
         }
 
         ssize_t data_size = state->get_data_size_rx(type);
         if (data_size < 0) {
-            LOG_ERR("Unknown event type %d", type);
+            LOG_WRN("Unknown event type %d", type);
             rx_free(rx_payload);
             continue;
         }
         
         size_t count = length / data_size;
         if (count * data_size != length) {
-            LOG_ERR("data_size * count != length");
+            LOG_WRN("data_size * count != length");
             rx_free(rx_payload);
             continue;
         }
@@ -203,7 +203,7 @@ void handle_packet(struct zmk_split_esb_async_state* state) {
 
         for (size_t i = 0; i < count; ++i) {
             if (length < data_size + offset) {
-                LOG_ERR("Payload too small for event type %d", type);
+                LOG_WRN("Payload too small for event type %d", type);
                 break;
             }
 
@@ -212,7 +212,7 @@ void handle_packet(struct zmk_split_esb_async_state* state) {
 
             err = state->handler(&env);
             if (err < 0) {
-                LOG_ERR("zmk handler failed(%d)", err);
+                LOG_WRN("zmk handler failed(%d)", err);
             }
         }
 
