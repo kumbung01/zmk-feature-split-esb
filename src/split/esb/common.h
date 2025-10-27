@@ -22,6 +22,8 @@
 #define IS_CENTRAL IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 #define IS_PERIPHERAL !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 
+#define PERIPHERAL_ID CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID
+
 #define TIMEOUT_MS CONFIG_ZMK_SPLIT_ESB_KEYBOARD_EVENT_TIMEOUT_MS
 #define SAFE_DIV(x, y) ((x) / (y) > 0 ? (x) / (y) : 1)
 
@@ -97,7 +99,7 @@ int service_init();
 uint32_t get_nonce();
 int process_payload(char* data, size_t length, uint32_t nonce);
 
-size_t handle_packet(struct zmk_split_esb_async_state* state);
+void handle_packet(struct zmk_split_esb_async_state* state);
 void reset_buffers();
 
 
@@ -114,3 +116,7 @@ void rx_free(void *ptr);
 
 void set_tx_queued(bool _queued);
 bool is_tx_queued();
+
+void inc_handled();
+void reset_handled();
+size_t get_handled();

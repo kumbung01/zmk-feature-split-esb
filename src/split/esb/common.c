@@ -147,9 +147,21 @@ void reset_buffers() {
     }
 }
 
+static atomic_t m_handled = ATOMIC_INIT(0);
+void inc_handled() {
+    atomic_inc(&m_handled);
+}
 
-size_t handle_packet(struct zmk_split_esb_async_state* state) {
-    size_t handled = 0;
+void reset_handled() {
+    atomic_clear(&m_handled);
+}
+
+size_t get_handled() {
+    return atomic_get(&m_handled);
+}
+
+static const size_t can_handle = TX_MSGQ_SIZE / 2;
+void handle_packet(struct zmk_split_esb_async_state* state) {
 
     while (true) {
         struct esb_payload *rx_payload = NULL;
@@ -192,13 +204,15 @@ size_t handle_packet(struct zmk_split_esb_async_state* state) {
                 continue;
             }
 
-            handled++;
+            inc_handled();
+            if (get_handled() >= can_handle) {
+                reset_handled();
+                k_msleep(1);
+            }
         }
 
         rx_free(rx_payload);
     }
-
-    return handled;
 }
 
 int tx_msgq_init(struct k_msgq *msgqs[], size_t _count, const int* type_to_idx, int* _idx_to_type) {

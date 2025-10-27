@@ -31,8 +31,6 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #include "common.h"
 
 
-static const uint8_t peripheral_id = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID;
-
 static void process_tx_work_handler(struct k_work *work);
 K_WORK_DEFINE(process_tx_work, process_tx_work_handler);
 
@@ -83,7 +81,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     }
 
     env->event = *event;
-    env->source = peripheral_id;
+    env->source = PERIPHERAL_ID;
     env->timestamp = k_uptime_get();
 
     int idx = type_to_idx[event->type];
