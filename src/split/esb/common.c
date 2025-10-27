@@ -72,31 +72,30 @@ int service_init(void) {
 
 void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state) {
     switch(event->evt_type) {
+#if IS_CENTRAL
         case APP_ESB_EVT_TX_SUCCESS:
-#if IS_PERIPHERAL
-            k_sem_give(&tx_sem);
-#else
             k_work_submit_to_queue(&esb_work_q, state->central_tx_work);
-#endif
             break;
         case APP_ESB_EVT_TX_FAIL:
-#if IS_PERIPHERAL
+            esb_pop_tx();
+            k_work_submit_to_queue(&esb_work_q, state->central_tx_work);
+            break;
+        case APP_ESB_EVT_RX:
+            k_sem_give(&rx_sem);
+            break;
+#else // IS_PERIPHERAL
+        case APP_ESB_EVT_TX_SUCCESS:
+            k_sem_give(&tx_sem);
+            break;
+        case APP_ESB_EVT_TX_FAIL:
             esb_pop_tx();
             esb_start_tx();
             k_sem_give(&tx_sem);
-#else
-            esb_pop_tx();
-            k_work_submit_to_queue(&esb_work_q, state->central_tx_work);
-#endif
             break;
         case APP_ESB_EVT_RX:
-#if IS_PERIPHERAL
             k_work_submit_to_queue(&esb_work_q, state->peripheral_rx_work);
-#else
-            k_sem_give(&rx_sem);
-#endif
-
             break;
+#endif
         default:
             LOG_ERR("Unknown APP ESB event!");
             break;
