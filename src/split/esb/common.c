@@ -141,7 +141,7 @@ void reset_buffers() {
 
 size_t handle_packet(struct zmk_split_esb_async_state* state) {
     size_t handled = 0;
-    
+
     while (true) {
         struct esb_payload *rx_payload = NULL;
         int err = k_msgq_get(&rx_msgq, &rx_payload, K_NO_WAIT);
@@ -247,11 +247,12 @@ void set_thread_id(k_tid_t thread) {
 }
 
 
-static bool is_queued = false;
+static atomic_t is_queued = ATOMIC_INIT(0);
+
 void set_tx_queued(bool _queued) {
-    is_queued = _queued;
+    atomic_set(&is_queued, _queued ? 1 : 0);
 }
 
 bool is_tx_queued() {
-    return is_queued;
+    return atomic_get(&is_queued) ? true : false;
 }
