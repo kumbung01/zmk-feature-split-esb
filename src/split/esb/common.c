@@ -22,7 +22,16 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 K_MEM_SLAB_DEFINE_STATIC(tx_slab, sizeof(struct esb_data_envelope), TX_MSGQ_SIZE, 4);
 K_MEM_SLAB_DEFINE_STATIC(rx_slab, sizeof(struct esb_payload), RX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(rx_msgq, sizeof(void*), RX_MSGQ_SIZE, 4);
-static struct zmk_split_esb_msgq *tx_msgq;
+
+K_MSGQ_DEFINE(msgq0, sizeof(void*), TX_MSGQ_SIZE, 4);
+K_MSGQ_DEFINE(msgq1, sizeof(void*), TX_MSGQ_SIZE, 4);
+K_MSGQ_DEFINE(msgq2, sizeof(void*), TX_MSGQ_SIZE, 4);
+K_MSGQ_DEFINE(msgq3, sizeof(void*), TX_MSGQ_SIZE, 4);
+static struct k_msgq* tx_msgq[] = {&msgq0, &msgq1, &msgq2, &msgq3};
+static int idx_to_type[ARRAY_SIZE(tx_msgq)];
+static const size_t tx_msgq_cnt = ARRAY_SIZE(tx_msgq);
+
+
 ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type _type) {
     switch (_type) {
     case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_POLL_EVENTS:
@@ -137,7 +146,7 @@ void put_u32_le(uint8_t *dst, uint32_t v) {
 void reset_buffers() {
     void *data;
 
-    for (int i = 0; i < tx_msgq->count; ++i) {
+    for (int i = 0; i < tx_msgq_cnt; ++i) {
         while (k_msgq_get(tx_msgq->msgqs[i], &data, K_NO_WAIT) == 0) {
             tx_free(data);
         }
@@ -214,32 +223,25 @@ void handle_packet(struct zmk_split_esb_async_state* state) {
     }
 }
 
-int tx_msgq_init(struct zmk_split_esb_msgq *msgqs) {
-    if (msgqs == NULL) {
-        return -ENOBUFS;
-    }
+int tx_msgq_init(int *type_to_idx) {
+    __ASSERT(type_to_idx != NULL, "type_to_idx must not NULL");
 
-    tx_msgq = msgqs;
-    for (int i = 0; i < tx_msgq->count; ++i) {
-        int idx = tx_msgq->type_to_idx[i];
-        tx_msgq->idx_to_type[idx] = i;
+    for (int i = 0; i < tx_msgq_cnt; ++i) {
+        int idx = type_to_idx[i];
+        __ASSERT(idx >= 0 && idx < tx_msgq_cnt, "idx out of valid range");
+        idx_to_type[idx] = i;
     }
 
     return 0;
 }
 
 struct k_msgq *tx_msgq_ready(int *_type) {
-    if (!_type || !tx_msgq) {
-        return NULL;
-    }
+    __ASSERT(_type != NULL, "_type must not NULL");
 
-    for (int i = 0; i < tx_msgq->count; ++i) {
-        if (tx_msgq->msgq[i] == NULL)
-            continue;
-
-        if (k_msgq_num_used_get(tx_msgq->msgq[i]) > 0) {
-            *_type = tx_msgq->idx_to_type[i];
-            return tx_msgq->msgq[i];
+    for (int i = 0; i < tx_msgq_cnt; ++i) {
+        if (k_msgq_num_used_get(tx_msgq[i]) > 0) {
+            *_type = idx_to_type[i];
+            return tx_msgq[i];
         }
     }
 

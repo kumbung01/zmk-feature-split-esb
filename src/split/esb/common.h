@@ -88,12 +88,6 @@ struct zmk_split_esb_async_state {
     zmk_split_transport_data_handler handler;
 };
 
-struct zmk_split_esb_msgq {
-    size_t count;
-    struct k_msgq **msgq;
-    size_t *type_to_idx;
-    size_t *idx_to_type;
-};
 
 void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state);
 
@@ -114,7 +108,7 @@ uint32_t get_u32_le(const uint8_t *src);
 void put_u32_le(uint8_t *dst, uint32_t val);
 
 
-int tx_msgq_init(struct zmk_split_esb_msgq *msgqs);
+int tx_msgq_init(int *type_to_idx);
 struct k_msgq *tx_msgq_ready(int *_type);
 int tx_alloc(void **ptr);
 int rx_alloc(void **ptr);

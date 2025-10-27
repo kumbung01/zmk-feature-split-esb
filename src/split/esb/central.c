@@ -34,6 +34,11 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #define MPSL_THREAD_PRIO             CONFIG_MPSL_THREAD_COOP_PRIO
 #define STACKSIZE                    CONFIG_MAIN_STACK_SIZE
 
+#if IS_ENABLED(CONFIG_ZMK_BATTERY_REPORT_INTERVAL)
+#define PERIPHERAL_REPORT_INTERVAL CONFIG_ZMK_BATTERY_REPORT_INTERVAL
+#else
+#define PERIPHERAL_REPORT_INTERVAL 60
+#endif
 
 static int type_to_idx[] = {
     [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_POLL_EVENTS]          = 0,
@@ -41,25 +46,6 @@ static int type_to_idx[] = {
     [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_PHYSICAL_LAYOUT]  = 2,
     [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_HID_INDICATORS]   = 3,
 };
-static int idx_to_type[ARRAY_SIZE(type_to_idx)];
-K_MSGQ_DEFINE(msgq0, sizeof(void*), TX_MSGQ_SIZE, 4);
-K_MSGQ_DEFINE(msgq1, sizeof(void*), SAFE_DIV(TX_MSGQ_SIZE, 2), 4);
-K_MSGQ_DEFINE(msgq2, sizeof(void*), SAFE_DIV(TX_MSGQ_SIZE, 4), 4);
-K_MSGQ_DEFINE(msgq3, sizeof(void*), SAFE_DIV(TX_MSGQ_SIZE, 8), 4);
-static struct k_msgq* msgqs[] = {&msgq0, &msgq1, &msgq2, &msgq3};
-
-static struct zmk_split_esb_msgq tx_msgq = {
-    .type_to_idx = type_to_idx,
-    .idx_to_type = idx_to_type,
-    .count = ARRAY_SIZE(type_to_idx),
-    .msgq = msgqs,
-};
-
-#if IS_ENABLED(CONFIG_ZMK_BATTERY_REPORT_INTERVAL)
-#define PERIPHERAL_REPORT_INTERVAL CONFIG_ZMK_BATTERY_REPORT_INTERVAL
-#else
-#define PERIPHERAL_REPORT_INTERVAL 60
-#endif
 
 enum peripheral_slot_state {
     PERIPHERAL_DOWN,
@@ -218,7 +204,7 @@ K_THREAD_DEFINE(publish_events_thread_id, STACKSIZE,
 
 
 static int zmk_split_esb_central_init(void) {
-    int ret = tx_msgq_init(&tx_msgq);
+    int ret = tx_msgq_init(type_to_idx);
     if (ret) {
         LOG_ERR("tx_msgq_init failed(%d)", ret);
         return ret;

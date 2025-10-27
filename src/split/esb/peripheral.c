@@ -30,6 +30,12 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #include "app_esb.h"
 #include "common.h"
 
+static int type_to_idx[] = {
+    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT]  = 0,
+    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT]         = 1,
+    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT]        = 2,
+    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT]       = 3
+};
 
 static void process_tx_work_handler(struct k_work *work);
 K_WORK_DEFINE(process_tx_work, process_tx_work_handler);
@@ -46,27 +52,6 @@ static struct zmk_split_esb_async_state async_state = {
 void zmk_split_esb_on_ptx_esb_callback(app_esb_event_t *event) {
     zmk_split_esb_cb(event, &async_state);
 }
-
-
-static int type_to_idx[] = {
-    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT]  = 0,
-    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT]         = 1,
-    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT]        = 2,
-    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT]       = 3
-};
-static int idx_to_type[ARRAY_SIZE(type_to_idx)];
-K_MSGQ_DEFINE(msgq0, sizeof(void*), TX_MSGQ_SIZE, 4);
-K_MSGQ_DEFINE(msgq1, sizeof(void*), SAFE_DIV(TX_MSGQ_SIZE, 2), 4);
-K_MSGQ_DEFINE(msgq2, sizeof(void*), SAFE_DIV(TX_MSGQ_SIZE, 4), 4);
-K_MSGQ_DEFINE(msgq3, sizeof(void*), SAFE_DIV(TX_MSGQ_SIZE, 8), 4);
-static struct k_msgq* msgqs[] = {&msgq0, &msgq1, &msgq2, &msgq3};
-
-static struct zmk_split_esb_msgq tx_msgq = {
-    .type_to_idx = type_to_idx,
-    .idx_to_type = idx_to_type,
-    .count = ARRAY_SIZE(type_to_idx),
-    .msgq = msgqs,
-};
 
 static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
@@ -149,7 +134,7 @@ static void notify_status_work_cb(struct k_work *_work) { notify_transport_statu
 static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
 static int zmk_split_esb_peripheral_init(void) {
-    int ret = tx_msgq_init(&tx_msgq);
+    int ret = tx_msgq_init(type_to_idx);
     if (ret) {
         LOG_ERR("tx_msgq_init faied(%d)", ret);
         return ret;
