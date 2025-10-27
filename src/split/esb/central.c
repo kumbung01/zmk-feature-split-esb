@@ -75,14 +75,14 @@ static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd) {
     ssize_t data_size = get_payload_data_size_cmd(cmd.type);
     if (data_size < 0) {
-        LOG_ERR("get_payload_data_size_cmd failed (err %d)", data_size);
+        LOG_WRN("get_payload_data_size_cmd failed (err %d)", data_size);
         return -ENOTSUP;
     }
 
     struct esb_data_envelope *env;
     int ret = tx_alloc(&env);
     if (ret < 0) {
-        LOG_ERR("k_mem_slab_alloc failed (err %d)", ret);
+        LOG_WRN("k_mem_slab_alloc failed (err %d)", ret);
         return -ENOMEM;
     }
 
@@ -94,7 +94,7 @@ static int split_central_esb_send_command(uint8_t source,
 
     ret = k_msgq_put(get_tx_msgq(idx), &env, K_NO_WAIT);
     if (ret < 0) {
-        LOG_ERR("k_msgq_put failed (err %d)", ret);
+        LOG_WRN("k_msgq_put failed (err %d)", ret);
         tx_free(env);
         return ret;
     }

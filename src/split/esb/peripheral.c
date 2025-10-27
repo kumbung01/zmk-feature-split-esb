@@ -60,14 +60,14 @@ static int
 split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event) {
     ssize_t data_size = get_payload_data_size_evt(event->type);
     if (data_size < 0) {
-        LOG_ERR("get_payload_data_size_evt failed (err %d)", data_size);
+        LOG_WRN("get_payload_data_size_evt failed (err %d)", data_size);
         return -ENOTSUP;
     }
 
     struct esb_data_envelope *env;
     int ret = tx_alloc(&env);
     if (ret < 0) {
-        LOG_ERR("Failed to allocate tx_slab (err %d)", ret);
+        LOG_WRN("Failed to allocate tx_slab (err %d)", ret);
         return -ENOMEM;
     }
 
@@ -79,7 +79,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
 
     ret = k_msgq_put(get_tx_msgq(idx), &env, K_NO_WAIT);
     if (ret < 0) {
-        LOG_ERR("k_msgq_put failed (err %d)", ret);
+        LOG_WRN("k_msgq_put failed (err %d)", ret);
         tx_free(env);
         return ret;
     }
