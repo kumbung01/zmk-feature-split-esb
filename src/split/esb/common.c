@@ -69,7 +69,7 @@ int service_init(void) {
     return 0;
 }
 
-
+static size_t tx_fail_count = 0;
 void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state) {
     switch(event->evt_type) {
 #if IS_CENTRAL
@@ -86,11 +86,19 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
 #else // IS_PERIPHERAL
         case APP_ESB_EVT_TX_SUCCESS:
             k_sem_give(&tx_sem);
+            tx_fail_count = 0;
             break;
         case APP_ESB_EVT_TX_FAIL:
-            esb_pop_tx();
-            esb_start_tx();
-            k_sem_give(&tx_sem);
+            if (tx_fail_count++ > 0) {
+                tx_fail_count = 0;
+                esb_pop_tx();
+                esb_start_tx();
+                k_sem_give(&tx_sem);
+            }
+            else {
+                esb_start_tx();
+            }
+
             break;
         case APP_ESB_EVT_RX:
             k_work_submit_to_queue(&esb_work_q, state->peripheral_rx_work);
