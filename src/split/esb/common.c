@@ -81,11 +81,11 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
     switch(event->evt_type) {
 #if IS_CENTRAL
         case APP_ESB_EVT_TX_SUCCESS:
-            k_work_submit_to_queue(&esb_work_q, state->central_tx_work);
+            // k_work_submit(state->central_tx_work);
             break;
         case APP_ESB_EVT_TX_FAIL:
             // esb_pop_tx();
-            k_work_submit_to_queue(&esb_work_q, state->central_tx_work);
+            // k_work_submit(state->central_tx_work);
             break;
         case APP_ESB_EVT_RX:
             k_sem_give(&rx_sem);
