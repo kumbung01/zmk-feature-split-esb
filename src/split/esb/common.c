@@ -218,6 +218,9 @@ size_t handle_packet(struct zmk_split_esb_async_state* state) {
         handled++;
     }
 
+    if (handled == 0)
+        handled = 1; // to prevent from tx app execute
+
 CLEANUP:
     rx_free(rx_payload);
     return handled;
