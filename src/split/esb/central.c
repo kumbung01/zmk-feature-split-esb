@@ -102,7 +102,7 @@ static int split_central_esb_send_command(uint8_t source,
     set_tx_queued(true);
 
     if (is_esb_active())
-        k_work_submit(&tx_work);
+        k_sem_give(&tx_sem);
 
     return 0;
 }

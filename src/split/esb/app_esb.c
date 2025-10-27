@@ -165,7 +165,7 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t
     return count;
 }
 
-#if IS_CENTRAL
+#if 0
 void tx_work_handler(struct k_work *work) {
     while (true) {
         if (!is_tx_queued()) {
@@ -248,7 +248,6 @@ void tx_thread() {
             ret = esb_start_tx();
             if (ret != -EBUSY) {
                 LOG_DBG("esb_start_tx() returned (%d)", ret);
-                break; // break if not busy but error
             }
         }
     }
