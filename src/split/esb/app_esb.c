@@ -51,10 +51,6 @@ uint8_t esb_addr_prefix[8] = DT_INST_PROP(0, addr_prefix);
 #error "Need to create a node with compatible of 'zmk,esb-split` with `all `address` property set."
 #endif
 
-#define RETRANSMIT_DELAY 0
-
-#define TIMEOUT_MS CONFIG_ZMK_SPLIT_ESB_KEYBOARD_EVENT_TIMEOUT_MS
-
 static app_esb_callback_t m_callback;
 
 K_SEM_DEFINE(tx_sem, 1, 1);

@@ -30,8 +30,6 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #include "app_esb.h"
 #include "common.h"
 
-#define MPSL_THREAD_PRIO             CONFIG_MPSL_THREAD_COOP_PRIO
-#define STACKSIZE                    CONFIG_MAIN_STACK_SIZE
 
 static const uint8_t peripheral_id = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID;
 
