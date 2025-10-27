@@ -147,19 +147,8 @@ void reset_buffers() {
     }
 }
 
-static atomic_t m_handled = ATOMIC_INIT(0);
-void inc_handled() {
-    atomic_inc(&m_handled);
-}
 
-void reset_handled() {
-    atomic_clear(&m_handled);
-}
-
-size_t get_handled() {
-    return atomic_get(&m_handled);
-}
-
+size_t handled = 0;
 static const size_t can_handle = TX_MSGQ_SIZE / 2;
 void handle_packet(struct zmk_split_esb_async_state* state) {
 
@@ -204,11 +193,13 @@ void handle_packet(struct zmk_split_esb_async_state* state) {
                 continue;
             }
 
-            inc_handled();
-            if (get_handled() >= can_handle) {
-                reset_handled();
+#if IS_CENTRAL
+            handled++;
+            if (handled >= can_handle) {
+                handled = 0;
                 k_msleep(1);
             }
+#endif
         }
 
         rx_free(rx_payload);

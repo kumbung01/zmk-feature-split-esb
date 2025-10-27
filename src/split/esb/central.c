@@ -146,6 +146,7 @@ static void notify_status_work_cb(struct k_work *_work) { notify_transport_statu
 
 static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
+extern size_t handled;
 static void publish_events_thread() {
     int64_t time = k_uptime_get();
 
@@ -153,7 +154,7 @@ static void publish_events_thread() {
     {
         k_sem_take(&rx_sem, K_FOREVER);
         if (k_uptime_delta(&time) >= TIMEOUT_MS) {
-            reset_handled();
+            handled = 0;
         }
 
         handle_packet(&async_state);
