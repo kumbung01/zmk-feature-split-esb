@@ -104,7 +104,7 @@ static int split_central_esb_send_command(uint8_t source,
     set_tx_queued(true);
 
     if (is_esb_active())
-        k_sem_give(&tx_sem);
+        k_sem_give(&rx_sem);
 
     return 0;
 }
@@ -196,6 +196,8 @@ static void publish_events_thread() {
     while (true)
     {
         k_sem_take(&rx_sem, K_FOREVER);
+        if (is_tx_queued())
+            esb_tx_app();
         handle_packet(&async_state);
     }
 }

@@ -165,6 +165,52 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t
     return count;
 }
 
+
+void esb_tx_app() {
+    if (!is_esb_active()) {
+        LOG_DBG("esb not active, retry later");
+        return;
+    }
+
+    if (!is_tx_queued()) {
+        LOG_DBG("tx not queued");
+        return;
+    }
+
+    while (true) {
+        if (esb_tx_full()) {
+            LOG_DBG("esb tx full, wait for next tx event");
+            break;
+        }
+
+        int type = -1;
+        struct k_msgq *msgq = tx_msgq_ready(&type);
+        if (msgq == NULL) {
+            set_tx_queued(false);
+            break;
+        }
+
+        struct esb_payload payload;
+        int packet_count = make_packet(msgq, &payload, type);
+        if (packet_count == 0) {
+            LOG_DBG("no packet to send");
+            break;
+        }
+
+        int ret = esb_write_payload(&payload);
+        if (ret != 0) {
+            LOG_WRN("esb_write_payload returned %d", ret);
+            break;
+        }
+
+        ret = esb_start_tx();
+        if (ret != -EBUSY) {
+            LOG_DBG("esb_start_tx() returned (%d)", ret);
+        }
+    }
+}
+
+
 #if 0
 void tx_work_handler(struct k_work *work) {
     while (true) {
@@ -208,48 +254,7 @@ void tx_thread() {
     {
         k_sem_take(&tx_sem, K_FOREVER);
         LOG_DBG("tx thread awake");
-
-        if (!is_esb_active()) {
-            LOG_DBG("esb not active, retry later");
-            continue;
-        }
-
-        if (!is_tx_queued()) {
-            LOG_DBG("tx not queued");
-            continue;
-        }
-
-        while (true) {
-            if (esb_tx_full()) {
-                LOG_DBG("esb tx full, wait for next tx event");
-                break;
-            }
-
-            int type = -1;
-            struct k_msgq *msgq = tx_msgq_ready(&type);
-            if (msgq == NULL) {
-                set_tx_queued(false);
-                break;
-            }
-
-            struct esb_payload payload;
-            int packet_count = make_packet(msgq, &payload, type);
-            if (packet_count == 0) {
-                LOG_DBG("no packet to send");
-                break;
-            }
-
-            int ret = esb_write_payload(&payload);
-            if (ret != 0) {
-                LOG_WRN("esb_write_payload returned %d", ret);
-                break;
-            }
-
-            ret = esb_start_tx();
-            if (ret != -EBUSY) {
-                LOG_DBG("esb_start_tx() returned (%d)", ret);
-            }
-        }
+        esb_tx_app();
     }
 }
 
@@ -257,6 +262,8 @@ K_THREAD_DEFINE(tx_thread_id, 1300,
         tx_thread, NULL, NULL, NULL,
         0, 0, 0);
 #endif
+
+
 
 
 static int clocks_start(void) {
