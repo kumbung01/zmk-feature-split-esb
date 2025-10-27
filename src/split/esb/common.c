@@ -149,7 +149,7 @@ void reset_buffers() {
 
 
 size_t handled = 0;
-static const size_t can_handle = TX_MSGQ_SIZE / 2;
+static const size_t can_handle = TX_MSGQ_SIZE - 1;
 void handle_packet(struct zmk_split_esb_async_state* state) {
 
     while (true) {

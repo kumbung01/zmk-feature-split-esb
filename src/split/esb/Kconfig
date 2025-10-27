@@ -50,7 +50,7 @@ config ZMK_SPLIT_ESB_BITRATE_2MBPS
 
 config ZMK_SPLIT_ESB_KEYBOARD_EVENT_TIMEOUT_MS
     int "keyboard event timeout in ms"
-    default 100
+    default 50
 
 config ZMK_SPLIT_ESB_ENCRYPTION_KEY
     string "10+byte encryption key in string"
