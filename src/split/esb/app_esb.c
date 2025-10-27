@@ -67,7 +67,6 @@ bool is_esb_active(void) {
     return atomic_get(&m_is_active) ? true : false;
 }
 
-static bool m_enabled = false;
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 static struct zmk_split_esb_async_state *m_state;
 
@@ -358,8 +357,9 @@ int zmk_split_esb_init(app_esb_mode_t mode, app_esb_callback_t callback, struct 
     return 0;
 }
 
+static atomic_t m_enabled = ATOMIC_INIT(0);
 int zmk_split_esb_set_enable(bool enabled) {
-    m_enabled = enabled;
+    atomic_set(&m_enabled, enabled ? 1 : 0);
     if (enabled) {
         zmk_split_esb_timeslot_open_session();
         return 0;
@@ -367,6 +367,10 @@ int zmk_split_esb_set_enable(bool enabled) {
         zmk_split_esb_timeslot_close_session();
         return 0;
     }
+}
+
+bool int zmk_split_esb_get_enable() {
+    return atomic_get(&m_enabled) ? true : false;
 }
 
 static int app_esb_suspend(void) {
@@ -429,10 +433,10 @@ static int on_activity_state(const zmk_event_t *eh) {
     }
 
     if (m_mode == APP_ESB_MODE_PTX) {
-        if (state_ev->state != ZMK_ACTIVITY_ACTIVE && m_enabled) {
+        if (state_ev->state != ZMK_ACTIVITY_ACTIVE && zmk_split_esb_get_enable()) {
             zmk_split_esb_set_enable(false);
         }
-        else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !m_enabled) {
+        else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !zmk_split_esb_get_enable()) {
             zmk_split_esb_set_enable(true);
         }
     }
