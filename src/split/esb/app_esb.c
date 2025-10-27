@@ -118,8 +118,8 @@ static void event_handler(struct esb_evt const *event) {
 static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t type) {
     const int64_t now = k_uptime_get();
     size_t count = 0;
-    uint8_t offset = 0;
-    struct payload_buffer *buf = payload->data;
+    size_t offset = 0;
+    struct payload_buffer *buf = (struct payload_buffer *)payload->data;
     const size_t body_size = sizeof(buf->body);
     const size_t data_size = m_state->get_data_size_tx(type);
 #if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
@@ -142,7 +142,7 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t
         
         int64_t timestamp = env->timestamp;
         if (now - timestamp > TIMEOUT_MS) {
-            LOG_DBG("dropping old event type %d timestamp %d", type, now - timestamp);
+            LOG_DBG("dropping old event type %lld timestamp %lld", type, now - timestamp);
             tx_free(env);
             continue;
         }
