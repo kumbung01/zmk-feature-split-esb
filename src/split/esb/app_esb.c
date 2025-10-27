@@ -107,11 +107,12 @@ static void event_handler(struct esb_evt const *event) {
 
 static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t type) {
     const int64_t now = k_uptime_get();
+    const size_t body_size = sizeof(buf->body);
+    const size_t data_size = m_state->get_data_size_tx(type);
     size_t count = 0;
     size_t offset = 0;
     struct payload_buffer *buf = (struct payload_buffer *)payload->data;
-    const size_t body_size = sizeof(buf->body);
-    const size_t data_size = m_state->get_data_size_tx(type);
+
 #if IS_PERIPHERAL
     payload->pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID; // use the peripheral_id as the ESB pipe number
 #endif
@@ -157,12 +158,9 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t
 
     // write header and length
     if (count > 0) {
-        // put_u32_le(&buf->header.nonce, nonce);
         buf->header.type = type;
         payload->length = offset + HEADER_SIZE;
     }
-
-    // process_payload((char*)&payload->data[5], payload->length - HEADER_SIZE, nonce);
 
     return count;
 }
@@ -170,10 +168,20 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t
 #if IS_CENTRAL
 void tx_work_handler() {
     while (true) {
+        if (!is_tx_queued()) {
+            LOG_DBG("nothing queued");
+            break;
+        }
 
         int type = -1;
         struct k_msgq *msgq = tx_msgq_ready(&type);
         if (msgq == NULL) {
+            set_tx_queued(false);
+            break;
+        }
+
+        if (esb_tx_full()) {
+            LOG_DBG("esb tx full, wait for next tx event");
             break;
         }
 
@@ -369,7 +377,7 @@ int zmk_split_esb_set_enable(bool enabled) {
     }
 }
 
-bool int zmk_split_esb_get_enable() {
+bool zmk_split_esb_get_enable() {
     return atomic_get(&m_enabled) ? true : false;
 }
 
