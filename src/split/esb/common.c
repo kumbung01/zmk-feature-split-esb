@@ -191,6 +191,12 @@ void handle_packet(struct zmk_split_esb_async_state* state) {
         }
         
         size_t count = length / data_size;
+        if (count * data_size != length) {
+            LOG_ERR("data_size * count != length");
+            rx_free(rx_payload);
+            continue;
+        }
+
         struct esb_data_envelope env = { .buf.type = type, 
                                          .source = source,
                                         };

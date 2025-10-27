@@ -97,7 +97,7 @@ static int split_central_esb_send_command(uint8_t source,
     env->source = source;
     env->timestamp = k_uptime_get();
 
-    int idx = type_to_idx[event->type];
+    int idx = type_to_idx[cmd.type];
 
     ret = k_msgq_put(msgqs[idx], &env, K_NO_WAIT);
     if (ret < 0) {
