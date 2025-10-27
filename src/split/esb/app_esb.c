@@ -249,18 +249,7 @@ void tx_work_handler(struct k_work *work) {
 
 K_WORK_DEFINE(tx_work, tx_work_handler);
 #else
-void tx_thread() {
-    while (true)
-    {
-        k_sem_take(&tx_sem, K_FOREVER);
-        LOG_DBG("tx thread awake");
-        esb_tx_app();
-    }
-}
 
-K_THREAD_DEFINE(tx_thread_id, 1300,
-        tx_thread, NULL, NULL, NULL,
-        0, 0, 0);
 #endif
 
 
