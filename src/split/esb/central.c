@@ -116,7 +116,8 @@ static int split_central_esb_send_command(uint8_t source,
         return ret;
     }
 
-    k_work_submit(&tx_work);
+    if (is_esb_active())
+        k_work_submit(&tx_work);
 
     return 0;
 }

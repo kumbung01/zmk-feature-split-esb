@@ -95,7 +95,8 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
         return ret;
     }
     
-    k_work_submit(&tx_work);
+    if (is_esb_active())
+        k_work_submit(&tx_work);
 
     return 0;
 }
