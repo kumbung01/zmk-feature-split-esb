@@ -73,13 +73,13 @@ static void event_handler(struct esb_evt const *event) {
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
             LOG_DBG("TX SUCCESS");
-            if (m_mode == APP_ESB_MODE_PTX) {
+#if IS_PERIPHERAL
                 k_sem_give(&tx_sem);
-            }
+#endif
             break;
         case ESB_EVENT_TX_FAILED:
             LOG_WRN("ESB_EVENT_TX_FAILED");
-            if (m_mode == APP_ESB_MODE_PTX) {
+#if IS_PERIPHERAL
                 static int tx_fail_count = 0;
                 if (tx_fail_count++ > 0) {
                     tx_fail_count = 0;
@@ -87,11 +87,10 @@ static void event_handler(struct esb_evt const *event) {
                     k_sem_give(&tx_sem);
                 }
                 esb_start_tx();
-            }
+#endif
             break;
         case ESB_EVENT_RX_RECEIVED:
             LOG_DBG("RX SUCCESS");
-            // m_event.evt_type = APP_ESB_EVT_RX;
             if (rx_alloc(&payload) != 0) {
                 LOG_WRN("Failed to allocate rx_slab");
                 return;
@@ -175,11 +174,6 @@ static int make_packet(struct esb_payload *payload) {
 
 
 void esb_tx_app() {
-    if (!is_esb_active()) {
-        LOG_DBG("esb not active, retry later");
-        return;
-    }
-
     while (true) {
         if (esb_tx_full()) {
             LOG_DBG("esb tx full, wait for next tx event");
