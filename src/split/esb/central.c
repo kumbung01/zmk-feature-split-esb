@@ -59,6 +59,7 @@ struct peripheral_slot {
 
 static struct peripheral_slot peripherals[CONFIG_ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS];
 
+static struct zmk_split_esb_async_state async_state;
 static void rx_work_handler(struct k_work *work) {
     while (handle_packet(&async_state) == 0) {}
 }
