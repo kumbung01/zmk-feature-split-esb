@@ -65,6 +65,7 @@ bool is_esb_active(void) {
 
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
+
 static void event_handler(struct esb_evt const *event) {
     struct esb_payload *payload = NULL;
 
@@ -75,7 +76,12 @@ static void event_handler(struct esb_evt const *event) {
         case ESB_EVENT_TX_FAILED:
             LOG_WRN("ESB_EVENT_TX_FAILED");
             if (m_mode == APP_ESB_MODE_PTX) {
-                esb_pop_tx();
+                static int tx_fail_count = 0;
+                if (tx_fail_count++ > 0) {
+                    tx_fail_count = 0;
+                    esb_pop_tx();
+                }
+                esb_start_tx();
             }
             break;
         case ESB_EVENT_RX_RECEIVED:
