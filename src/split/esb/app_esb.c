@@ -86,7 +86,7 @@ static void event_handler(struct esb_evt const *event) {
                 return;
             }
 
-            if (esb_read_payload(payload) != 0) {
+            if (esb_read_rx_payload(payload) != 0) {
                 LOG_WRN("esb_read_payload fail");
                 rx_free(payload);
                 return;

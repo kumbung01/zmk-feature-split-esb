@@ -154,15 +154,6 @@ static int zmk_split_esb_peripheral_init(void) {
 
 SYS_INIT(zmk_split_esb_peripheral_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 
-
-static void process_tx_work_handler(struct k_work *work) {
-    while (true) {
-        if (handle_packet(&async_state) == 0) {
-            break;
-        }
-    }
-}
-
 static int peripheral_handler(struct esb_data_envelope* env) {
     return zmk_split_transport_peripheral_command_handler(&esb_peripheral, env->command);
 }
