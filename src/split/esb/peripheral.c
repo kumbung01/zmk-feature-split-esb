@@ -67,7 +67,6 @@ void zmk_split_esb_on_ptx_esb_callback(app_esb_event_t *event) {
 
 static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
-extern struct k_work_q esb_work_q;
 static int
 split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event) {
     ssize_t data_size = get_payload_data_size_evt(event->type);
@@ -96,7 +95,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
         return ret;
     }
     
-    k_work_submit(state->tx_work);
+    k_work_submit(&tx_work);
 
     return 0;
 }
@@ -154,8 +153,6 @@ static int zmk_split_esb_peripheral_init(void) {
         LOG_ERR("zmk_split_esb_init failed (ret %d)", ret);
         return ret;
     }
-
-    service_init();
 
     k_work_submit(&notify_status_work);
     return 0;
