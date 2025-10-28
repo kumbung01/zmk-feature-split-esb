@@ -251,8 +251,8 @@ void *get_next_rx_data() {
     return ptr;
 }
 
-int get_rx_data_count() {
-    return k_msgq_num_used_get(&rx_msgq) > 0;
+size_t get_rx_data_count() {
+    return k_msgq_num_used_get(&rx_msgq);
 }
 
 int put_rx_data(void *ptr) {
