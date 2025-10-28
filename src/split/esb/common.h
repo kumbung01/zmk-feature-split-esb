@@ -97,7 +97,7 @@ void reset_buffers();
 int tx_msgq_init(int *type_to_idx);
 int put_tx_data(void *ptr);
 void *get_next_tx_data();
-void requeue_tx_data(void *ptr);
+size_t get_rx_data_count();
 int tx_alloc(void **ptr);
 int rx_alloc(void **ptr);
 void tx_free(void *ptr);

@@ -248,6 +248,10 @@ void *get_next_rx_data() {
     return ptr;
 }
 
+int get_rx_data_count() {
+    return k_msgq_num_used_get(&rx_msgq) > 0;
+}
+
 int put_rx_data(void *ptr) {
     return k_msgq_put(&rx_msgq, &ptr, K_NO_WAIT) != 0;
 }
