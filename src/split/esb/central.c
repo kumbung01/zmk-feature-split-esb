@@ -58,9 +58,6 @@ struct peripheral_slot {
 };
 
 static struct peripheral_slot peripherals[CONFIG_ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS];
-
-static struct zmk_split_esb_async_state async_state;
-
 static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
 
@@ -79,7 +76,7 @@ static struct zmk_split_esb_ops central_ops = {
 };
 
 static void rx_work_handler(struct k_work *work) {
-    while (handle_packet(&async_state) == 0) {}
+    while (handle_packet() == 0) {}
 }
 
 static void tx_work_handler(struct k_work *work) {

@@ -38,8 +38,6 @@ static const int type_to_idx[] = {
 };
 
 static int peripheral_handler(struct esb_data_envelope* env);
-
-static int central_handler(struct esb_data_envelope *env);
 static void rx_work_handler(struct k_work *work);
 static void tx_work_handler(struct k_work *work);
 K_WORK_DEFINE(rx_work, rx_work_handler);
@@ -54,7 +52,7 @@ static struct zmk_split_esb_ops peripheral_ops = {
 };
 
 static void rx_work_handler(struct k_work *work) {
-    while (handle_packet(&async_state) == 0) {}
+    while (handle_packet() == 0) {}
 }
 
 static void tx_work_handler(struct k_work *work) {
