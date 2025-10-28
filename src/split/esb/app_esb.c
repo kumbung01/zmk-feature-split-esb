@@ -172,11 +172,6 @@ void esb_tx_app() {
         return;
     }
 
-    if (!is_tx_queued()) {
-        LOG_DBG("tx not queued");
-        return;
-    }
-
     while (true) {
         if (esb_tx_full()) {
             LOG_DBG("esb tx full, wait for next tx event");
@@ -186,7 +181,6 @@ void esb_tx_app() {
         int type = -1;
         struct k_msgq *msgq = tx_msgq_ready(&type);
         if (msgq == NULL) {
-            set_tx_queued(false);
             break;
         }
 
