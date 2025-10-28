@@ -103,14 +103,12 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
             break;
 #else // IS_PERIPHERAL
         case APP_ESB_EVT_TX_SUCCESS:
-            k_work_submit(state->tx_work);
             tx_fail_count = 0;
             break;
         case APP_ESB_EVT_TX_FAIL:
             if (tx_fail_count++ > 0) {
                 tx_fail_count = 0;
                 esb_pop_tx();
-                k_work_submit(state->tx_work);
             }
             esb_start_tx();
             break;
