@@ -80,7 +80,7 @@ struct zmk_split_esb_ops {
     zmk_split_transport_data_handler data_handler;
 };
 
-extern struct zmk_split_esb_ops esb_ops;
+extern struct zmk_split_esb_ops *esb_ops;
 
 ssize_t get_payload_data_size_evt(enum zmk_split_transport_peripheral_event_type _type);
 ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type _type);
