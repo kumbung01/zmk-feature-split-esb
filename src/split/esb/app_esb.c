@@ -206,50 +206,6 @@ void esb_tx_app() {
 }
 
 
-#if 0
-void tx_work_handler(struct k_work *work) {
-    while (true) {
-        if (!is_tx_queued()) {
-            LOG_DBG("nothing queued");
-            break;
-        }
-
-        int type = -1;
-        struct k_msgq *msgq = tx_msgq_ready(&type);
-        if (msgq == NULL) {
-            set_tx_queued(false);
-            break;
-        }
-
-        if (esb_tx_full()) {
-            LOG_DBG("esb tx full, wait for next tx event");
-            break;
-        }
-
-        struct esb_payload payload;
-        int packet_count = make_packet(msgq, &payload, type);
-        if (packet_count == 0) {
-            LOG_DBG("no packet to send");
-            break;
-        }
-
-        LOG_WRN("TX packet with %d events on pipe %d", packet_count, payload.pipe);
-        int ret = esb_write_payload(&payload);
-        if (ret != 0) {
-            LOG_DBG("esb_write_payload returned %d", ret);
-            break;
-        }
-    }
-}
-
-K_WORK_DEFINE(tx_work, tx_work_handler);
-#else
-
-#endif
-
-
-
-
 static int clocks_start(void) {
     int err;
     int res;
@@ -415,8 +371,6 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) 
     switch (type) {
         case APP_TS_STARTED:
             app_esb_resume();
-            if (is_tx_queued())
-                k_sem_give(&tx_sem);
             break;
         case APP_TS_STOPPED:
             app_esb_suspend();
@@ -436,6 +390,7 @@ static int on_activity_state(const zmk_event_t *eh) {
         }
         else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !zmk_split_esb_get_enable()) {
             zmk_split_esb_set_enable(true);
+            k_work_submit(m_state->tx_work);
         }
     }
 
