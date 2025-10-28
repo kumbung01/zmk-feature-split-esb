@@ -184,7 +184,7 @@ int handle_packet() {
         memcpy(env.buf.data, &data[offset], data_size);
         offset += data_size;
 
-        err = esb_ops->data_handler(&env);
+        err = esb_ops->event_handler(&env);
         if (err < 0) {
             LOG_WRN("zmk handler failed(%d)", err);
         }
