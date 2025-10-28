@@ -238,7 +238,7 @@ void *get_next_tx_data() {
 int put_tx_data(void *ptr) {
     __ASSERT(type_to_idx != NULL && ptr != NULL, "type_to_idx and ptr must not null");
     int idx = type_to_idx[((struct esb_data_envelope*)ptr)->buf.type];
-    return k_msgq_put(tx_msgq[idx], &ptr, K_MSEC(TIMEOUT_MS));
+    return k_msgq_put(tx_msgq[idx], &ptr, K_NO_WAIT);
 }
 
 void *get_next_rx_data() {
