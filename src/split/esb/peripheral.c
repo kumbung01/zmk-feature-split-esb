@@ -30,7 +30,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #include "app_esb.h"
 #include "common.h"
 
-static const int type_to_idx[] = {
+static const int event_prio[] = {
     [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT]  = 0,
     [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT]         = 1,
     [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT]        = 2,
@@ -82,9 +82,6 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
 
     env->event = *event;
     env->source = PERIPHERAL_ID;
-    // env->timestamp = k_uptime_get();
-
-    int idx = type_to_idx[event->type];
 
     ret = put_tx_data(env);
     if (ret < 0) {
@@ -143,7 +140,7 @@ static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 static int zmk_split_esb_peripheral_init(void) {
     esb_ops = &peripheral_ops;
 
-    int ret = tx_msgq_init(type_to_idx);
+    int ret = tx_msgq_init(event_prio);
     if (ret) {
         LOG_ERR("tx_msgq_init faied(%d)", ret);
         return ret;

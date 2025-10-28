@@ -40,7 +40,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #define PERIPHERAL_REPORT_INTERVAL 60
 #endif
 
-static const int type_to_idx[] = {
+static const int event_prio[] = {
     [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_POLL_EVENTS]          = 0,
     [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_INVOKE_BEHAVIOR]      = 1,
     [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_PHYSICAL_LAYOUT]  = 2,
@@ -102,9 +102,6 @@ static int split_central_esb_send_command(uint8_t source,
 
     env->command = cmd;
     env->source = source;
-    // env->timestamp = k_uptime_get();
-
-    int idx = type_to_idx[cmd.type];
 
     ret = put_tx_data(env);
     if (ret < 0) {
@@ -205,7 +202,7 @@ static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 static int zmk_split_esb_central_init(void) {
     esb_ops = &central_ops;
 
-    int ret = tx_msgq_init(type_to_idx);
+    int ret = tx_msgq_init(event_prio);
     if (ret) {
         LOG_ERR("tx_msgq_init failed(%d)", ret);
         return ret;
