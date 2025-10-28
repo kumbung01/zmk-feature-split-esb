@@ -59,10 +59,6 @@ static void tx_work_handler(struct k_work *work) {
     esb_tx_app();
 }
 
-void zmk_split_esb_on_ptx_esb_callback(app_esb_event_t *event) {
-    zmk_split_esb_cb(event, &async_state);
-}
-
 static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
 static int

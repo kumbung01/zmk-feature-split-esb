@@ -116,9 +116,6 @@ static int split_central_esb_send_command(uint8_t source,
     return 0;
 }
 
-void zmk_split_esb_on_prx_esb_callback(app_esb_event_t *event) {
-    zmk_split_esb_cb(event, &async_state);
-}
 
 static int split_central_esb_get_available_source_ids(uint8_t *sources) {
     int count = 0;
