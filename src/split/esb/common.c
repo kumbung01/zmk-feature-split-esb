@@ -88,7 +88,7 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
             // k_work_submit(state->central_tx_work);
             break;
         case APP_ESB_EVT_RX:
-            k_sem_give(&rx_sem);
+            k_work_submit(state->rx_work);
             break;
 #else // IS_PERIPHERAL
         case APP_ESB_EVT_TX_SUCCESS:
@@ -160,13 +160,12 @@ void reset_buffers() {
 #endif
 
 
-size_t handle_packet(struct zmk_split_esb_async_state* state) {
-    size_t handled = 0;
+int handle_packet(struct zmk_split_esb_async_state* state) {
     struct esb_payload *rx_payload = NULL;
     int err = k_msgq_get(&rx_msgq, &rx_payload, K_NO_WAIT);
     if (err < 0) {
         LOG_DBG("k_msgq_get failed (err %d)", err);
-        return 0;
+        return err;
     }
 
     struct payload_buffer *buf = (struct payload_buffer*)(rx_payload->data);
@@ -192,20 +191,14 @@ size_t handle_packet(struct zmk_split_esb_async_state* state) {
     }
     
     size_t count = length / data_size;
-    if (count * data_size != length) {
-        LOG_WRN("data_size * count != length");
-        goto CLEANUP;
-    }
+    __ASSERT(count * data_size == length, "count * data_size != length");
 
     struct esb_data_envelope env = { .buf.type = type, 
                                         .source = source,
                                     };
 
     for (size_t i = 0; i < count; ++i) {
-        if (length < data_size + offset) {
-            LOG_WRN("Payload too small for event type %d", type);
-            break;
-        }
+        __ASSERT(length >= data_size + offset, "length < data_size + offset");
 
         memcpy(env.buf.data, &data[offset], data_size);
         offset += data_size;
@@ -214,16 +207,12 @@ size_t handle_packet(struct zmk_split_esb_async_state* state) {
         if (err < 0) {
             LOG_WRN("zmk handler failed(%d)", err);
         }
-        
-        handled++;
     }
-
-    if (handled == 0)
-        handled = 1; // to prevent from tx app execute
 
 CLEANUP:
     rx_free(rx_payload);
-    return handled;
+
+    return 0;
 }
 
 int tx_msgq_init(int *type_to_idx) {

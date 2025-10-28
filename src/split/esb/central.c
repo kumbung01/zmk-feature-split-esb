@@ -59,6 +59,16 @@ struct peripheral_slot {
 
 static struct peripheral_slot peripherals[CONFIG_ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS];
 
+static void rx_work_handler(struct k_work *work) {
+    while (handle_packet(&async_state) == 0) {}
+}
+K_WORK_DEFINE(rx_work, rx_work_handler);
+
+static void tx_work_handler(struct k_work *work) {
+    esb_tx_app();
+}
+K_WORK_DEFINE(tx_work, tx_work_handler);
+
 static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
 
@@ -68,7 +78,8 @@ static struct zmk_split_esb_async_state async_state = {
     .handler = central_handler,
     .get_data_size_rx = get_payload_data_size_evt,
     .get_data_size_tx = get_payload_data_size_cmd,
-    // .central_tx_work = &tx_work,
+    .rx_work = &rx_work,
+    .tx_work = &tx_work,
 };
 
 static int split_central_esb_send_command(uint8_t source,
@@ -101,9 +112,7 @@ static int split_central_esb_send_command(uint8_t source,
         return ret;
     }
 
-    set_tx_queued(true);
-
-    k_sem_give(&rx_sem);
+    k_work_submit(&tx_work);
 
     return 0;
 }
@@ -189,24 +198,6 @@ static void notify_transport_status(void) {
 static void notify_status_work_cb(struct k_work *_work) { notify_transport_status(); }
 
 static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
-
-
-static void publish_events_thread() {
-    while (true)
-    {
-        k_sem_take(&rx_sem, K_FOREVER);
-        if (handle_packet(&async_state) > 0) {
-            continue;
-        }
-        else {
-            esb_tx_app();
-        }
-    }
-}
-
-K_THREAD_DEFINE(publish_events_thread_id, 2048,
-        publish_events_thread, NULL, NULL, NULL,
-        -1, 0, 0);
 
 
 static int zmk_split_esb_central_init(void) {

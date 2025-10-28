@@ -79,7 +79,8 @@ struct zmk_split_esb_async_state {
 
     struct k_work_delayable restart_rx_work;
     struct k_work *peripheral_rx_work;
-    struct k_work *central_tx_work;
+    struct k_work *tx_work;
+    struct k_work *rx_work;
     const struct gpio_dt_spec *dir_gpio;
 
     get_data_size get_data_size_rx;
@@ -100,7 +101,7 @@ int service_init();
 uint32_t get_nonce();
 int process_payload(char* data, size_t length, uint32_t nonce);
 
-size_t handle_packet(struct zmk_split_esb_async_state* state);
+int handle_packet(struct zmk_split_esb_async_state* state);
 void reset_buffers();
 
 
