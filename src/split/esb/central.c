@@ -60,14 +60,10 @@ struct peripheral_slot {
 static struct peripheral_slot peripherals[CONFIG_ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS];
 
 static struct zmk_split_esb_async_state async_state;
-static void rx_work_handler(struct k_work *work) {
-    while (handle_packet(&async_state) == 0) {}
-}
-K_WORK_DEFINE(rx_work, rx_work_handler);
 
-static void tx_work_handler(struct k_work *work) {
-    esb_tx_app();
-}
+static void rx_work_handler(struct k_work *work);
+static void tx_work_handler(struct k_work *work);
+K_WORK_DEFINE(rx_work, rx_work_handler);
 K_WORK_DEFINE(tx_work, tx_work_handler);
 
 static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
@@ -82,6 +78,14 @@ static struct zmk_split_esb_async_state async_state = {
     .rx_work = &rx_work,
     .tx_work = &tx_work,
 };
+
+static void rx_work_handler(struct k_work *work) {
+    while (handle_packet(&async_state) == 0) {}
+}
+
+static void tx_work_handler(struct k_work *work) {
+    esb_tx_app();
+}
 
 static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd) {
