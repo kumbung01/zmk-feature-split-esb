@@ -44,8 +44,6 @@ int zmk_split_esb_init(app_esb_mode_t mode);
 int zmk_split_esb_set_enable(bool enabled);
 bool zmk_split_esb_get_enable();
 
-int zmk_split_esb_send(app_esb_data_t *tx_packet);
-
 int pull_packet_from_tx_msgq(void);
 void esb_tx_app();
 void set_esb_active(bool is_active);
