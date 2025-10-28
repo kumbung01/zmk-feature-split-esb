@@ -126,7 +126,11 @@ static int make_packet(struct esb_payload *payload) {
         }
 
         type = env->buf.type;
-        data_size = m_state->get_data_size_tx(type);
+        ssize_t data_size = m_state->get_data_size_tx(type);
+        if (data_size < 0) {
+            LOG_WRN("invalid type (%d)", data_size);
+            break;
+        }
 
         if (offset + data_size > body_size) {
             LOG_DBG("packet full (%u + %u > %d)", offset, data_size, body_size);
