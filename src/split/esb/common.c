@@ -138,12 +138,13 @@ void reset_buffers() {
 #endif
 
 
-int handle_packet() {
+size_t handle_packet() {
+    size_t handled = 0;
     struct esb_payload *rx_payload = NULL;
     int err = k_msgq_get(&rx_msgq, &rx_payload, K_NO_WAIT);
     if (err < 0) {
         LOG_DBG("k_msgq_get failed (err %d)", err);
-        return err;
+        return handled;
     }
 
     struct payload_buffer *buf = (struct payload_buffer*)(rx_payload->data);
@@ -188,12 +189,14 @@ int handle_packet() {
         if (err < 0) {
             LOG_WRN("zmk handler failed(%d)", err);
         }
+        
+        handled++;
     }
 
 CLEANUP:
     rx_free(rx_payload);
 
-    return 0;
+    return handled;
 }
 
 int tx_msgq_init(int *_type_to_idx) {

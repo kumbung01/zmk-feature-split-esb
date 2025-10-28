@@ -91,7 +91,7 @@ int service_init();
 uint32_t get_nonce();
 int process_payload(char* data, size_t length, uint32_t nonce);
 
-int handle_packet();
+size_t handle_packet();
 void reset_buffers();
 
 int tx_msgq_init(int *type_to_idx);
