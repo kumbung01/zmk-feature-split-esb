@@ -47,8 +47,8 @@ K_WORK_DEFINE(tx_work, tx_work_handler);
 
 static struct zmk_split_esb_async_state async_state = {
     .handler = peripheral_handler,
-    .get_data_size_rx = get_payload_data_size_evt,
-    .get_data_size_tx = get_payload_data_size_cmd,
+    .get_data_size_rx = get_payload_data_size_cmd,
+    .get_data_size_tx = get_payload_data_size_evt,
     .rx_work = &rx_work,
     .tx_work = &tx_work,
 };
