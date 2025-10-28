@@ -51,6 +51,7 @@ uint8_t esb_addr_prefix[8] = DT_INST_PROP(0, addr_prefix);
 #error "Need to create a node with compatible of 'zmk,esb-split` with `all `address` property set."
 #endif
 
+K_SEM_DEFINE(tx_sem, 0, 1);
 
 static app_esb_mode_t m_mode;
 
@@ -72,6 +73,9 @@ static void event_handler(struct esb_evt const *event) {
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
             LOG_DBG("TX SUCCESS");
+            if (m_mode == APP_ESB_MODE_PTX) {
+                k_sem_give(&tx_sem);
+            }
             break;
         case ESB_EVENT_TX_FAILED:
             LOG_WRN("ESB_EVENT_TX_FAILED");
@@ -80,6 +84,7 @@ static void event_handler(struct esb_evt const *event) {
                 if (tx_fail_count++ > 0) {
                     tx_fail_count = 0;
                     esb_pop_tx();
+                    k_sem_give(&tx_sem);
                 }
                 esb_start_tx();
             }
@@ -368,7 +373,11 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) 
         case APP_TS_STARTED:
             app_esb_resume();
             if (atomic_cas(&tx_work_submit, 0, 1)) {
+#if IS_CENTRAL
                 k_work_submit(esb_ops->tx_work);
+#else
+                k_sem_give(&tx_sem);
+#endif
             }
             break;
         case APP_TS_STOPPED:

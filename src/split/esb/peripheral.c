@@ -87,7 +87,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     }
     
     if (is_esb_active())
-        k_work_submit(&tx_work);
+        k_sem_give(&tx_sem);
 
     return 0;
 }
@@ -158,15 +158,15 @@ static int peripheral_handler(struct esb_data_envelope* env) {
     return zmk_split_transport_peripheral_command_handler(&esb_peripheral, env->command);
 }
 
-// void tx_thread() {
-//     while (true)
-//     {
-//         k_sem_take(&tx_sem, K_FOREVER);
-//         LOG_DBG("tx thread awake");
-//         esb_tx_app();
-//     }
-// }
+void tx_thread() {
+    while (true)
+    {
+        k_sem_take(&tx_sem, K_FOREVER);
+        LOG_DBG("tx thread awake");
+        esb_tx_app();
+    }
+}
 
-// K_THREAD_DEFINE(tx_thread_id, 1300,
-//         tx_thread, NULL, NULL, NULL,
-//         0, 0, 0);
+K_THREAD_DEFINE(tx_thread_id, 1300,
+        tx_thread, NULL, NULL, NULL,
+        0, 0, 0);

@@ -10,6 +10,8 @@
 #include <zephyr/kernel.h>
 #include <esb.h>
 
+extern struct k_sem tx_sem;
+
 typedef enum {
     APP_ESB_EVT_TX_SUCCESS,
     APP_ESB_EVT_TX_FAIL,
