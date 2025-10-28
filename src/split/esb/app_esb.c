@@ -200,6 +200,7 @@ void esb_tx_app() {
         ret = esb_start_tx();
         if (ret != -EBUSY) {
             LOG_DBG("esb_start_tx() returned (%d)", ret);
+            break;
         }
     }
 }
