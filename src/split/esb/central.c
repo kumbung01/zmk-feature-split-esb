@@ -105,7 +105,7 @@ static int split_central_esb_send_command(uint8_t source,
 
     env->command = cmd;
     env->source = source;
-    env->timestamp = k_uptime_get();
+    // env->timestamp = k_uptime_get();
 
     int idx = type_to_idx[cmd.type];
 

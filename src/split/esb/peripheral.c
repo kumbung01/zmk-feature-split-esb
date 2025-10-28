@@ -84,7 +84,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
 
     env->event = *event;
     env->source = PERIPHERAL_ID;
-    env->timestamp = k_uptime_get();
+    // env->timestamp = k_uptime_get();
 
     int idx = type_to_idx[event->type];
 

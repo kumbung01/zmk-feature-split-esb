@@ -109,7 +109,7 @@ static int make_packet(struct esb_payload *payload) {
     size_t count = 0;
     size_t offset = 0;
     struct payload_buffer *buf = (struct payload_buffer *)payload->data;
-    const int64_t now = k_uptime_get();
+    // const int64_t now = k_uptime_get();
     const size_t body_size = sizeof(buf->body);
     uint8_t type;
 
