@@ -80,13 +80,9 @@ static void event_handler(struct esb_evt const *event) {
         case ESB_EVENT_TX_FAILED:
             LOG_WRN("ESB_EVENT_TX_FAILED");
 #if IS_PERIPHERAL
-                static int tx_fail_count = 0;
-                if (tx_fail_count++ > 0) {
-                    tx_fail_count = 0;
-                    esb_pop_tx();
-                    k_sem_give(&tx_sem);
-                }
+                esb_pop_tx();
                 esb_start_tx();
+                k_sem_give(&tx_sem);
 #endif
             break;
         case ESB_EVENT_RX_RECEIVED:
