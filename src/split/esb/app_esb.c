@@ -138,12 +138,12 @@ static int make_packet(struct esb_payload *payload) {
             break;
         }
         
-        int64_t timestamp = env->timestamp;
-        if (now - timestamp > TIMEOUT_MS) {
-            LOG_DBG("dropping old event type %lld timestamp %lld", type, now - timestamp);
-            tx_free(env);
-            continue;
-        }
+        // int64_t timestamp = env->timestamp;
+        // if (now - timestamp > TIMEOUT_MS) {
+        //     LOG_DBG("dropping old event type %lld timestamp %lld", type, now - timestamp);
+        //     tx_free(env);
+        //     continue;
+        // }
 
         LOG_DBG("adding type %u size %u to packet", type, data_size);
 
