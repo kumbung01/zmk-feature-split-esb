@@ -33,48 +33,53 @@ static const size_t tx_msgq_cnt = ARRAY_SIZE(tx_msgq);
 
 
 ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type _type) {
+    ssize_t size = -1;
+
     switch (_type) {
     case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_POLL_EVENTS:
-        return 0;
+        size = 0;
+        break;
     case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_INVOKE_BEHAVIOR:
-        return sizeof(((struct zmk_split_transport_central_command*)0)->data.invoke_behavior);
+        size = sizeof(((struct zmk_split_transport_central_command*)0)->data.invoke_behavior);
+        break;
     case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_PHYSICAL_LAYOUT:
-        return sizeof(((struct zmk_split_transport_central_command*)0)->data.set_physical_layout);
+        size = sizeof(((struct zmk_split_transport_central_command*)0)->data.set_physical_layout);
+        break;
     case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_HID_INDICATORS:
-        return sizeof(((struct zmk_split_transport_central_command*)0)->data.set_hid_indicators);
+        size = sizeof(((struct zmk_split_transport_central_command*)0)->data.set_hid_indicators);
+        break;
     default:
-        return -ENOTSUP;
+        size = -ENOTSUP;
+        break;
     }
+
+    LOG_DBG("cmd type (%d) size (%d)", _type, size);
+
+    return size;
 }
+
 
 ssize_t get_payload_data_size_evt(enum zmk_split_transport_peripheral_event_type _type) {
+    ssize_t size = -1;
+
     switch (_type) {
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT:
-        return sizeof(((struct zmk_split_transport_peripheral_event*)0)->data.input_event);
+        size = sizeof(((struct zmk_split_transport_peripheral_event*)0)->data.input_event);
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT:
-        return sizeof(((struct zmk_split_transport_peripheral_event*)0)->data.key_position_event);
+        size = sizeof(((struct zmk_split_transport_peripheral_event*)0)->data.key_position_event);
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT:
-        return sizeof(((struct zmk_split_transport_peripheral_event*)0)->data.sensor_event);
+        size = sizeof(((struct zmk_split_transport_peripheral_event*)0)->data.sensor_event);
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT:
-        return sizeof(((struct zmk_split_transport_peripheral_event*)0)->data.battery_event);
+        size = sizeof(((struct zmk_split_transport_peripheral_event*)0)->data.battery_event);
     default:
-        return -ENOTSUP;
+        size = -ENOTSUP;
     }
+
+    LOG_DBG("evt type (%d) size (%d)", _type, size);
+
+    return size;
 }
 
-#if 0
-struct k_work_q esb_work_q;
-K_THREAD_STACK_DEFINE(esb_work_q_stack, 1300);
-
-int service_init(void) {
-    static const struct k_work_queue_config queue_config = {
-        .name = "Split Peripheral Notification Queue"};
-    k_work_queue_start(&esb_work_q, esb_work_q_stack, K_THREAD_STACK_SIZEOF(esb_work_q_stack),
-                       5, &queue_config);
-
-    return 0;
-}
-#endif
 
 static size_t tx_fail_count = 0;
 void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state) {
