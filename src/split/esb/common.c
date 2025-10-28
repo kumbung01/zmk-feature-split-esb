@@ -89,34 +89,7 @@ ssize_t get_payload_data_size_evt(enum zmk_split_transport_peripheral_event_type
 
 
 // static size_t tx_fail_count = 0;
-void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state) {
-    switch(event->evt_type) {
-#if IS_CENTRAL
-        case APP_ESB_EVT_TX_SUCCESS:
-            // k_work_submit(state->central_tx_work);
-            break;
-        case APP_ESB_EVT_TX_FAIL:
-            // esb_pop_tx();
-            // k_work_submit(state->central_tx_work);
-            break;
-        case APP_ESB_EVT_RX:
-            k_work_submit(state->rx_work);
-            break;
-#else // IS_PERIPHERAL
-        case APP_ESB_EVT_TX_SUCCESS:
-            break;
-        case APP_ESB_EVT_TX_FAIL:
-            esb_pop_tx();
-            break;
-        case APP_ESB_EVT_RX:
-            k_work_submit(state->rx_work);
-            break;
-#endif
-        default:
-            LOG_ERR("Unknown APP ESB event!");
-            break;
-    }
-}
+
 
 #if 0
 // encrption
@@ -265,7 +238,7 @@ void *get_next_tx_data() {
 int put_tx_data(void *ptr) {
     __ASSERT(type_to_idx != NULL && ptr != NULL, "type_to_idx and ptr must not null");
     int idx = type_to_idx[((struct esb_data_envelope*)ptr)->buf.type];
-    return k_msgq_put(tx_msgq[idx], &ptr, K_MSEC(TIMEOUT_MS));
+    return k_msgq_put(tx_msgq[idx], &ptr, K_NO_WAIT);
 }
 
 void *get_next_rx_data() {
