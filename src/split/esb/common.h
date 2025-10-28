@@ -105,7 +105,7 @@ int handle_packet(struct zmk_split_esb_async_state* state);
 void reset_buffers();
 
 int tx_msgq_init(int *type_to_idx);
-struct k_msgq *get_tx_msgq(size_t idx);
+int put_tx_data(void *ptr);
 void *get_next_tx_data();
 void requeue_tx_data(void *ptr);
 int tx_alloc(void **ptr);

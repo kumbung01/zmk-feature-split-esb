@@ -30,7 +30,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #include "app_esb.h"
 #include "common.h"
 
-static int type_to_idx[] = {
+static const int type_to_idx[] = {
     [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT]  = 0,
     [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT]         = 1,
     [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT]        = 2,
@@ -88,7 +88,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
 
     int idx = type_to_idx[event->type];
 
-    ret = k_msgq_put(get_tx_msgq(idx), &env, K_NO_WAIT);
+    ret = put_tx_data(env);
     if (ret < 0) {
         LOG_WRN("k_msgq_put failed (err %d)", ret);
         tx_free(env);

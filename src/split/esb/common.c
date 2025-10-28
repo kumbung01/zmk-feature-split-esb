@@ -29,6 +29,7 @@ K_MSGQ_DEFINE(msgq2, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq3, sizeof(void*), TX_MSGQ_SIZE, 4);
 static struct k_msgq* tx_msgq[] = {&msgq0, &msgq1, &msgq2, &msgq3};
 static int idx_to_type[ARRAY_SIZE(tx_msgq)];
+static int *type_to_idx;
 static const size_t tx_msgq_cnt = ARRAY_SIZE(tx_msgq);
 
 
@@ -228,8 +229,9 @@ CLEANUP:
     return 0;
 }
 
-int tx_msgq_init(int *type_to_idx) {
+int tx_msgq_init(int *_type_to_idx) {
     __ASSERT(type_to_idx != NULL, "type_to_idx must not NULL");
+    type_to_idx = _type_to_idx;
 
     for (int i = 0; i < tx_msgq_cnt; ++i) {
         int idx = type_to_idx[i];
@@ -274,10 +276,11 @@ void requeue_tx_data(void *ptr) {
     }
 }
 
-struct k_msgq *get_tx_msgq(size_t idx) {
-    __ASSERT(idx >= 0 && idx < tx_msgq_cnt, "idx out of valid range");
 
-    return tx_msgq[idx];
+int put_tx_data(void *ptr) {
+    __ASSERT(type_to_idx != NULL && ptr != NULL, "type_to_idx and ptr must not null");
+    int idx = type_to_idx[(struct esb_data_envelope*)ptr->buf.type];
+    return k_msgq_put(tx_msgq[idx], &ptr, K_NO_WAIT);
 }
 
 int tx_alloc(void **ptr) {
