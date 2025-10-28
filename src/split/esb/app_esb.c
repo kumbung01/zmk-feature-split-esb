@@ -105,13 +105,13 @@ static void event_handler(struct esb_evt const *event) {
     m_callback(&m_event);
 }
 
-static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t type) {
+static int make_packet(struct esb_payload *payload) {
     size_t count = 0;
     size_t offset = 0;
     struct payload_buffer *buf = (struct payload_buffer *)payload->data;
     const int64_t now = k_uptime_get();
     const size_t body_size = sizeof(buf->body);
-    const size_t data_size = m_state->get_data_size_tx(type);
+    uint8_t type;
 
 #if IS_PERIPHERAL
     payload->pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID; // use the peripheral_id as the ESB pipe number
@@ -119,15 +119,18 @@ static int make_packet(struct k_msgq *msgq, struct esb_payload *payload, uint8_t
     payload->noack = !CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK;
 
     while (true) {
-        if (offset + data_size > body_size) {
-            LOG_DBG("packet full (%u + %u > %d)", offset, data_size, body_size);
+        struct esb_data_envelope *env = get_next_tx_data();
+        if (env == NULL) {
+            LOG_DBG("next data is NULL.");
             break;
         }
 
-        struct esb_data_envelope *env = NULL;
-        int err = k_msgq_get(msgq, &env, K_NO_WAIT);
-        if (err != 0) {
-            LOG_DBG("k_msgq_get failed(%d).", err);
+        type = env->buf.type;
+        data_size = m_state->get_data_size_tx(type);
+
+        if (offset + data_size > body_size) {
+            LOG_DBG("packet full (%u + %u > %d)", offset, data_size, body_size);
+            requeue_tx_data(env);
             break;
         }
         
@@ -178,14 +181,8 @@ void esb_tx_app() {
             break;
         }
 
-        int type = -1;
-        struct k_msgq *msgq = tx_msgq_ready(&type);
-        if (msgq == NULL) {
-            break;
-        }
-
         struct esb_payload payload;
-        int packet_count = make_packet(msgq, &payload, type);
+        int packet_count = make_packet(&payload);
         if (packet_count == 0) {
             LOG_DBG("no packet to send");
             break;

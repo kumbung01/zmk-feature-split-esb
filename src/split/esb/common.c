@@ -240,17 +240,38 @@ int tx_msgq_init(int *type_to_idx) {
     return 0;
 }
 
-struct k_msgq *tx_msgq_ready(int *_type) {
-    __ASSERT(_type != NULL, "_type must not NULL");
 
+static int last_idx = -1;
+void *get_next_tx_data() {
+    void *ptr;
+    if (last_idx != -1) {
+        if (k_msgq_get(tx_msgq[last_idx], &ptr, K_NO_WAIT) != 0) {
+            LOG_DBG("queue is empty.");
+            last_idx = -1;
+            return NULL;
+        }
+
+        return ptr;
+    }
+
+    // when last_idx == -1, search for new data
     for (int i = 0; i < tx_msgq_cnt; ++i) {
-        if (k_msgq_num_used_get(tx_msgq[i]) > 0) {
-            *_type = idx_to_type[i];
-            return tx_msgq[i];
+        if (k_msgq_get(tx_msgq[i], &ptr, K_NO_WAIT) == 0) {
+            last_idx = i;
+            return ptr;
         }
     }
 
+    LOG_DBG("no more data.");
     return NULL;
+}
+
+void requeue_tx_data(void *ptr) {
+    __ASSERT(last_idx != -1, "last_idx must not -1");
+
+    if (k_msgq_put(tx_msgq[last_idx], &ptr, K_NO_WAIT) != 0) {
+        LOG_WRN("requeue failed, queue full");
+    }
 }
 
 struct k_msgq *get_tx_msgq(size_t idx) {
@@ -273,13 +294,4 @@ int rx_alloc(void **ptr) {
 
 void rx_free(void *ptr) {
     k_mem_slab_free(&rx_slab, ptr);
-}
-
-static atomic_t is_queued = ATOMIC_INIT(0);
-void set_tx_queued(bool _queued) {
-    atomic_set(&is_queued, _queued ? 1 : 0);
-}
-
-bool is_tx_queued() {
-    return atomic_get(&is_queued) ? true : false;
 }

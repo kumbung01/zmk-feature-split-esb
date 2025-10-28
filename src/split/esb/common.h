@@ -104,22 +104,11 @@ int process_payload(char* data, size_t length, uint32_t nonce);
 int handle_packet(struct zmk_split_esb_async_state* state);
 void reset_buffers();
 
-
-uint32_t get_u32_le(const uint8_t *src);
-void put_u32_le(uint8_t *dst, uint32_t val);
-
-
 int tx_msgq_init(int *type_to_idx);
 struct k_msgq *get_tx_msgq(size_t idx);
-struct k_msgq *tx_msgq_ready(int *_type);
+void *get_next_tx_data();
+void requeue_tx_data(void *ptr);
 int tx_alloc(void **ptr);
 int rx_alloc(void **ptr);
 void tx_free(void *ptr);
 void rx_free(void *ptr);
-
-void set_tx_queued(bool _queued);
-bool is_tx_queued();
-
-void inc_handled();
-void reset_handled();
-size_t get_handled();
