@@ -44,7 +44,6 @@ _Static_assert(sizeof(struct zmk_split_transport_buffer) == ZMK_DATA_SIZE,
                "zmk_split_transport_buffer size mismatch");
 
 struct esb_data_envelope {
-    // int64_t timestamp;
     uint8_t source;
     union {
         struct zmk_split_transport_peripheral_event event;
@@ -55,7 +54,6 @@ struct esb_data_envelope {
 
 struct payload_header {
     uint8_t type;
-    // uint32_t nonce;
 } __packed;
 
 #define HEADER_SIZE sizeof(struct payload_header)
@@ -68,29 +66,21 @@ struct payload_buffer {
 _Static_assert(sizeof(struct payload_buffer) == CONFIG_ESB_MAX_PAYLOAD_LENGTH,
                "zmk_split_transport_buffer size mismatch");
 
-// #define ESB_MSG_EXTRA_SIZE (sizeof(struct esb_msg_prefix) + sizeof(struct esb_msg_postfix))
-
 typedef int (*zmk_split_transport_data_handler)(struct esb_data_envelope*);
 typedef int (*get_data_size)(int);
 
 typedef void (*zmk_split_esb_process_tx_callback_t)(void);
-struct zmk_split_esb_async_state {
-    atomic_t state;
-
-    struct k_work_delayable restart_rx_work;
-    struct k_work *peripheral_rx_work;
+struct zmk_split_esb_ops {
     struct k_work *tx_work;
     struct k_work *rx_work;
-    const struct gpio_dt_spec *dir_gpio;
 
     get_data_size get_data_size_rx;
     get_data_size get_data_size_tx;
 
-    zmk_split_transport_data_handler handler;
+    zmk_split_transport_data_handler data_handler;
 };
 
-
-void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state);
+extern struct zmk_split_esb_ops esb_ops;
 
 ssize_t get_payload_data_size_evt(enum zmk_split_transport_peripheral_event_type _type);
 ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type _type);
@@ -101,7 +91,7 @@ int service_init();
 uint32_t get_nonce();
 int process_payload(char* data, size_t length, uint32_t nonce);
 
-int handle_packet(struct zmk_split_esb_async_state* state);
+int handle_packet();
 void reset_buffers();
 
 int tx_msgq_init(int *type_to_idx);

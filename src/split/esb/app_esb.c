@@ -51,10 +51,6 @@ uint8_t esb_addr_prefix[8] = DT_INST_PROP(0, addr_prefix);
 #error "Need to create a node with compatible of 'zmk,esb-split` with `all `address` property set."
 #endif
 
-static app_esb_callback_t m_callback;
-
-K_SEM_DEFINE(tx_sem, 0, 1);
-K_SEM_DEFINE(rx_sem, 0, RX_MSGQ_SIZE);
 
 static app_esb_mode_t m_mode;
 
@@ -68,48 +64,49 @@ bool is_esb_active(void) {
 }
 
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
-static struct zmk_split_esb_async_state *m_state;
 
 static void event_handler(struct esb_evt const *event) {
-    app_esb_event_t m_event = {0};
+    struct esb_payload *payload = NULL;
 
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
-            // Forward an event to the application
-            m_event.evt_type = APP_ESB_EVT_TX_SUCCESS;
+            LOG_DBG("TX SUCCESS");
             break;
         case ESB_EVENT_TX_FAILED:
-            // Forward an event to the application
-            m_event.evt_type = APP_ESB_EVT_TX_FAIL;
             LOG_WRN("ESB_EVENT_TX_FAILED");
+            if (m_mode == APP_ESB_MODE_PTX) {
+                esb_pop_tx();
+            }
             break;
         case ESB_EVENT_RX_RECEIVED:
             LOG_DBG("RX SUCCESS");
-            m_event.evt_type = APP_ESB_EVT_RX;
-            struct esb_payload *rx_payload = NULL;
-            if (rx_alloc(&rx_payload) != 0) {
-                LOG_ERR("Failed to allocate rx_slab");
+            // m_event.evt_type = APP_ESB_EVT_RX;
+            if (rx_alloc(&payload) != 0) {
+                LOG_WRN("Failed to allocate rx_slab");
                 return;
             }
 
-            if (esb_read_rx_payload(rx_payload) == 0) {
-                if (k_msgq_put(&rx_msgq, &rx_payload, K_NO_WAIT) != 0) {
-                    LOG_ERR("k_msgq_put failed");
-                    rx_free(rx_payload);
-                    return;
-                }
+            if (esb_read_payload(payload) != 0) {
+                LOG_WRN("esb_read_payload fail");
+                rx_free(payload);
+                return;
             }
+
+            if (put_rx_data(payload) != 0) {
+                LOG_ERR("k_msgq_put failed");
+                rx_free(payload);
+                return;
+            }
+
+            k_work_submit(esb_ops->rx_work);
             break;
     }
-
-    m_callback(&m_event);
 }
 
 static int make_packet(struct esb_payload *payload) {
     size_t count = 0;
     size_t offset = 0;
     struct payload_buffer *buf = (struct payload_buffer *)payload->data;
-    // const int64_t now = k_uptime_get();
     const size_t body_size = sizeof(buf->body);
     uint8_t type;
 
@@ -126,7 +123,7 @@ static int make_packet(struct esb_payload *payload) {
         }
 
         type = env->buf.type;
-        ssize_t data_size = m_state->get_data_size_tx(type);
+        ssize_t data_size = esb_ops->get_data_size_tx(type);
         if (data_size < 0) {
             LOG_WRN("invalid type (%d)", data_size);
             break;
@@ -134,16 +131,9 @@ static int make_packet(struct esb_payload *payload) {
 
         if (offset + data_size > body_size) {
             LOG_DBG("packet full (%u + %u > %d)", offset, data_size, body_size);
-            requeue_tx_data(env);
+            put_tx_data(env);
             break;
         }
-        
-        // int64_t timestamp = env->timestamp;
-        // if (now - timestamp > TIMEOUT_MS) {
-        //     LOG_DBG("dropping old event type %lld timestamp %lld", type, now - timestamp);
-        //     tx_free(env);
-        //     continue;
-        // }
 
         LOG_DBG("adding type %u size %u to packet", type, data_size);
 
@@ -186,8 +176,8 @@ void esb_tx_app() {
         }
 
         struct esb_payload payload;
-        int packet_count = make_packet(&payload);
-        if (packet_count == 0) {
+        int data_count = make_packet(&payload);
+        if (data_count == 0) {
             LOG_DBG("no packet to send");
             break;
         }
@@ -290,11 +280,9 @@ static int esb_initialize(app_esb_mode_t mode) {
 #define ESB_TX_FIFO_REQUE_MAX (CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS \
                                * CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT)
 
-int zmk_split_esb_init(app_esb_mode_t mode, app_esb_callback_t callback, struct zmk_split_esb_async_state *state) {
+int zmk_split_esb_init(app_esb_mode_t mode) {
     int ret;
-    m_callback = callback;
     m_mode = mode;
-    m_state = state;
     ret = clocks_start();
     if (ret < 0) {
         return ret;

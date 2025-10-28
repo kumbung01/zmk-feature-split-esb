@@ -70,8 +70,8 @@ static void tx_work_handler(struct k_work *work);
 K_WORK_DEFINE(rx_work, rx_work_handler);
 K_WORK_DEFINE(tx_work, tx_work_handler);
 
-static struct zmk_split_esb_async_state async_state = {
-    .handler = central_handler,
+static struct zmk_split_esb_ops central_ops = {
+    .data_handler = central_handler,
     .get_data_size_rx = get_payload_data_size_evt,
     .get_data_size_tx = get_payload_data_size_cmd,
     .rx_work = &rx_work,
@@ -206,13 +206,15 @@ static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
 
 static int zmk_split_esb_central_init(void) {
+    esb_ops = &central_ops;
+
     int ret = tx_msgq_init(type_to_idx);
     if (ret) {
         LOG_ERR("tx_msgq_init failed(%d)", ret);
         return ret;
     }
 
-    ret = zmk_split_esb_init(APP_ESB_MODE_PRX, zmk_split_esb_on_prx_esb_callback, &async_state);
+    ret = zmk_split_esb_init(APP_ESB_MODE_PRX);
     if (ret) {
         LOG_ERR("zmk_split_esb_init failed (err %d)", ret);
         return ret;

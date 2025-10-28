@@ -32,6 +32,7 @@ static int idx_to_type[ARRAY_SIZE(tx_msgq)];
 static int *type_to_idx;
 static const size_t tx_msgq_cnt = ARRAY_SIZE(tx_msgq);
 
+struct zmk_split_esb_ops *esb_ops;
 
 ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type _type) {
     ssize_t size = -1;
@@ -87,7 +88,7 @@ ssize_t get_payload_data_size_evt(enum zmk_split_transport_peripheral_event_type
 }
 
 
-static size_t tx_fail_count = 0;
+// static size_t tx_fail_count = 0;
 void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *state) {
     switch(event->evt_type) {
 #if IS_CENTRAL
@@ -103,14 +104,9 @@ void zmk_split_esb_cb(app_esb_event_t *event, struct zmk_split_esb_async_state *
             break;
 #else // IS_PERIPHERAL
         case APP_ESB_EVT_TX_SUCCESS:
-            tx_fail_count = 0;
             break;
         case APP_ESB_EVT_TX_FAIL:
-            if (tx_fail_count++ > 0) {
-                tx_fail_count = 0;
-                esb_pop_tx();
-            }
-            esb_start_tx();
+            esb_pop_tx();
             break;
         case APP_ESB_EVT_RX:
             k_work_submit(state->rx_work);
@@ -169,7 +165,7 @@ void reset_buffers() {
 #endif
 
 
-int handle_packet(struct zmk_split_esb_async_state* state) {
+int handle_packet() {
     struct esb_payload *rx_payload = NULL;
     int err = k_msgq_get(&rx_msgq, &rx_payload, K_NO_WAIT);
     if (err < 0) {
@@ -193,7 +189,7 @@ int handle_packet(struct zmk_split_esb_async_state* state) {
         goto CLEANUP;
     }
 
-    ssize_t data_size = state->get_data_size_rx(type);
+    ssize_t data_size = esb_ops->get_data_size_rx(type);
     if (data_size < 0) {
         LOG_WRN("Unknown event type %d", type);
         goto CLEANUP;
@@ -215,7 +211,7 @@ int handle_packet(struct zmk_split_esb_async_state* state) {
         memcpy(env.buf.data, &data[offset], data_size);
         offset += data_size;
 
-        err = state->handler(&env);
+        err = esb_ops->data_handler(&env);
         if (err < 0) {
             LOG_WRN("zmk handler failed(%d)", err);
         }
@@ -266,19 +262,21 @@ void *get_next_tx_data() {
     return NULL;
 }
 
-void requeue_tx_data(void *ptr) {
-    __ASSERT(last_idx != -1, "last_idx must not -1");
-
-    if (k_msgq_put(tx_msgq[last_idx], &ptr, K_NO_WAIT) != 0) {
-        LOG_WRN("requeue failed, queue full");
-    }
-}
-
-
 int put_tx_data(void *ptr) {
     __ASSERT(type_to_idx != NULL && ptr != NULL, "type_to_idx and ptr must not null");
     int idx = type_to_idx[((struct esb_data_envelope*)ptr)->buf.type];
     return k_msgq_put(tx_msgq[idx], &ptr, K_MSEC(TIMEOUT_MS));
+}
+
+void *get_next_rx_data() {
+    void *ptr = NULL;
+    k_msgq_get(&rx_msgq, &ptr, K_NO_WAIT);
+
+    return ptr;
+}
+
+int put_rx_data(void *ptr) {
+    return k_msgq_put(&rx_msgq, &ptr, K_NO_WAIT) != 0;
 }
 
 int tx_alloc(void **ptr) {
