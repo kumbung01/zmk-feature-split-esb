@@ -34,6 +34,9 @@
     #define ENABLED_PIPES BIT(PERIPHERAL_ID)
 #endif
 
+#define PIPE_TO_SOURCE(pipe)   (pipe - 1)
+#define SOURCE_TO_PIPE(source) (source + 1)
+
 extern struct k_msgq rx_msgq;
 
 typedef enum zmk_split_transport_peripheral_event_type zmk_split_transport_buffer_type;

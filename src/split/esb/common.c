@@ -152,8 +152,8 @@ size_t handle_packet() {
     int type = buf->header.type;
     size_t length = rx_payload->length - HEADER_SIZE;
     size_t offset = 0;
-    size_t source = rx_payload->pipe;
-    
+    size_t source = PIPE_TO_SOURCE(rx_payload->pipe);
+
     ssize_t data_size = esb_ops->get_data_size_rx(type);
     if (data_size < 0) {
         LOG_WRN("Unknown event type %d", type);
@@ -167,7 +167,7 @@ size_t handle_packet() {
     }
 
     struct esb_data_envelope env = { .buf.type = type, 
-                                        .source = source,
+                                     .source = source,
                                     };
 
     for (size_t i = 0; i < count; ++i) {
