@@ -53,30 +53,24 @@ static struct zmk_split_esb_ops peripheral_ops = {
 
 
 static void rx_work_handler(struct k_work *work) {
-    size_t total = 0;
+    int64_t start = k_uptime_get();
     
-    while (total < CAN_HANDLE_RX) {
-        size_t handled = handle_packet();
-        if (handled == 0) {
+    while (k_uptime_get() - start < 500) {
+        if (handle_packet() == 0) {
             return;
         }
-
-        total += handled;
     }
 
     k_work_submit(&rx_work);
 }
 
 static void tx_work_handler(struct k_work *work) {
-    size_t total = 0;
-
-    while (total < CAN_HANDLE_TX) {
-        size_t handled = esb_tx_app();
-        if (handled == 0) {
+    int64_t start = k_uptime_get();
+    
+    while (k_uptime_get() - start < 500) {
+        if (esb_tx_app() == 0) {
             return;
         }
-
-        total += handled;
     }
 
     k_work_submit(&tx_work);
