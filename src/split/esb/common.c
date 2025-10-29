@@ -221,7 +221,6 @@ int make_packet(struct esb_payload *payload) {
 
 
 int handle_packet() {
-    size_t handled = 0;
     struct esb_payload *rx_payload = NULL;
     int err = k_msgq_get(&rx_msgq, &rx_payload, K_NO_WAIT);
     if (err < 0) {
@@ -244,10 +243,7 @@ int handle_packet() {
     }
 
     size_t count = length / data_size;
-    if (count * data_size != length) {
-        LOG_WRN("data size mismatch (%d * %d != %d)", count, data_size, length);
-        goto CLEANUP;
-    }
+    __ASSERT(count * data_size == length, "data_size * count != length")
 
     struct esb_data_envelope env = { .buf.type = type, 
                                      .source = source,
