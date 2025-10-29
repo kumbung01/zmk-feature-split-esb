@@ -51,7 +51,8 @@ uint8_t esb_addr_prefix[8] = DT_INST_PROP(0, addr_prefix);
 #error "Need to create a node with compatible of 'zmk,esb-split` with `all `address` property set."
 #endif
 
-struct esb_config config = {
+static void event_handler(struct esb_evt const *event);
+static struct esb_config config = {
     .protocol = ESB_PROTOCOL_ESB_DPL,
     .mode = ESB_MODE_PTX,
     .bitrate = IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_BITRATE_2MBPS) ? ESB_BITRATE_2MBPS : ESB_BITRATE_1MBPS,
