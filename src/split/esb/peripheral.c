@@ -68,13 +68,7 @@ static void rx_work_handler(struct k_work *work) {
 
 static void tx_work_handler(struct k_work *work) {
     size_t total = 0;
-    static size_t tx_fail_count = 0;
-    if (tx_fail_count++ > 3) {
-        esb_pop_tx();
-    }
 
-    esb_start_tx();
-    
     while (total < TX_MSGQ_SIZE - 1) {
         size_t handled = esb_tx_app();
         if (handled == 0) {
