@@ -147,6 +147,8 @@ size_t handle_packet() {
         return handled;
     }
 
+    LOG_DBG("rx_payload pipe %d", rx_payload->pipe);
+
     struct payload_buffer *buf = (struct payload_buffer*)(rx_payload->data);
     uint8_t *data = buf->body;
     int type = buf->header.type;
@@ -159,7 +161,7 @@ size_t handle_packet() {
         LOG_WRN("Unknown event type %d", type);
         goto CLEANUP;
     }
-    
+
     size_t count = length / data_size;
     if (count * data_size != length) {
         LOG_WRN("data sizse mismatch (%d * %d != %d)", count, data_size, length);
