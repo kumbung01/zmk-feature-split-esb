@@ -36,7 +36,7 @@
 
 #define PIPE_TO_SOURCE(pipe)   (pipe - 1)
 #define SOURCE_TO_PIPE(source) (source + 1)
-
+extern const char *ACTIVE_STATE_CHAR[];
 extern struct k_msgq rx_msgq;
 
 typedef enum zmk_split_transport_peripheral_event_type zmk_split_transport_buffer_type;
@@ -108,6 +108,7 @@ int tx_msgq_init(int *type_to_idx);
 int put_tx_data(void *ptr);
 void *get_next_tx_data();
 size_t get_rx_data_count();
+int put_rx_data(void *ptr);
 int tx_alloc(void **ptr);
 int rx_alloc(void **ptr);
 void tx_free(void *ptr);

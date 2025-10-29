@@ -31,6 +31,7 @@ static struct k_msgq* tx_msgq[] = {&msgq0, &msgq1, &msgq2, &msgq3};
 static int idx_to_type[ARRAY_SIZE(tx_msgq)];
 static int *type_to_idx;
 static const size_t tx_msgq_cnt = ARRAY_SIZE(tx_msgq);
+const char *ACTIVE_STATE_CHAR[] = {"ACTIVE", "IDLE", "SLEEP"};
 
 struct zmk_split_esb_ops *esb_ops;
 
@@ -249,7 +250,7 @@ size_t get_rx_data_count() {
 }
 
 int put_rx_data(void *ptr) {
-    return k_msgq_put(&rx_msgq, &ptr, K_NO_WAIT) != 0;
+    return k_msgq_put(&rx_msgq, &ptr, K_NO_WAIT);
 }
 
 int tx_alloc(void **ptr) {

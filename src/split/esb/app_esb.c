@@ -96,7 +96,7 @@ static void event_handler(struct esb_evt const *event) {
         case ESB_EVENT_TX_FAILED:
             LOG_WRN("ESB_EVENT_TX_FAILED");
 #if IS_PERIPHERAL
-                // esb_pop_tx();
+                esb_pop_tx();
                 esb_start_tx();
                 k_sem_give(&tx_sem);
 #endif
@@ -393,12 +393,11 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) 
 
 static int on_activity_state(const zmk_event_t *eh) {
     struct zmk_activity_state_changed *state_ev = as_zmk_activity_state_changed(eh);
-    const char *str[] = {"ACTIVE", "IDLE", "SLEEP"};
     if (!state_ev) {
         return 0;
     }
 
-    LOG_DBG("activity state changed: %s", state[state_ev->state]);
+    LOG_DBG("activity state changed: %s", ACTIVE_STATE_CHAR[state_ev->state]);
 
     if (m_mode == APP_ESB_MODE_PTX) {
         if (state_ev->state != ZMK_ACTIVITY_ACTIVE && zmk_split_esb_get_enable()) {
