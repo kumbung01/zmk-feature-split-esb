@@ -76,7 +76,6 @@ static void schedule_request(enum mpsl_timeslot_call call) {
     }
 }
 
-// static volatile bool is_radio_on = false;
 static void set_timeslot_active_status(bool active) {
 #if ESB_ONLY
     if (m_sess_open && m_in_timeslot) {

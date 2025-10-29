@@ -78,7 +78,7 @@ static struct zmk_split_esb_ops central_ops = {
 static void rx_work_handler(struct k_work *work) {
     size_t total = 0;
     
-    while (total < RX_MSGQ_SIZE / 2) {
+    while (total < RX_MSGQ_SIZE - 1) {
         size_t handled = handle_packet();
         if (handled == 0) {
             return;
@@ -93,7 +93,7 @@ static void rx_work_handler(struct k_work *work) {
 static void tx_work_handler(struct k_work *work) {
     size_t total = 0;
     
-    while (total < TX_MSGQ_SIZE / 2) {
+    while (total < TX_MSGQ_SIZE - 1) {
         size_t handled = esb_tx_app();
         if (handled == 0) {
             return;
