@@ -91,7 +91,18 @@ static void rx_work_handler(struct k_work *work) {
 }
 
 static void tx_work_handler(struct k_work *work) {
-    esb_tx_app();
+    size_t total = 0;
+    
+    while (total < TX_MSGQ_SIZE / 2) {
+        size_t handled = esb_tx_app();
+        if (handled == 0) {
+            return;
+        }
+
+        total += handled;
+    }
+
+    k_work_submit(&tx_work);
 }
 
 static int split_central_esb_send_command(uint8_t source,

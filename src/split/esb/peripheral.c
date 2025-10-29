@@ -67,7 +67,18 @@ static void rx_work_handler(struct k_work *work) {
 }
 
 static void tx_work_handler(struct k_work *work) {
-    esb_tx_app();
+    size_t total = 0;
+    
+    while (total < TX_MSGQ_SIZE / 2) {
+        size_t handled = esb_tx_app();
+        if (handled == 0) {
+            return;
+        }
+
+        total += handled;
+    }
+
+    k_work_submit(&tx_work);
 }
 
 static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
@@ -99,7 +110,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     }
     
     if (is_esb_active())
-        k_sem_give(&tx_sem);
+        k_work_submit(&tx_work);
 
     return 0;
 }
@@ -170,15 +181,15 @@ static int peripheral_handler(struct esb_data_envelope* env) {
     return zmk_split_transport_peripheral_command_handler(&esb_peripheral, env->command);
 }
 
-void tx_thread() {
-    while (true)
-    {
-        k_sem_take(&tx_sem, K_FOREVER);
-        LOG_DBG("tx thread awake");
-        esb_tx_app();
-    }
-}
+// void tx_thread() {
+//     while (true)
+//     {
+//         k_sem_take(&tx_sem, K_FOREVER);
+//         LOG_DBG("tx thread awake");
+//         esb_tx_app();
+//     }
+// }
 
-K_THREAD_DEFINE(tx_thread_id, 1300,
-        tx_thread, NULL, NULL, NULL,
-        5, 0, 0);
+// K_THREAD_DEFINE(tx_thread_id, 1300,
+//         tx_thread, NULL, NULL, NULL,
+//         5, 0, 0);

@@ -89,17 +89,15 @@ static void event_handler(struct esb_evt const *event) {
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
             LOG_DBG("TX SUCCESS");
-#if IS_PERIPHERAL
-                k_sem_give(&tx_sem);
-#endif
+            k_work_submit(esb_ops->tx_work);
             break;
         case ESB_EVENT_TX_FAILED:
             LOG_WRN("ESB_EVENT_TX_FAILED");
 #if IS_PERIPHERAL
-                esb_pop_tx();
-                esb_start_tx();
-                k_sem_give(&tx_sem);
+            // esb_pop_tx();
+            esb_start_tx();
 #endif
+            k_work_submit(esb_ops->tx_work);
             break;
         case ESB_EVENT_RX_RECEIVED:
             LOG_DBG("RX SUCCESS");
@@ -188,34 +186,36 @@ static int make_packet(struct esb_payload *payload) {
 }
 
 
-void esb_tx_app() {
-    while (true) {
-        if (esb_tx_full()) {
-            LOG_DBG("esb tx full, wait for next tx event");
-            break;
-        }
+size_t esb_tx_app() {
+    size_t data_count = 0;
+    struct esb_payload payload;
 
-        struct esb_payload payload;
-        int data_count = make_packet(&payload);
-        if (data_count == 0) {
-            LOG_DBG("no packet to send");
-            break;
-        }
-
-        LOG_DBG("sending payload through pipe %d", payload.pipe);
-
-        int ret = esb_write_payload(&payload);
-        if (ret != 0) {
-            LOG_WRN("esb_write_payload returned %d", ret);
-            break;
-        }
-
-        ret = esb_start_tx();
-        if (ret != 0 && ret != -EBUSY) {
-            LOG_DBG("esb_start_tx() returned (%d)", ret);
-            break;
-        }
+    if (esb_tx_full()) {
+        LOG_DBG("esb tx full, wait for next tx event");
+        return 0;
     }
+
+    data_count = make_packet(&payload);
+    if (data_count == 0) {
+        LOG_DBG("no packet to send");
+        return 0;
+    }
+
+    LOG_DBG("sending payload through pipe %d", payload.pipe);
+
+    int ret = esb_write_payload(&payload);
+    if (ret != 0) {
+        LOG_WRN("esb_write_payload returned %d", ret);
+        return 0;
+    }
+
+    ret = esb_start_tx();
+    if (ret != 0 && ret != -EBUSY) {
+        LOG_DBG("esb_start_tx() returned (%d)", ret);
+        return 0;
+    }
+
+    return data_count;
 }
 
 
@@ -378,11 +378,7 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) 
         case APP_TS_STARTED:
             app_esb_resume();
             if (atomic_cas(&tx_work_submit, 0, 1)) {
-#if IS_CENTRAL
                 k_work_submit(esb_ops->tx_work);
-#else
-                k_sem_give(&tx_sem);
-#endif
             }
             break;
         case APP_TS_STOPPED:
