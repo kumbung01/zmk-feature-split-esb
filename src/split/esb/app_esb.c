@@ -199,6 +199,8 @@ void esb_tx_app() {
             break;
         }
 
+        LOG_DBG("sending payload through pipe %d", payload->pipe);
+
         int ret = esb_write_payload(&payload);
         if (ret != 0) {
             LOG_WRN("esb_write_payload returned %d", ret);
