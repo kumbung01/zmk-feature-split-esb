@@ -139,12 +139,6 @@ void reset_buffers() {
 #endif
 
 int send_event(uint8_t source, struct zmk_split_transport_buffer *buf) {
-    ssize_t data_size = esb_ops->get_data_size_tx(buf->type);
-    if (data_size < 0) {
-        LOG_WRN("get_payload_data_size_cmd failed (err %d)", data_size);
-        return -ENOTSUP;
-    }
-
     LOG_DBG("sending packet type (%d)", buf->type);
 
     struct esb_data_envelope *env;
