@@ -96,7 +96,7 @@ static void event_handler(struct esb_evt const *event) {
         case ESB_EVENT_TX_FAILED:
             LOG_WRN("ESB_EVENT_TX_FAILED");
 #if IS_PERIPHERAL
-                esb_pop_tx();
+                // esb_pop_tx();
                 esb_start_tx();
                 k_sem_give(&tx_sem);
 #endif
@@ -131,6 +131,7 @@ static int make_packet(struct esb_payload *payload) {
     struct payload_buffer *buf = (struct payload_buffer *)payload->data;
     const size_t body_size = sizeof(buf->body);
     uint8_t type;
+    int64_t now = k_uptime_get();
 
 #if IS_PERIPHERAL
     payload->pipe = SOURCE_TO_PIPE(PERIPHERAL_ID); // use the peripheral_id as the ESB pipe number
@@ -146,14 +147,16 @@ static int make_packet(struct esb_payload *payload) {
 
         type = env->buf.type;
         ssize_t data_size = esb_ops->get_data_size_tx(type);
-        if (data_size < 0) {
-            LOG_WRN("invalid type (%d)", data_size);
-            break;
-        }
+        __ASSERT(data_size >= 0, "data_size can't be negative");
 
         if (offset + data_size > body_size) {
             LOG_DBG("packet full (%u + %u > %d)", offset, data_size, body_size);
             put_tx_data(env);
+            break;
+        }
+
+        if (now - env->timestamp >= TIMEOUT_MS) {
+            LOG_WRN("Packet Timeout exceeded, %lld - %lld >= %d", now, env->timestamp, TIMEOUT_MS);
             break;
         }
 
@@ -390,9 +393,12 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) 
 
 static int on_activity_state(const zmk_event_t *eh) {
     struct zmk_activity_state_changed *state_ev = as_zmk_activity_state_changed(eh);
+    const char *str[] = {"ACTIVE", "IDLE", "SLEEP"};
     if (!state_ev) {
         return 0;
     }
+
+    LOG_DBG("activity state changed: %s", state[state_ev->state]);
 
     if (m_mode == APP_ESB_MODE_PTX) {
         if (state_ev->state != ZMK_ACTIVITY_ACTIVE && zmk_split_esb_get_enable()) {

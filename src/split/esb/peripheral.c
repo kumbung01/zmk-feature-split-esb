@@ -89,6 +89,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
 
     env->event = *event;
     env->source = PERIPHERAL_ID;
+    env->timestamp = k_uptime_get();
 
     ret = put_tx_data(env);
     if (ret < 0) {
@@ -178,6 +179,6 @@ void tx_thread() {
     }
 }
 
-K_THREAD_DEFINE(tx_thread_id, 1024,
+K_THREAD_DEFINE(tx_thread_id, 1300,
         tx_thread, NULL, NULL, NULL,
-        0, 0, 0);
+        5, 0, 0);
