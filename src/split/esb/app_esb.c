@@ -51,6 +51,21 @@ uint8_t esb_addr_prefix[8] = DT_INST_PROP(0, addr_prefix);
 #error "Need to create a node with compatible of 'zmk,esb-split` with `all `address` property set."
 #endif
 
+struct esb_config config = {
+    .protocol = ESB_PROTOCOL_ESB_DPL,
+    .mode = ESB_MODE_PTX,
+    .bitrate = IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_BITRATE_2MBPS) ? ESB_BITRATE_2MBPS : ESB_BITRATE_1MBPS,
+    .crc = ESB_CRC_16BIT,
+    .retransmit_delay = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY,
+    .retransmit_count = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT,
+    .tx_mode = ESB_TXMODE_MANUAL_START,
+    .payload_length = CONFIG_ESB_MAX_PAYLOAD_LENGTH,
+    .selective_auto_ack = true,
+    .use_fast_ramp_up = false,
+    .event_handler = event_handler,
+    .tx_output_power = -4,
+};
+
 K_SEM_DEFINE(tx_sem, 0, 1);
 
 static app_esb_mode_t m_mode;
@@ -231,26 +246,12 @@ static int clocks_start(void) {
     return 0;
 }
 
-static int esb_initialize(app_esb_mode_t mode) {
-    int err;
-    struct esb_config config = ESB_DEFAULT_CONFIG;
 
-    config.protocol = ESB_PROTOCOL_ESB_DPL;
-    config.retransmit_delay = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY;
-    config.retransmit_count = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT;
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_BITRATE_2MBPS)
-    config.bitrate = ESB_BITRATE_2MBPS;
-#else
-    config.bitrate = ESB_BITRATE_1MBPS;
-#endif
-    config.event_handler = event_handler;
-    config.mode = (mode == APP_ESB_MODE_PTX) ? ESB_MODE_PTX : ESB_MODE_PRX;
-    config.tx_mode = ESB_TXMODE_MANUAL_START;
-    config.selective_auto_ack = true;
-    config.tx_output_power = -8;
-    
-    err = esb_init(&config);
 
+static int
+esb_initialize(app_esb_mode_t mode)
+{
+    int err = esb_init(&config);
     if (err) {
         return err;
     }
@@ -270,6 +271,11 @@ static int esb_initialize(app_esb_mode_t mode) {
         return err;
     }
 
+    err = esb_enable_pipes(ENABLED_PIPES);
+    if (err) {
+        return err;
+    }
+
     NVIC_SetPriority(RADIO_IRQn, 0);
 
     if (mode == APP_ESB_MODE_PRX) {
@@ -285,6 +291,7 @@ static int esb_initialize(app_esb_mode_t mode) {
 int zmk_split_esb_init(app_esb_mode_t mode) {
     int ret;
     m_mode = mode;
+    config.mode = mode == APP_ESB_MODE_PTX ? ESB_MODE_PTX : ESB_MODE_PRX;
     ret = clocks_start();
     if (ret < 0) {
         return ret;

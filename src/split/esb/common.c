@@ -153,16 +153,7 @@ size_t handle_packet() {
     size_t length = rx_payload->length - HEADER_SIZE;
     size_t offset = 0;
     size_t source = rx_payload->pipe;
-#if IS_CENTRAL
-    if (source >= CONFIG_ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS)
-#else
-    if (source != PERIPHERAL_ID)
-#endif
-    {
-        LOG_WRN("invalid source (%u)", source);
-        goto CLEANUP;
-    }
-
+    
     ssize_t data_size = esb_ops->get_data_size_rx(type);
     if (data_size < 0) {
         LOG_WRN("Unknown event type %d", type);
