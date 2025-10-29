@@ -133,7 +133,7 @@ static int make_packet(struct esb_payload *payload) {
     uint8_t type;
 
 #if IS_PERIPHERAL
-    payload->pipe = CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID; // use the peripheral_id as the ESB pipe number
+    payload->pipe = PERIPHERAL_ID + 1; // use the peripheral_id as the ESB pipe number
 #endif
     payload->noack = !CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK;
 
@@ -166,7 +166,7 @@ static int make_packet(struct esb_payload *payload) {
         tx_free(env);
 
 #if IS_CENTRAL
-        payload->pipe = env->source; // use the source as the ESB pipe number
+        payload->pipe = env->source + 1; // use the source as the ESB pipe number
         break;
 #endif
 
