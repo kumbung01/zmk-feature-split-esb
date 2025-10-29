@@ -51,10 +51,11 @@ static struct zmk_split_esb_ops peripheral_ops = {
     .tx_work = &tx_work,
 };
 
+
 static void rx_work_handler(struct k_work *work) {
     size_t total = 0;
     
-    while (total < RX_MSGQ_SIZE - 1) {
+    while (total < CAN_HANDLE_RX) {
         size_t handled = handle_packet();
         if (handled == 0) {
             return;
@@ -69,7 +70,7 @@ static void rx_work_handler(struct k_work *work) {
 static void tx_work_handler(struct k_work *work) {
     size_t total = 0;
 
-    while (total < TX_MSGQ_SIZE - 1) {
+    while (total < CAN_HANDLE_TX) {
         size_t handled = esb_tx_app();
         if (handled == 0) {
             return;
