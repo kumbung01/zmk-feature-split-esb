@@ -56,7 +56,7 @@ static void rx_work_handler(struct k_work *work) {
     int64_t deadline = k_uptime_get() + TIMEOUT_MS;
 
     do {
-        if (handle_packet() == 0) {
+        if (handle_packet() != 0) {
             return;
         }
     } while (k_uptime_get() < deadline);
@@ -68,7 +68,7 @@ static void tx_work_handler(struct k_work *work) {
     int64_t deadline = k_uptime_get() + TIMEOUT_MS;
 
     do {
-        if (esb_tx_app() == 0) {
+        if (esb_tx_app() != 0) {
             return;
         }
     } while (k_uptime_get() < deadline);

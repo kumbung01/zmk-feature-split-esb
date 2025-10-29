@@ -179,7 +179,6 @@ int make_packet(struct esb_payload *payload) {
     while (true) {
         struct esb_data_envelope *env = get_next_tx_data();
         if (env == NULL) {
-            LOG_DBG("next data is NULL.");
             break;
         }
 
@@ -192,11 +191,6 @@ int make_packet(struct esb_payload *payload) {
             put_tx_data(env);
             break;
         }
-
-        // if (now - env->timestamp >= TIMEOUT_MS) {
-        //     LOG_WRN("Packet Timeout exceeded, %lld - %lld >= %d", now, env->timestamp, TIMEOUT_MS);
-        //     break;
-        // }
 
         LOG_DBG("adding type %u size %u to packet", type, data_size);
 
@@ -226,13 +220,13 @@ int make_packet(struct esb_payload *payload) {
 }
 
 
-size_t handle_packet() {
+int handle_packet() {
     size_t handled = 0;
     struct esb_payload *rx_payload = NULL;
     int err = k_msgq_get(&rx_msgq, &rx_payload, K_NO_WAIT);
     if (err < 0) {
         LOG_DBG("k_msgq_get failed (err %d)", err);
-        return handled;
+        return err;
     }
 
     LOG_DBG("rx_payload pipe %d", rx_payload->pipe);
@@ -241,7 +235,6 @@ size_t handle_packet() {
     uint8_t *data = buf->body;
     int type = buf->header.type;
     size_t length = rx_payload->length - HEADER_SIZE;
-    size_t offset = 0;
     size_t source = PIPE_TO_SOURCE(rx_payload->pipe);
 
     ssize_t data_size = esb_ops->get_data_size_rx(type);
@@ -252,7 +245,7 @@ size_t handle_packet() {
 
     size_t count = length / data_size;
     if (count * data_size != length) {
-        LOG_WRN("data sizse mismatch (%d * %d != %d)", count, data_size, length);
+        LOG_WRN("data size mismatch (%d * %d != %d)", count, data_size, length);
         goto CLEANUP;
     }
 
@@ -261,23 +254,17 @@ size_t handle_packet() {
                                     };
 
     for (size_t i = 0; i < count; ++i) {
-        __ASSERT(length >= data_size + offset, "length < data_size + offset");
-
-        memcpy(env.buf.data, &data[offset], data_size);
-        offset += data_size;
+        memcpy(env.buf.data, &data[i * data_size], data_size);
 
         err = esb_ops->event_handler(&env);
         if (err < 0) {
             LOG_WRN("zmk handler failed(%d)", err);
         }
-        
-        handled++;
     }
 
 CLEANUP:
     rx_free(rx_payload);
-
-    return handled;
+    return 0;
 }
 
 int tx_msgq_init(int *_type_to_idx) {
