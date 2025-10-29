@@ -57,7 +57,7 @@ struct peripheral_slot {
     int64_t last_reported;
 };
 
-static struct peripheral_slot peripherals[CONFIG_ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS];
+static struct peripheral_slot peripherals[PERIPHERAL_COUNT];
 static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
 

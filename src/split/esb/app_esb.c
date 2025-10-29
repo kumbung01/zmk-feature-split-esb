@@ -279,9 +279,10 @@ esb_initialize(app_esb_mode_t mode)
 
     const uint32_t channel = 22;
     LOG_DBG("setting rf channel to %d", channel);
-    ret = esb_set_rf_channel(channel);
-    if (ret < 0) {
-        LOG_ERR("esb_set_rf_channel failed: %d", ret);
+    err = esb_set_rf_channel(channel);
+    if (err < 0) {
+        LOG_ERR("esb_set_rf_channel failed: %d", err);
+        return err;
     }
 
     NVIC_SetPriority(RADIO_IRQn, 0);
