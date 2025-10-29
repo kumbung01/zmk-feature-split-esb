@@ -139,6 +139,69 @@ void reset_buffers() {
 #endif
 
 
+int make_packet(struct esb_payload *payload) {
+    size_t count = 0;
+    size_t offset = 0;
+    struct payload_buffer *buf = (struct payload_buffer *)payload->data;
+    const size_t body_size = sizeof(buf->body);
+    uint8_t type;
+    int64_t now = k_uptime_get();
+
+#if IS_PERIPHERAL
+    payload->pipe = SOURCE_TO_PIPE(PERIPHERAL_ID); // use the peripheral_id as the ESB pipe number
+#endif
+    payload->noack = !CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK;
+
+    while (true) {
+        struct esb_data_envelope *env = get_next_tx_data();
+        if (env == NULL) {
+            LOG_DBG("next data is NULL.");
+            break;
+        }
+
+        type = env->buf.type;
+        ssize_t data_size = esb_ops->get_data_size_tx(type);
+        __ASSERT(data_size >= 0, "data_size can't be negative");
+
+        if (offset + data_size > body_size) {
+            LOG_DBG("packet full (%u + %u > %d)", offset, data_size, body_size);
+            put_tx_data(env);
+            break;
+        }
+
+        if (now - env->timestamp >= TIMEOUT_MS) {
+            LOG_WRN("Packet Timeout exceeded, %lld - %lld >= %d", now, env->timestamp, TIMEOUT_MS);
+            break;
+        }
+
+        LOG_DBG("adding type %u size %u to packet", type, data_size);
+
+        memcpy(&buf->body[offset], env->buf.data, data_size);
+        offset += data_size;
+        count++;
+
+        tx_free(env);
+
+#if IS_CENTRAL
+        payload->pipe = SOURCE_TO_PIPE(env->source); // use the source as the ESB pipe number
+        break;
+#endif
+
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_SINGLE_PACKET)
+        break;
+#endif
+    }
+
+    // write header and length
+    if (count > 0) {
+        buf->header.type = type;
+        payload->length = offset + HEADER_SIZE;
+    }
+
+    return count;
+}
+
+
 size_t handle_packet() {
     size_t handled = 0;
     struct esb_payload *rx_payload = NULL;

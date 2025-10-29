@@ -123,7 +123,7 @@ static void event_handler(struct esb_evt const *event) {
     }
 }
 
-static int make_packet(struct esb_payload *payload) {
+int make_packet(struct esb_payload *payload) {
     size_t count = 0;
     size_t offset = 0;
     struct payload_buffer *buf = (struct payload_buffer *)payload->data;

@@ -101,6 +101,7 @@ int service_init();
 uint32_t get_nonce();
 int process_payload(char* data, size_t length, uint32_t nonce);
 
+int make_packet(struct esb_payload *payload);
 size_t handle_packet();
 void reset_buffers();
 
