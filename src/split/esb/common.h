@@ -54,7 +54,7 @@ _Static_assert(sizeof(struct zmk_split_transport_buffer) == ZMK_DATA_SIZE,
 
 struct esb_data_envelope {
     uint8_t source;
-    int64_t timestamp;
+    // int64_t timestamp;
     union {
         struct zmk_split_transport_peripheral_event event;
         struct zmk_split_transport_central_command command;
@@ -94,6 +94,8 @@ extern struct zmk_split_esb_ops *esb_ops;
 
 ssize_t get_payload_data_size_evt(enum zmk_split_transport_peripheral_event_type _type);
 ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type _type);
+
+int send_event(struct zmk_split_transport_buffer *event);
 
 
 int service_init();

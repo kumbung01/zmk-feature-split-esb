@@ -107,31 +107,12 @@ static void tx_work_handler(struct k_work *work) {
 
 static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd) {
-    ssize_t data_size = get_payload_data_size_cmd(cmd.type);
-    if (data_size < 0) {
-        LOG_WRN("get_payload_data_size_cmd failed (err %d)", data_size);
-        return -ENOTSUP;
+    
+    int err = send_event(source, &cmd);
+    if (err) {
+        return err;
     }
-
-    LOG_DBG("sending packet type (%d)", cmd.type);
-
-    struct esb_data_envelope *env;
-    int ret = tx_alloc(&env);
-    if (ret < 0) {
-        LOG_WRN("k_mem_slab_alloc failed (err %d)", ret);
-        return -ENOMEM;
-    }
-
-    env->command = cmd;
-    env->source = source;
-
-    ret = put_tx_data(env);
-    if (ret < 0) {
-        LOG_WRN("k_msgq_put failed (err %d)", ret);
-        tx_free(env);
-        return ret;
-    }
-
+    
     if (is_esb_active())
         k_work_submit(&tx_work);
 

@@ -85,29 +85,7 @@ static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
 static int
 split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event) {
-    ssize_t data_size = get_payload_data_size_evt(event->type);
-    if (data_size < 0) {
-        LOG_WRN("get_payload_data_size_evt failed (err %d)", data_size);
-        return -ENOTSUP;
-    }
-
-    struct esb_data_envelope *env;
-    int ret = tx_alloc(&env);
-    if (ret < 0) {
-        LOG_WRN("Failed to allocate tx_slab (err %d)", ret);
-        return -ENOMEM;
-    }
-
-    env->event = *event;
-    env->source = PERIPHERAL_ID;
-    env->timestamp = k_uptime_get();
-
-    ret = put_tx_data(env);
-    if (ret < 0) {
-        LOG_WRN("k_msgq_put failed (err %d)", ret);
-        tx_free(env);
-        return ret;
-    }
+    int err = send_event(PERIPHERAL_ID, event);
     
     if (is_esb_active())
         k_work_submit(&tx_work);

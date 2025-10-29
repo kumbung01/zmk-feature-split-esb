@@ -138,6 +138,36 @@ void reset_buffers() {
 }
 #endif
 
+int send_event(uint8_t source, struct zmk_split_transport_buffer *buf) {
+    ssize_t data_size = esb_ops->get_data_size_tx(buf->type);
+    if (data_size < 0) {
+        LOG_WRN("get_payload_data_size_cmd failed (err %d)", data_size);
+        return -ENOTSUP;
+    }
+
+    LOG_DBG("sending packet type (%d)", cmd->type);
+
+    struct esb_data_envelope *env;
+    int ret = tx_alloc(&env);
+    if (ret < 0) {
+        LOG_WRN("k_mem_slab_alloc failed (err %d)", ret);
+        return -ENOMEM;
+    }
+
+    env->buf = *buf;
+    env->source = source;
+    // env->timestamp = k_uptime_get();
+
+    ret = put_tx_data(env);
+    if (ret < 0) {
+        LOG_WRN("k_msgq_put failed (err %d)", ret);
+        tx_free(env);
+        return ret;
+    }
+
+    return 0;
+}
+
 
 int make_packet(struct esb_payload *payload) {
     size_t count = 0;
@@ -145,7 +175,7 @@ int make_packet(struct esb_payload *payload) {
     struct payload_buffer *buf = (struct payload_buffer *)payload->data;
     const size_t body_size = sizeof(buf->body);
     uint8_t type;
-    int64_t now = k_uptime_get();
+    // int64_t now = k_uptime_get();
 
 #if IS_PERIPHERAL
     payload->pipe = SOURCE_TO_PIPE(PERIPHERAL_ID); // use the peripheral_id as the ESB pipe number
@@ -169,10 +199,10 @@ int make_packet(struct esb_payload *payload) {
             break;
         }
 
-        if (now - env->timestamp >= TIMEOUT_MS) {
-            LOG_WRN("Packet Timeout exceeded, %lld - %lld >= %d", now, env->timestamp, TIMEOUT_MS);
-            break;
-        }
+        // if (now - env->timestamp >= TIMEOUT_MS) {
+        //     LOG_WRN("Packet Timeout exceeded, %lld - %lld >= %d", now, env->timestamp, TIMEOUT_MS);
+        //     break;
+        // }
 
         LOG_DBG("adding type %u size %u to packet", type, data_size);
 
