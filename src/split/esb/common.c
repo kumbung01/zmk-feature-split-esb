@@ -145,7 +145,7 @@ int send_event(uint8_t source, struct zmk_split_transport_buffer *buf) {
         return -ENOTSUP;
     }
 
-    LOG_DBG("sending packet type (%d)", cmd->type);
+    LOG_DBG("sending packet type (%d)", buf->type);
 
     struct esb_data_envelope *env;
     int ret = tx_alloc(&env);
