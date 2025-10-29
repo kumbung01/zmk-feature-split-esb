@@ -300,7 +300,7 @@ int zmk_split_esb_init(app_esb_mode_t mode) {
     LOG_INF("Timeslothandler init");
     zmk_split_esb_timeslot_init(on_timeslot_start_stop);
     
-    const uint32_t channel = 1;
+    const uint32_t channel = 22;
     LOG_DBG("setting rf channel to %d", channel);
     ret = esb_set_rf_channel(channel);
     if (ret < 0) {
