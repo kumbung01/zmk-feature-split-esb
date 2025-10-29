@@ -234,7 +234,6 @@ int handle_packet() {
     uint8_t *data = buf->body;
     int type = buf->header.type;
     size_t length = rx_payload->length - HEADER_SIZE;
-    size_t source = PIPE_TO_SOURCE(rx_payload->pipe);
 
     ssize_t data_size = esb_ops->get_data_size_rx(type);
     if (data_size < 0) {
@@ -246,7 +245,7 @@ int handle_packet() {
     __ASSERT(count * data_size == length, "data_size * count != length")
 
     struct esb_data_envelope env = { .buf.type = type, 
-                                     .source = source,
+                                     .source = PIPE_TO_SOURCE(rx_payload->pipe),
                                     };
 
     for (size_t i = 0; i < count; ++i) {
