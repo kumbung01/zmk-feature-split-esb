@@ -57,15 +57,13 @@ static void rx_work_handler(struct k_work *work) {
     while (total < RX_MSGQ_SIZE) {
         size_t handled = handle_packet();
         if (handled == 0) {
-            break;
+            return;
         }
 
         total += handled;
     }
 
-    if (get_rx_data_count() > 0) {
-        k_work_submit(&rx_work);
-    }
+    k_work_submit(&rx_work);
 }
 
 static void tx_work_handler(struct k_work *work) {

@@ -81,15 +81,13 @@ static void rx_work_handler(struct k_work *work) {
     while (total < RX_MSGQ_SIZE) {
         size_t handled = handle_packet();
         if (handled == 0) {
-            break;
+            return;
         }
 
         total += handled;
     }
 
-    if (get_rx_data_count() > 0) {
-        k_work_submit(&rx_work);
-    }
+    k_work_submit(&rx_work);
 }
 
 static void tx_work_handler(struct k_work *work) {
@@ -232,7 +230,9 @@ SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DE
 
 
 static int central_handler(struct esb_data_envelope *env) {
-    uint8_t source = env->source;
+    int source = env->source;
+    __ASSERT(0 <= source && source < ARRAY_SIZE(peripherals), "source must within valid range");
+
     peripherals[source].state = PERIPHERAL_UP;
     peripherals[source].last_reported = k_uptime_get();
     
