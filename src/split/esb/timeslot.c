@@ -16,7 +16,11 @@
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(timeslot, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
-
+#if CONFIG_MPSL_TIMESLOT_SESSION_COUNT == 1
+#define ESB_ONLY 1
+#else
+#define ESB_ONLY 0
+#endif
 
 #define TIMESLOT_REQUEST_TIMEOUT_US  1000000
 #define TIMESLOT_LENGTH_US           10000
@@ -72,18 +76,44 @@ static void schedule_request(enum mpsl_timeslot_call call) {
     }
 }
 
+static volatile bool is_radio_on = false;
 static void set_timeslot_active_status(bool active) {
     if (active) {
         if (!m_in_timeslot) {
             m_in_timeslot = true;
+#if ESB_ONLY
+            if (m_sess_open && is_radio_on) {
+                return;
+            }
+#endif
             m_callback(APP_TS_STARTED);
+            is_radio_on = true;
         }
     } else {
         if (m_in_timeslot) {
             m_in_timeslot = false;
+#if ESB_ONLY
+            if (m_sess_open && is_radio_on) {
+                return;
+            }
+#endif
             m_callback(APP_TS_STOPPED);
+            is_radio_on = false;
         }
     }
+}
+
+static void reset_radio() {
+    if (m_sess_open && is_radio_on) {
+        LOG_DBG("ignore reset radio");
+        return;
+    }
+
+    // Reset the radio to make sure no configuration remains from BLE
+    NVIC_ClearPendingIRQ(RADIO_IRQn);
+    NRF_RADIO->POWER = RADIO_POWER_POWER_Disabled << RADIO_POWER_POWER_Pos;
+    NRF_RADIO->POWER = RADIO_POWER_POWER_Enabled << RADIO_POWER_POWER_Pos;
+    NVIC_ClearPendingIRQ(RADIO_IRQn);
 }
 
 static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot_session_id_t session_id, 
@@ -100,11 +130,7 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
 
             timeslot_extension_failed = false;
 
-            // Reset the radio to make sure no configuration remains from BLE
-            NVIC_ClearPendingIRQ(RADIO_IRQn);
-            NRF_RADIO->POWER = RADIO_POWER_POWER_Disabled << RADIO_POWER_POWER_Pos;
-            NRF_RADIO->POWER = RADIO_POWER_POWER_Enabled << RADIO_POWER_POWER_Pos;
-            NVIC_ClearPendingIRQ(RADIO_IRQn);
+            reset_radio();
 
             nrf_timer_bit_width_set(NRF_TIMER0, NRF_TIMER_BIT_WIDTH_32);
             
