@@ -76,38 +76,34 @@ static void schedule_request(enum mpsl_timeslot_call call) {
     }
 }
 
-static volatile bool is_radio_on = false;
+// static volatile bool is_radio_on = false;
 static void set_timeslot_active_status(bool active) {
+#if ESB_ONLY
+    if (m_sess_open && m_in_timeslot) {
+        return;
+    }
+#endif
+
     if (active) {
         if (!m_in_timeslot) {
             m_in_timeslot = true;
-#if ESB_ONLY
-            if (m_sess_open && is_radio_on) {
-                return;
-            }
-#endif
             m_callback(APP_TS_STARTED);
-            is_radio_on = true;
         }
     } else {
         if (m_in_timeslot) {
             m_in_timeslot = false;
-#if ESB_ONLY
-            if (m_sess_open && is_radio_on) {
-                return;
-            }
-#endif
             m_callback(APP_TS_STOPPED);
-            is_radio_on = false;
         }
     }
 }
 
 static void reset_radio() {
-    if (m_sess_open && is_radio_on) {
+#if ESB_ONLY
+    if (m_sess_open && m_in_timeslot) {
         LOG_DBG("ignore reset radio");
         return;
     }
+#endif
 
     // Reset the radio to make sure no configuration remains from BLE
     NVIC_ClearPendingIRQ(RADIO_IRQn);
