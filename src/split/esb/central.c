@@ -76,25 +76,25 @@ static struct zmk_split_esb_ops central_ops = {
 };
 
 static void rx_work_handler(struct k_work *work) {
-    int64_t start = k_uptime_get();
-    
-    while (k_uptime_get() - start < 500) {
+    int64_t deadline = k_uptime_get() + TIMEOUT_MS;
+
+    do {
         if (handle_packet() == 0) {
             return;
         }
-    }
+    } while (k_uptime_get() < deadline);
 
     k_work_submit(&rx_work);
 }
 
 static void tx_work_handler(struct k_work *work) {
-    int64_t start = k_uptime_get();
-    
-    while (k_uptime_get() - start < 500) {
+    int64_t deadline = k_uptime_get() + TIMEOUT_MS;
+
+    do {
         if (esb_tx_app() == 0) {
             return;
         }
-    }
+    } while (k_uptime_get() < deadline);
 
     k_work_submit(&tx_work);
 }
