@@ -85,7 +85,7 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
 static void event_handler(struct esb_evt const *event) {
     struct esb_payload *payload = NULL;
-    static size_t tx_fail_count = 0;
+    static int tx_fail_count = 0;
 
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
