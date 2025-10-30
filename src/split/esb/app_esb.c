@@ -330,7 +330,7 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) 
         case APP_TS_STARTED:
             app_esb_resume();
             if (atomic_cas(&tx_work_submit, 0, 1)) {
-                k_work_submit(esb_ops->tx_work);
+                esb_ops->tx_op();
             }
             break;
         case APP_TS_STOPPED:
