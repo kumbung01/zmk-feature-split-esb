@@ -164,7 +164,6 @@ size_t esb_tx_app() {
     ret = esb_start_tx();
     if (ret != 0 && ret != -EBUSY) {
         LOG_DBG("esb_start_tx() returned (%d)", ret);
-        return 0;
     }
 
     return evt_count;

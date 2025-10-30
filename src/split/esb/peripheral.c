@@ -154,9 +154,16 @@ static int peripheral_handler(struct esb_data_envelope* env) {
 void tx_thread() {
     while (true)
     {
+        int  total = 0;
         k_sem_take(&tx_sem, K_FOREVER);
         LOG_DBG("tx thread awake");
-        esb_tx_app();
+        do {
+            int count = esb_tx_app();
+            if (count == 0)
+                break;
+
+            total += count;
+        } while (total < CAN_HANDLE_TX);
     }
 }
 
