@@ -45,6 +45,7 @@ static const int event_prio[] = {
     [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_INVOKE_BEHAVIOR]      = 1,
     [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_PHYSICAL_LAYOUT]  = 2,
     [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_HID_INDICATORS]   = 3,
+    [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SEED]                 = 4,
 };
 
 enum peripheral_slot_state {
@@ -236,6 +237,17 @@ static int central_handler(struct esb_data_envelope *env) {
 
     peripherals[source].state = PERIPHERAL_UP;
     peripherals[source].last_reported = k_uptime_get();
+
+    if (env->event.type == ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_HELLO_EVENT) {
+        LOG_WRN("HELLO from source %d", source);
+
+        LOG_DBG("sending seed");
+        struct zmk_split_transport_central_command cmd = {.type = ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SEED};
+        uint32_t seed = 0xf7f7;
+        memcpy(cmd.data, &seed, sizeof(seed));
+        split_central_esb_send_command(source, cmd);
+        return 0;
+    }
     
     return zmk_split_transport_central_peripheral_event_handler(&esb_central, source, env->event);
 }

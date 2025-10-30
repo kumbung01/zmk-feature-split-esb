@@ -34,7 +34,8 @@ static const int event_prio[] = {
     [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT]  = 0,
     [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT]         = 1,
     [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT]        = 2,
-    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT]       = 3
+    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT]       = 3,
+    [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_HELLO_EVENT]         = 4,
 };
 
 static void rx_work_handler(struct k_work *work);
@@ -142,12 +143,24 @@ static int zmk_split_esb_peripheral_init(void) {
     }
 
     k_work_submit(&notify_status_work);
+    struct zmk_split_transport_buffer buf = {.type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_HELLO_EVENT,};
+
+    split_peripheral_esb_report_event(*buf);
+
     return 0;
 }
 
 SYS_INIT(zmk_split_esb_peripheral_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 
 static int peripheral_handler(struct esb_data_envelope* env) {
+    if (env->buf.type == ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SEED) {
+        uint32_t timestamp;
+        memcpy(&timestamp, env->buf.data, sizeof(timestamp));
+        LOG_WRN("seed is 0x%x", timestamp);
+
+        return 0;
+    }
+
     return zmk_split_transport_peripheral_command_handler(&esb_peripheral, env->command);
 }
 

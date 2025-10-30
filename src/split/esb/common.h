@@ -21,6 +21,7 @@
 
 #define CAN_HANDLE_RX (5)
 #define CAN_HANDLE_TX (5)
+#define MAX_EVENT_PER_PACKET_TX (3)
 
 #define IS_CENTRAL IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 #define IS_PERIPHERAL !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
@@ -54,6 +55,14 @@ struct zmk_split_transport_buffer {
 
 _Static_assert(sizeof(struct zmk_split_transport_buffer) == ZMK_DATA_SIZE,
                "zmk_split_transport_buffer size mismatch");
+
+enum zmk_split_transport_central_command_type_proprietary {
+    ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SEED = 4,
+};
+
+enum zmk_split_transport_peripheral_event_type_proprietary {
+    ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_HELLO_EVENT = 4,
+}
 
 struct esb_data_envelope {
     uint8_t source;

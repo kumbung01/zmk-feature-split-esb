@@ -27,7 +27,8 @@ K_MSGQ_DEFINE(msgq0, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq1, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq2, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq3, sizeof(void*), TX_MSGQ_SIZE, 4);
-static struct k_msgq* tx_msgq[] = {&msgq0, &msgq1, &msgq2, &msgq3};
+K_MSGQ_DEFINE(msgq4, sizeof(void*), TX_MSGQ_SIZE, 4);
+static struct k_msgq* tx_msgq[] = {&msgq0, &msgq1, &msgq2, &msgq3, &msgq4};
 static int idx_to_type[ARRAY_SIZE(tx_msgq)];
 static int *type_to_idx;
 static const size_t tx_msgq_cnt = ARRAY_SIZE(tx_msgq);
@@ -50,6 +51,10 @@ ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type 
         break;
     case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_HID_INDICATORS:
         size = sizeof(((struct zmk_split_transport_central_command*)0)->data.set_hid_indicators);
+        break;
+    case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SEED:
+        size = sizeof(uint32_t);
+        LOG_DBG("seed");
         break;
     default:
         size = -ENOTSUP;
@@ -78,6 +83,9 @@ ssize_t get_payload_data_size_evt(enum zmk_split_transport_peripheral_event_type
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT:
         size = sizeof(((struct zmk_split_transport_peripheral_event*)0)->data.battery_event);
         break;
+    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_HELLO_EVENT:
+        size = 0;
+        LOG_DBG("hello");
     default:
         size = -ENOTSUP;
         break;
@@ -169,7 +177,6 @@ size_t make_packet(struct esb_payload *payload) {
     uint8_t type;
     struct payload_buffer *buf = (struct payload_buffer *)payload->data;
     const size_t body_size = sizeof(buf->body);
-    // int64_t now = k_uptime_get();
 
 #if IS_PERIPHERAL
     payload->pipe = SOURCE_TO_PIPE(PERIPHERAL_ID); // use the peripheral_id as the ESB pipe number
@@ -208,7 +215,7 @@ size_t make_packet(struct esb_payload *payload) {
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_SINGLE_PACKET)
         break;
 #endif
-    } while (count < CAN_HANDLE_TX);
+    } while (count < MAX_EVENT_PER_PACKET_TX);
 
     // write header and length
     buf->header.type = type;
