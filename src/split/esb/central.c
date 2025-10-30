@@ -89,7 +89,7 @@ static void rx_work_handler(struct k_work *work) {
     } while (total < CAN_HANDLE_RX);
 
     if (get_rx_count() > 0)
-        k_work_schedule(&rx_work, K_MSEC(1));
+        k_work_schedule(&rx_work, K_MSEC(TIMEOUT_MS));
     else
         rx_work_finished();
 }
