@@ -334,6 +334,8 @@ int put_rx_data(void *ptr) {
         
         k_msgq_put(&rx_msgq, &ptr, K_NO_WAIT);
     }
+
+    return 0;
 }
 
 int tx_alloc(void **ptr) {
