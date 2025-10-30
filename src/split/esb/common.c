@@ -86,6 +86,7 @@ ssize_t get_payload_data_size_evt(enum zmk_split_transport_peripheral_event_type
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_HELLO_EVENT:
         size = 0;
         LOG_DBG("hello");
+        break;
     default:
         size = -ENOTSUP;
         break;
