@@ -158,7 +158,7 @@ void reset_buffers() {
 #endif
 
 int send_event(uint8_t source, struct zmk_split_transport_buffer *buf) {
-    LOG_DBG("sending packet type (%d)", buf->type);
+    LOG_DBG("sending packet type (%d) to source (%d)", buf->type, source);
 
     struct esb_data_envelope *env;
     int ret = tx_alloc(&env);
