@@ -90,7 +90,7 @@ static void rx_work_handler(struct k_work *work) {
     do {
         size_t evt_count = handle_packet();
         int64_t delta = k_uptime_delta(&start);
-        LOG_DBG("rx_work delta: %lld, count: %u", delta, evt_count);
+        // LOG_DBG("rx_work delta: %lld, count: %u", delta, evt_count);
         total_delta += delta;
         total += evt_count;
         if (evt_count == 0) {
@@ -99,11 +99,11 @@ static void rx_work_handler(struct k_work *work) {
     } while (total < CAN_HANDLE_RX);
 
     if (get_rx_count() > 0) {
-        LOG_DBG("rx_work reschedule");
+        LOG_WRN("rx_work reschedule");
         k_work_submit(&rx_work);
     }
 
-    LOG_WRN("rx_work end. total: %u, delta: %lld", total, total_delta);
+    // LOG_WRN("rx_work end. total: %u, delta: %lld", total, total_delta);
 }
 
 

@@ -162,7 +162,7 @@ int send_event(uint8_t source, struct zmk_split_transport_buffer *buf) {
     return 0;
 }
 
-static int64_t timestamp = 0;
+
 size_t make_packet(struct esb_payload *payload) {
     size_t count = 0;
     size_t offset = 0;
@@ -214,11 +214,10 @@ size_t make_packet(struct esb_payload *payload) {
     buf->header.type = type;
     payload->length = offset + HEADER_SIZE;
 
-    LOG_WRN("handle_packet delta: %lld", k_uptime_delta(&timestamp));
     return count;
 }
 
-
+static int64_t timestamp = 0;
 size_t handle_packet() {
     size_t handled = 0; // at least 1 packet
     struct esb_payload *rx_payload = NULL;
@@ -262,6 +261,7 @@ size_t handle_packet() {
 
 CLEANUP:
     rx_free(rx_payload);
+    LOG_WRN("handle_packet delta: %lld", k_uptime_delta(&timestamp));
     return handled;
 }
 
