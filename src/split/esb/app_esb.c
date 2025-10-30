@@ -109,7 +109,9 @@ static void event_handler(struct esb_evt const *event) {
                 tx_fail_count = 0;
                 esb_flush_tx();
             }
-            esb_start_tx();
+            else {
+                esb_start_tx();
+            }
 #endif
             if (get_tx_count() > 0)
                 esb_ops->tx_op();
