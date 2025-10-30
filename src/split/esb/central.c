@@ -64,7 +64,7 @@ static bool is_enabled = false;
 static int central_handler(struct esb_data_envelope *env);
 static void rx_work_handler(struct k_work *work);
 static void tx_work_handler(struct k_work *work);
-K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
+K_WORK_DEFINE(rx_work, rx_work_handler);
 K_WORK_DEFINE(tx_work, tx_work_handler);
 
 static void tx_op() {
@@ -72,7 +72,7 @@ static void tx_op() {
 }
 
 static void rx_op() {
-    k_work_schedule(&rx_work, K_MSEC(TIMEOUT_MS));
+    k_work_submit(&rx_work);
 }
 
 static struct zmk_split_esb_ops central_ops = {
