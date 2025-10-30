@@ -119,3 +119,5 @@ int tx_alloc(void **ptr);
 int rx_alloc(void **ptr);
 void tx_free(void *ptr);
 void rx_free(void *ptr);
+size_t get_tx_count();
+size_t get_rx_count();

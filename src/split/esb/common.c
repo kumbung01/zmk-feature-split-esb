@@ -335,3 +335,11 @@ int rx_alloc(void **ptr) {
 void rx_free(void *ptr) {
     k_mem_slab_free(&rx_slab, ptr);
 }
+
+size_t get_tx_count() {
+    return k_mem_slab_num_used_get(&tx_slab);
+}
+
+size_t get_rx_count() {
+    return k_mem_slab_num_used_get(&rx_slab);
+}

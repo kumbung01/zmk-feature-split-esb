@@ -61,7 +61,8 @@ static void rx_work_handler(struct k_work *work) {
         }
     } while (k_uptime_get() < deadline);
 
-    k_work_submit(&rx_work);
+    if (get_rx_count() > 0)
+        k_work_submit(&rx_work);
 }
 
 static void tx_work_handler(struct k_work *work) {
@@ -73,7 +74,8 @@ static void tx_work_handler(struct k_work *work) {
         }
     } while (k_uptime_get() < deadline);
 
-    k_work_submit(&tx_work);
+    if (get_tx_count() > 0)
+        k_work_submit(&tx_work);
 }
 
 static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
