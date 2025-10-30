@@ -302,7 +302,16 @@ void *get_next_tx_data() {
 int put_tx_data(void *ptr) {
     __ASSERT(type_to_idx != NULL && ptr != NULL, "type_to_idx and ptr must not null");
     int idx = type_to_idx[((struct esb_data_envelope*)ptr)->buf.type];
-    return k_msgq_put(tx_msgq[idx], &ptr, K_NO_WAIT);
+    if (k_msgq_put(tx_msgq[idx], &ptr, K_NO_WAIT) != 0) {
+        void *temp;
+        if (k_msgq_get(tx_msgq[idx], &temp, K_NO_WAIT) == 0 && temp) {
+            tx_free(temp);
+        }
+        
+        k_msgq_put(tx_msgq[idx], &ptr, K_NO_WAIT);
+    }
+
+    return 0;
 }
 
 void *get_next_rx_data() {
@@ -317,7 +326,14 @@ size_t get_rx_data_count() {
 }
 
 int put_rx_data(void *ptr) {
-    return k_msgq_put(&rx_msgq, &ptr, K_NO_WAIT);
+    if (k_msgq_put(&rx_msgq, &ptr, K_NO_WAIT) != 0) {
+        void *temp;
+        if (k_msgq_get(&rx_msgq, &temp, K_NO_WAIT) == 0 && temp) {
+            tx_free(temp);
+        }
+        
+        k_msgq_put(&rx_msgq, &ptr, K_NO_WAIT);
+    }
 }
 
 int tx_alloc(void **ptr) {
