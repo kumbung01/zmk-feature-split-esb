@@ -107,7 +107,7 @@ static void event_handler(struct esb_evt const *event) {
 #if IS_PERIPHERAL
             if (tx_fail_count++ >= 3) {
                 tx_fail_count = 0;
-                esb_pop_tx();
+                esb_flush_tx();
             }
             esb_start_tx();
 #endif

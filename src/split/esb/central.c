@@ -94,7 +94,8 @@ static void rx_work_handler(struct k_work *work) {
         total += evt_count;
     } while (total < CAN_HANDLE_RX);
 
-    k_work_submit(&rx_work);
+    if (get_rx_count() > 0)
+        k_work_submit(&rx_work);
 }
 
 
@@ -128,7 +129,7 @@ static int split_central_esb_send_command(uint8_t source,
     return 0;
 }
 
-
+DF
 static int split_central_esb_get_available_source_ids(uint8_t *sources) {
     int count = 0;
     for (int i = 0; i < ARRAY_SIZE(peripherals); i++) {
