@@ -136,6 +136,11 @@ int esb_tx_app() {
         return -ENOMEM;
     }
 
+    if (get_tx_count() == 0) {
+        LOG_DBG("no data");
+        return -ENODATA;
+    }
+
     if (make_packet(&payload) == 0) {
         LOG_DBG("no packet to send");
         return -ENODATA;
