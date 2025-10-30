@@ -128,10 +128,6 @@ static void event_handler(struct esb_evt const *event) {
 
 int esb_tx_app() {
     struct esb_payload payload;
-
-    if (get_tx_count() == 0) {
-        return -ENODATA;
-    }
     
     if (esb_tx_full()) {
         LOG_DBG("esb tx full, wait for next tx event");

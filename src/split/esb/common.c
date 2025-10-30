@@ -287,6 +287,10 @@ void *get_next_tx_data() {
         return ptr;
     }
 
+    if (get_tx_count() == 0) {
+        return NULL;
+    }
+
     // when last_idx == -1, search for new data
     for (int i = 0; i < tx_msgq_cnt; ++i) {
         if (k_msgq_get(tx_msgq[i], &ptr, K_NO_WAIT) == 0) {
