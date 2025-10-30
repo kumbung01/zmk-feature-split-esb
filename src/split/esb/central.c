@@ -72,7 +72,7 @@ static void tx_op() {
 }
 
 static void rx_op() {
-    k_work_schedule(&rx_work);
+    k_work_schedule(&rx_work, K_MSEC(TIMEOUT_MS));
 }
 
 static struct zmk_split_esb_ops central_ops = {
