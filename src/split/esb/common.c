@@ -249,7 +249,7 @@ size_t handle_packet() {
         goto CLEANUP;
     }
 
-    size_t count = length / data_size;
+    size_t count = data_size == 0 ? 1 : length / data_size;
     __ASSERT(count * data_size == length, "data_size * count != length")
 
     struct esb_data_envelope env = { .buf.type = type, 
