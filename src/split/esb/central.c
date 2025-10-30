@@ -108,9 +108,9 @@ static void tx_work_handler(struct k_work *work) {
             break;
         }
         total += evt_count;
-    } while (total < CAN_HANDLE_RX);
+    } while (total < CAN_HANDLE_TX);
 
-    if (get_rx_count() > 0) {
+    if (get_tx_count() > 0) {
         k_work_submit(&tx_work);
     }
 }
