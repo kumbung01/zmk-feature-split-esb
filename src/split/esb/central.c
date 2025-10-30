@@ -82,7 +82,7 @@ static void rx_work_handler(struct k_work *work) {
     do {
         size_t evt_count = handle_packet();
         int64_t delta = k_uptime_delta(&start);
-        LOG_WRN("rx_work delta: %lld, count: %u", delta, evt_count);
+        LOG_DBG("rx_work delta: %lld, count: %u", delta, evt_count);
         total_delta += delta;
         total += evt_count;
         if (evt_count == 0) {
@@ -95,7 +95,7 @@ static void rx_work_handler(struct k_work *work) {
     else
         rx_work_finished();
 
-    LOG_DBG("rx_work finished. total: %u, delta: %lld", total, total_delta);
+    LOG_WRN("rx_work finished. total: %u, delta: %lld", total, total_delta);
 }
 
 
@@ -106,7 +106,7 @@ static void tx_work_handler(struct k_work *work) {
     do {
         size_t evt_count = esb_tx_app();
         int64_t delta = k_uptime_delta(&start);
-        LOG_WRN("rx_work delta: %lld, count: %u", delta, evt_count);
+        LOG_DBG("rx_work delta: %lld, count: %u", delta, evt_count);
         total_delta += delta;
         total += evt_count;
         if (evt_count == 0) {
@@ -116,7 +116,7 @@ static void tx_work_handler(struct k_work *work) {
 
     if (get_tx_count() > 0)
         k_work_submit(&tx_work);
-    LOG_DBG("tx_work finished. total: %u, delta: %lld", total, total_delta);
+    LOG_WRN("tx_work finished. total: %u, delta: %lld", total, total_delta);
 }
 
 static int split_central_esb_send_command(uint8_t source,
