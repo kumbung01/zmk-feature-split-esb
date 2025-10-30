@@ -115,14 +115,6 @@ static void tx_work_handler(struct k_work *work) {
     }
 }
 
-static void send_seed(uint8_t source) {
-    LOG_DBG("sending seed");
-    struct zmk_split_transport_central_command cmd = {.type = ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SEED};
-    uint32_t seed = 0xf7f7;
-    memcpy(&cmd.data, &seed, sizeof(seed));
-    split_central_esb_send_command(source, cmd);
-}
-
 static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd) {
     
@@ -137,6 +129,13 @@ static int split_central_esb_send_command(uint8_t source,
     return 0;
 }
 
+static void send_seed(uint8_t source) {
+    LOG_DBG("sending seed");
+    struct zmk_split_transport_central_command cmd = {.type = ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SEED};
+    uint32_t seed = 0xf7f7;
+    memcpy(&cmd.data, &seed, sizeof(seed));
+    split_central_esb_send_command(source, cmd);
+}
 
 static int split_central_esb_get_available_source_ids(uint8_t *sources) {
     int count = 0;

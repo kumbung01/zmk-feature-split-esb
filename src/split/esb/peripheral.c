@@ -77,12 +77,6 @@ static void rx_work_handler(struct k_work *work) {
 static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
 
-static int send_hello() {
-    struct zmk_split_transport_peripheral_event buf = {.type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_HELLO_EVENT,};
-
-    split_peripheral_esb_report_event(&buf);
-}
-
 static int
 split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event) {
     if (is_timer_set()) {
@@ -97,6 +91,11 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
     return 0;
 }
 
+static int send_hello() {
+    struct zmk_split_transport_peripheral_event buf = {.type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_HELLO_EVENT,};
+
+    split_peripheral_esb_report_event(&buf);
+}
 
 static int split_peripheral_esb_set_enabled(bool enabled) {
     is_enabled = enabled;
