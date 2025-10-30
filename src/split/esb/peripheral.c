@@ -145,7 +145,7 @@ static int zmk_split_esb_peripheral_init(void) {
     k_work_submit(&notify_status_work);
     struct zmk_split_transport_peripheral_event buf = {.type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_HELLO_EVENT,};
 
-    split_peripheral_esb_report_event(*buf);
+    split_peripheral_esb_report_event(&buf);
 
     return 0;
 }
