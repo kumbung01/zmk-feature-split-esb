@@ -129,7 +129,7 @@ static int split_central_esb_send_command(uint8_t source,
     return 0;
 }
 
-DF
+
 static int split_central_esb_get_available_source_ids(uint8_t *sources) {
     int count = 0;
     for (int i = 0; i < ARRAY_SIZE(peripherals); i++) {
