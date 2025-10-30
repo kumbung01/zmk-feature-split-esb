@@ -95,15 +95,13 @@ static void event_handler(struct esb_evt const *event) {
         case ESB_EVENT_TX_FAILED:
             LOG_WRN("ESB_EVENT_TX_FAILED");            
 #if IS_PERIPHERAL
-            if (tx_fail_count++ >= 10) {
+            if (tx_fail_count++ >= 3) {
                 tx_fail_count = 0;
-                esb_flush_tx();
-                k_work_submit(esb_ops->tx_work);
+                esb_pop_tx();
             }
-            else {
-                esb_start_tx();
-            }
+            esb_start_tx();
 #endif
+            k_work_submit(esb_ops->tx_work);
             break;
         case ESB_EVENT_RX_RECEIVED:
             LOG_DBG("RX SUCCESS");
