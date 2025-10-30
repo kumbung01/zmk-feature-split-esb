@@ -67,12 +67,20 @@ static void tx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
 K_WORK_DEFINE(tx_work, tx_work_handler);
 
+static void tx_op() {
+    k_work_submit(&tx_work);
+}
+
+static void rx_op() {
+    k_work_schedule(&rx_work);
+}
+
 static struct zmk_split_esb_ops central_ops = {
     .event_handler = central_handler,
     .get_data_size_rx = get_payload_data_size_evt,
     .get_data_size_tx = get_payload_data_size_cmd,
-    .rx_work = &rx_work,
-    .tx_work = &tx_work,
+    .tx_op = tx_op,
+    .rx_op = rx_op,
 };
 
 static void rx_work_handler(struct k_work *work) {
@@ -122,7 +130,7 @@ static void tx_work_handler(struct k_work *work) {
         LOG_DBG("rx_work reschedule");
         k_work_submit(&tx_work);
     }
-    
+
     LOG_WRN("tx_work end. total: %u, delta: %lld", total, total_delta);
 }
 
@@ -135,7 +143,7 @@ static int split_central_esb_send_command(uint8_t source,
     }
     
     if (is_esb_active())
-        k_work_submit(&tx_work);
+        tx_op();
 
     return 0;
 }

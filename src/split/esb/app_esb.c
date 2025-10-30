@@ -99,6 +99,7 @@ static void event_handler(struct esb_evt const *event) {
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
             LOG_DBG("TX SUCCESS");
+            esb_ops->tx_op();
             break;
         case ESB_EVENT_TX_FAILED:
             LOG_WRN("ESB_EVENT_TX_FAILED");            
@@ -106,7 +107,7 @@ static void event_handler(struct esb_evt const *event) {
             if (tx_fail_count++ >= 5) {
                 tx_fail_count = 0;
                 esb_flush_tx();
-                k_work_submit(esb_ops->tx_work);
+                esb_ops->tx_op();
             }
             esb_start_tx();
 #endif
@@ -131,7 +132,7 @@ static void event_handler(struct esb_evt const *event) {
             }
             if (try_start_rx_work()) {
                 LOG_DBG("rx_event submit");
-                k_work_schedule(esb_ops->rx_work, K_NO_WAIT);
+                esb_ops->rx_op();
             }
             break;
     }

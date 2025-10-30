@@ -37,19 +37,24 @@ static const int event_prio[] = {
     [ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT]       = 3
 };
 
-static int peripheral_handler(struct esb_data_envelope* env);
 static void rx_work_handler(struct k_work *work);
-static void tx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
-K_WORK_DEFINE(tx_work, tx_work_handler);
-
+static int peripheral_handler(struct esb_data_envelope* env);\
 static struct zmk_split_esb_ops peripheral_ops = {
     .event_handler = peripheral_handler,
     .get_data_size_rx = get_payload_data_size_cmd,
     .get_data_size_tx = get_payload_data_size_evt,
-    .rx_work = &rx_work,
-    .tx_work = &tx_work,
+    .tx_op = tx_op,
+    .rx_op = rx_op,
 };
+
+static void tx_op() {
+    k_sem_give(&tx_sem);
+}
+
+static void rx_op() {
+    k_work_schedule(&rx_work);
+}
 
 
 static void rx_work_handler(struct k_work *work) {
@@ -79,29 +84,6 @@ static void rx_work_handler(struct k_work *work) {
     LOG_WRN("rx_work end. total: %u, delta: %lld", total, total_delta);
 }
 
-
-static void tx_work_handler(struct k_work *work) {
-    size_t total = 0;
-    int64_t start = k_uptime_get();
-    int64_t total_delta = 0;
-    do {
-        size_t evt_count = esb_tx_app();
-        int64_t delta = k_uptime_delta(&start);
-        LOG_DBG("rx_work delta: %lld, count: %u", delta, evt_count);
-        total_delta += delta;
-        total += evt_count;
-        if (evt_count == 0) {
-            break;
-        }
-    } while (total < CAN_HANDLE_TX);
-
-    if (get_tx_count() > 0) {
-        LOG_DBG("rx_work reschedule");
-        k_work_submit(&tx_work);
-    }
-    
-    LOG_WRN("tx_work end. total: %u, delta: %lld", total, total_delta);
-}
 
 static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
@@ -181,15 +163,15 @@ static int peripheral_handler(struct esb_data_envelope* env) {
     return zmk_split_transport_peripheral_command_handler(&esb_peripheral, env->command);
 }
 
-// void tx_thread() {
-//     while (true)
-//     {
-//         k_sem_take(&tx_sem, K_FOREVER);
-//         LOG_DBG("tx thread awake");
-//         esb_tx_app();
-//     }
-// }
+void tx_thread() {
+    while (true)
+    {
+        k_sem_take(&tx_sem, K_FOREVER);
+        LOG_DBG("tx thread awake");
+        esb_tx_app();
+    }
+}
 
-// K_THREAD_DEFINE(tx_thread_id, 1300,
-//         tx_thread, NULL, NULL, NULL,
-//         5, 0, 0);
+K_THREAD_DEFINE(tx_thread_id, 1300,
+        tx_thread, NULL, NULL, NULL,
+        5, 0, 0);
