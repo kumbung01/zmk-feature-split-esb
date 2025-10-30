@@ -90,6 +90,8 @@ static void event_handler(struct esb_evt const *event) {
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
             LOG_DBG("TX SUCCESS");
+            if (get_tx_count() > 0)
+                k_work_submit(esb_ops->tx_work);
             break;
         case ESB_EVENT_TX_FAILED:
             LOG_WRN("ESB_EVENT_TX_FAILED");            
