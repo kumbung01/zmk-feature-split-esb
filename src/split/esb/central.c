@@ -84,8 +84,7 @@ static void rx_work_handler(struct k_work *work) {
         }
     } while (k_uptime_get() < deadline);
 
-    if (get_rx_count() > 0)
-        k_work_submit(&rx_work);
+    k_work_submit(&rx_work);
 }
 
 static void tx_work_handler(struct k_work *work) {
@@ -97,8 +96,7 @@ static void tx_work_handler(struct k_work *work) {
         }
     } while (k_uptime_get() < deadline);
 
-    if (get_tx_count() > 0)
-        k_work_submit(&tx_work);
+    k_work_submit(&tx_work);
 }
 
 static int split_central_esb_send_command(uint8_t source,
