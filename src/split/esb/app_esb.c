@@ -85,25 +85,24 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
 static void event_handler(struct esb_evt const *event) {
     struct esb_payload *payload = NULL;
-    static int tx_fail_count = 0;
+    static volatile int tx_fail_count = 0;
 
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
             LOG_DBG("TX SUCCESS");
-            if (get_tx_count() > 0)
-                k_work_submit(esb_ops->tx_work);
             break;
         case ESB_EVENT_TX_FAILED:
             LOG_WRN("ESB_EVENT_TX_FAILED");            
 #if IS_PERIPHERAL
-            if (tx_fail_count++ >= 3) {
+            if (tx_fail_count++ >= 10) {
                 tx_fail_count = 0;
-                esb_pop_tx();
-            }
-            esb_start_tx();
-#endif
-            if (get_tx_count() > 0)
+                esb_flush_tx();
                 k_work_submit(esb_ops->tx_work);
+            }
+            else {
+                esb_start_tx();
+            }
+#endif
             break;
         case ESB_EVENT_RX_RECEIVED:
             LOG_DBG("RX SUCCESS");
