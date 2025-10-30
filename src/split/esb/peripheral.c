@@ -39,15 +39,7 @@ static const int event_prio[] = {
 
 static void rx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
-static int peripheral_handler(struct esb_data_envelope* env);\
-static struct zmk_split_esb_ops peripheral_ops = {
-    .event_handler = peripheral_handler,
-    .get_data_size_rx = get_payload_data_size_cmd,
-    .get_data_size_tx = get_payload_data_size_evt,
-    .tx_op = tx_op,
-    .rx_op = rx_op,
-};
-
+static int peripheral_handler(struct esb_data_envelope* env);
 static void tx_op() {
     k_sem_give(&tx_sem);
 }
@@ -55,6 +47,13 @@ static void tx_op() {
 static void rx_op() {
     k_work_schedule(&rx_work);
 }
+static struct zmk_split_esb_ops peripheral_ops = {
+    .event_handler = peripheral_handler,
+    .get_data_size_rx = get_payload_data_size_cmd,
+    .get_data_size_tx = get_payload_data_size_evt,
+    .tx_op = tx_op,
+    .rx_op = rx_op,
+};
 
 
 static void rx_work_handler(struct k_work *work) {
