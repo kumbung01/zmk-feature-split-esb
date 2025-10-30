@@ -135,7 +135,7 @@ int esb_tx_app() {
 
     if (esb_tx_full()) {
         LOG_DBG("esb tx full, wait for next tx event");
-        return 0;
+        return -ENOMEM;
     }
 
     if (make_packet(&payload) == 0) {
@@ -148,7 +148,7 @@ int esb_tx_app() {
     int ret = esb_write_payload(&payload);
     if (ret != 0) {
         LOG_WRN("esb_write_payload returned %d", ret);
-        return 0;
+        return ret;
     }
 
     ret = esb_start_tx();
