@@ -130,10 +130,8 @@ static void event_handler(struct esb_evt const *event) {
                 rx_free(payload);
                 return;
             }
-            if (try_start_rx_work()) {
-                LOG_DBG("rx_event submit");
-                esb_ops->rx_op();
-            }
+            LOG_DBG("rx_event submit");
+            esb_ops->rx_op();
             break;
     }
 }

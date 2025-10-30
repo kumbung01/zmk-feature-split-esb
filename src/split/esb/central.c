@@ -100,11 +100,7 @@ static void rx_work_handler(struct k_work *work) {
 
     if (get_rx_count() > 0) {
         LOG_DBG("rx_work reschedule");
-        k_work_schedule(&rx_work, K_MSEC(TIMEOUT_MS));
-    }
-    else {
-        LOG_DBG("rx_work finish");
-        rx_work_finished();
+        k_work_submit(&rx_work);
     }
 
     LOG_WRN("rx_work end. total: %u, delta: %lld", total, total_delta);
