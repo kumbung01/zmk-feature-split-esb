@@ -131,3 +131,5 @@ void tx_free(void *ptr);
 void rx_free(void *ptr);
 size_t get_tx_count();
 size_t get_rx_count();
+bool is_timer_set();
+void timer_set(uint32_t seed);

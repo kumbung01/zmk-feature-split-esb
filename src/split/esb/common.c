@@ -36,6 +36,16 @@ const char *ACTIVE_STATE_CHAR[] = {"ACTIVE", "IDLE", "SLEEP"};
 
 struct zmk_split_esb_ops *esb_ops;
 
+static atomic_t m_timer_set = ATOMIC_INIT(0);
+bool is_timer_set() {
+    return atomic_get(&m_timer_set);
+}
+
+void timer_set(uint32_t seed) {
+    // timer set
+    atomic_set(&m_timer_set, 1);
+}
+
 ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type _type) {
     ssize_t size = -1;
 
