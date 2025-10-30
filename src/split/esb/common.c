@@ -208,7 +208,7 @@ size_t make_packet(struct esb_payload *payload) {
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_SINGLE_PACKET)
         break;
 #endif
-    } while (true);
+    } while (count < CAN_HANDLE_TX);
 
     // write header and length
     buf->header.type = type;
@@ -290,10 +290,6 @@ void *get_next_tx_data() {
         }
 
         return ptr;
-    }
-
-    if (get_tx_count() == 0) {
-        return NULL;
     }
 
     // when last_idx == -1, search for new data
