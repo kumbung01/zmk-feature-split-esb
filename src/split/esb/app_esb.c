@@ -90,18 +90,16 @@ static void event_handler(struct esb_evt const *event) {
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
             LOG_DBG("TX SUCCESS");
-            k_work_submit(esb_ops->tx_work);
             break;
         case ESB_EVENT_TX_FAILED:
             LOG_WRN("ESB_EVENT_TX_FAILED");            
 #if IS_PERIPHERAL
-            if (tx_fail_count++ >= 3) {
+            if (tx_fail_count++ >= 5) {
                 tx_fail_count = 0;
-                esb_pop_tx();
+                esb_flush_tx();
             }
             esb_start_tx();
 #endif
-            k_work_submit(esb_ops->tx_work);
             break;
         case ESB_EVENT_RX_RECEIVED:
             LOG_DBG("RX SUCCESS");
@@ -132,10 +130,9 @@ int esb_tx_app() {
     struct esb_payload payload;
 
     if (get_tx_count() == 0) {
-        LOG_DBG("no data");
         return -ENODATA;
     }
-
+    
     if (esb_tx_full()) {
         LOG_DBG("esb tx full, wait for next tx event");
         return -ENOMEM;
