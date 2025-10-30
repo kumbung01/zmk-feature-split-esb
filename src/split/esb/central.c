@@ -77,7 +77,7 @@ static struct zmk_split_esb_ops central_ops = {
 
 static void rx_work_handler(struct k_work *work) {
     size_t total = 0;
-
+    int64_t start = k_uptime_get();
     do {
         size_t evt_count = handle_packet();
         if (evt_count == 0) {
@@ -92,11 +92,14 @@ static void rx_work_handler(struct k_work *work) {
         k_work_schedule(&rx_work, K_MSEC(TIMEOUT_MS));
     else
         rx_work_finished();
+
+    LOG_DBG("rx_work delta: %lld", k_uptime_delta(&start));
 }
+
 
 static void tx_work_handler(struct k_work *work) {
     size_t total = 0;
-
+    int64_t start = k_uptime_get();
     do {
         size_t evt_count = esb_tx_app();
         if (evt_count == 0)
@@ -107,6 +110,8 @@ static void tx_work_handler(struct k_work *work) {
 
     if (get_tx_count() > 0)
         k_work_submit(&tx_work);
+
+    LOG_DBG("tx_work delta: %lld", k_uptime_delta(&start));
 }
 
 static int split_central_esb_send_command(uint8_t source,
