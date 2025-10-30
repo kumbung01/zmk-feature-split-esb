@@ -62,7 +62,7 @@ enum zmk_split_transport_central_command_type_proprietary {
 
 enum zmk_split_transport_peripheral_event_type_proprietary {
     ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_HELLO_EVENT = 4,
-}
+};
 
 struct esb_data_envelope {
     uint8_t source;
