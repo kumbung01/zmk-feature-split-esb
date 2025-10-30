@@ -244,7 +244,7 @@ static int central_handler(struct esb_data_envelope *env) {
         LOG_DBG("sending seed");
         struct zmk_split_transport_central_command cmd = {.type = ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SEED};
         uint32_t seed = 0xf7f7;
-        memcpy(cmd.data, &seed, sizeof(seed));
+        memcpy(&cmd.data, &seed, sizeof(seed));
         split_central_esb_send_command(source, cmd);
         return 0;
     }

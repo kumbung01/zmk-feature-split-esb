@@ -143,7 +143,7 @@ static int zmk_split_esb_peripheral_init(void) {
     }
 
     k_work_submit(&notify_status_work);
-    struct zmk_split_transport_buffer buf = {.type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_HELLO_EVENT,};
+    struct zmk_split_transport_peripheral_event buf = {.type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_HELLO_EVENT,};
 
     split_peripheral_esb_report_event(*buf);
 
@@ -154,9 +154,9 @@ SYS_INIT(zmk_split_esb_peripheral_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY
 
 static int peripheral_handler(struct esb_data_envelope* env) {
     if (env->buf.type == ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SEED) {
-        uint32_t timestamp;
-        memcpy(&timestamp, env->buf.data, sizeof(timestamp));
-        LOG_WRN("seed is 0x%x", timestamp);
+        uint32_t seed;
+        memcpy(&seed, env->buf.data, sizeof(seed));
+        LOG_WRN("seed is 0x%x", seed);
 
         return 0;
     }
