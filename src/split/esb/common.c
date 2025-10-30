@@ -217,7 +217,6 @@ size_t make_packet(struct esb_payload *payload) {
     return count;
 }
 
-static int64_t timestamp = 0;
 size_t handle_packet() {
     size_t handled = 0; // at least 1 packet
     struct esb_payload *rx_payload = NULL;
@@ -261,7 +260,6 @@ size_t handle_packet() {
 
 CLEANUP:
     rx_free(rx_payload);
-    LOG_WRN("handle_packet delta: %lld", k_uptime_delta(&timestamp));
     return handled;
 }
 
