@@ -34,8 +34,14 @@
 #define SAFE_DIV(x, y) ((x) / (y) > 0 ? (x) / (y) : 1)
 #if IS_CENTRAL
     #define ENABLED_PIPES GENMASK(PERIPHERAL_COUNT, 0)
+    #define SINGLE_PACKET 1
 #else
     #define ENABLED_PIPES BIT(PERIPHERAL_ID)
+    #if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_SINGLE_PACKET)
+    #define SINGLE_PACKET 1
+    #else
+    #define SINGLE_PACKET 0
+    #endif
 #endif
 
 #define PIPE_TO_SOURCE(pipe)   (pipe - 1)

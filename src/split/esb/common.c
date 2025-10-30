@@ -215,15 +215,13 @@ size_t make_packet(struct esb_payload *payload) {
         memcpy(&buf->body[offset], env->buf.data, data_size);
         offset += data_size;
         count++;
+#if IS_CENTRAL
+        payload->pipe = SOURCE_TO_PIPE(env->source); // use the source as the ESB pipe number
+#endif
 
         tx_free(env);
 
-#if IS_CENTRAL
-        payload->pipe = SOURCE_TO_PIPE(env->source); // use the source as the ESB pipe number
-        break;
-#endif
-
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_SINGLE_PACKET)
+#if SINGLE_PACKET
         break;
 #endif
     } while (count < MAX_EVENT_PER_PACKET_TX);
