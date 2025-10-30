@@ -15,7 +15,7 @@
 
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(timeslot, CONFIG_ZMK_SPLIT_ESB_MPSL_LOG_LEVEL);
+LOG_MODULE_REGISTER(timeslot, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #if CONFIG_MPSL_TIMESLOT_SESSION_COUNT == 1 || !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 #define ESB_ONLY 1
 #else
@@ -98,7 +98,7 @@ static void set_timeslot_active_status(bool active) {
 static void reset_radio() {
 #if ESB_ONLY
     if (m_sess_open && m_in_timeslot) {
-        LOG_DBG("ignore reset radio");
+        // LOG_DBG("ignore reset radio");
         return;
     }
 #endif
@@ -118,7 +118,7 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
     mpsl_timeslot_signal_return_param_t *p_ret_val = NULL;
     switch (signal_type) {
         case MPSL_TIMESLOT_SIGNAL_START:
-            LOG_DBG("TS start");
+            // LOG_DBG("TS start");
             signal_callback_return_param.callback_action = MPSL_TIMESLOT_SIGNAL_ACTION_NONE;
             p_ret_val = &signal_callback_return_param;
 
@@ -191,7 +191,7 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
             break;
 
         case MPSL_TIMESLOT_SIGNAL_EXTEND_FAILED:
-            LOG_DBG("Extend failed");	
+            // LOG_DBG("Extend failed");	
             signal_callback_return_param.callback_action = MPSL_TIMESLOT_SIGNAL_ACTION_NONE;
             timeslot_extension_failed = true;
             p_ret_val = &signal_callback_return_param;
@@ -212,14 +212,14 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
             break;
 
         case MPSL_TIMESLOT_SIGNAL_OVERSTAYED:
-            LOG_WRN("something overstayed!");
+            // LOG_WRN("something overstayed!");
             signal_callback_return_param.callback_action = MPSL_TIMESLOT_SIGNAL_ACTION_END;
             p_ret_val = &signal_callback_return_param;
             set_timeslot_active_status(false);
             break;
 
         case MPSL_TIMESLOT_SIGNAL_CANCELLED:
-            LOG_DBG("something cancelled!");
+            // LOG_DBG("something cancelled!");
             signal_callback_return_param.callback_action = MPSL_TIMESLOT_SIGNAL_ACTION_NONE;
             p_ret_val = &signal_callback_return_param;
             set_timeslot_active_status(false);
@@ -230,7 +230,7 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
             break;
 
         case MPSL_TIMESLOT_SIGNAL_BLOCKED:
-            LOG_DBG("something blocked!");
+            // LOG_DBG("something blocked!");
             signal_callback_return_param.callback_action = MPSL_TIMESLOT_SIGNAL_ACTION_NONE;
             p_ret_val = &signal_callback_return_param;
             set_timeslot_active_status(false);
@@ -240,14 +240,14 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
             break;
 
         case MPSL_TIMESLOT_SIGNAL_INVALID_RETURN:
-            LOG_WRN("something gave invalid return");
+            // LOG_WRN("something gave invalid return");
             signal_callback_return_param.callback_action = MPSL_TIMESLOT_SIGNAL_ACTION_END;
             p_ret_val = &signal_callback_return_param;
             set_timeslot_active_status(false);
             break;
 
         case MPSL_TIMESLOT_SIGNAL_SESSION_IDLE:
-            LOG_DBG("idle");
+            // LOG_DBG("idle");
 
             // Request a new timeslot in this case
             schedule_request(REQ_MAKE_REQUEST);
@@ -258,7 +258,7 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
             break;
 
         case MPSL_TIMESLOT_SIGNAL_SESSION_CLOSED:
-            LOG_DBG("Session closed");
+            // LOG_DBG("Session closed");
 
             signal_callback_return_param.callback_action = MPSL_TIMESLOT_SIGNAL_ACTION_NONE;
             p_ret_val = &signal_callback_return_param;
@@ -266,7 +266,7 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
             break;
 
         default:
-            LOG_ERR("unexpected signal: %u", signal_type);
+            // LOG_ERR("unexpected signal: %u", signal_type);
             k_oops();
             break;
     }
@@ -289,7 +289,7 @@ static void mpsl_nonpreemptible_thread(void) {
             //NRF_P0->OUTSET = BIT(29);
             switch (api_call) {
                 case REQ_OPEN_SESSION:
-                    LOG_DBG("req open");
+                    // LOG_DBG("req open");
                     err = mpsl_timeslot_session_open(mpsl_timeslot_callback, &session_id);
                     if (err) {
                         LOG_ERR("Timeslot session open error: %d", err);
@@ -297,7 +297,7 @@ static void mpsl_nonpreemptible_thread(void) {
                     }
                     break;
                 case REQ_MAKE_REQUEST:
-                    LOG_DBG("req request");
+                    // LOG_DBG("req request");
                     err = mpsl_timeslot_request(session_id, &timeslot_request_earliest);
                     if (err) {
                         LOG_ERR("Timeslot request error: %d", err);
@@ -305,7 +305,7 @@ static void mpsl_nonpreemptible_thread(void) {
                     }
                     break;
                 case REQ_CLOSE_SESSION:
-                    LOG_DBG("req close");
+                    // LOG_DBG("req close");
                     err = mpsl_timeslot_session_close(session_id);
                     if (err) {
                         LOG_ERR("Timeslot session close error: %d", err);
