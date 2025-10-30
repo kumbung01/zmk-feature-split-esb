@@ -97,6 +97,7 @@ static void event_handler(struct esb_evt const *event) {
             if (tx_fail_count++ >= 5) {
                 tx_fail_count = 0;
                 esb_flush_tx();
+                k_work_submit(esb_ops->tx_work);
             }
             esb_start_tx();
 #endif
