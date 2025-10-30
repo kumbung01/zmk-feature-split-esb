@@ -163,7 +163,7 @@ int send_event(uint8_t source, struct zmk_split_transport_buffer *buf) {
 }
 
 
-int make_packet(struct esb_payload *payload) {
+size_t make_packet(struct esb_payload *payload) {
     size_t count = 0;
     size_t offset = 0;
     uint8_t type;
@@ -218,12 +218,13 @@ int make_packet(struct esb_payload *payload) {
 }
 
 
-int handle_packet() {
+size_t handle_packet() {
+    size_t handled = 0; // at least 1 packet
     struct esb_payload *rx_payload = NULL;
     int err = k_msgq_get(&rx_msgq, &rx_payload, K_NO_WAIT);
     if (err < 0) {
         LOG_DBG("k_msgq_get failed (err %d)", err);
-        return err;
+        return 0;
     }
 
     LOG_DBG("rx_payload pipe %d", rx_payload->pipe);
@@ -236,6 +237,7 @@ int handle_packet() {
     ssize_t data_size = esb_ops->get_data_size_rx(type);
     if (data_size < 0) {
         LOG_WRN("Unknown event type %d", type);
+        handled++;
         goto CLEANUP;
     }
 
@@ -253,11 +255,13 @@ int handle_packet() {
         if (err < 0) {
             LOG_WRN("zmk handler failed(%d)", err);
         }
+
+        handled++;
     }
 
 CLEANUP:
     rx_free(rx_payload);
-    return 0;
+    return handled;
 }
 
 int tx_msgq_init(int *_type_to_idx) {

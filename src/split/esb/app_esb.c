@@ -126,17 +126,18 @@ static void event_handler(struct esb_evt const *event) {
 }
 
 
-int esb_tx_app() {
+size_t esb_tx_app() {
     struct esb_payload payload;
     
     if (esb_tx_full()) {
         LOG_DBG("esb tx full, wait for next tx event");
-        return -ENOMEM;
+        return 0;
     }
 
-    if (make_packet(&payload) == 0) {
+    size_t evt_count = make_packet(&payload);
+    if (evt_count == 0) {
         LOG_DBG("no packet to send");
-        return -ENODATA;
+        return 0;
     }
 
     LOG_DBG("sending payload through pipe %d", payload.pipe);
@@ -144,16 +145,16 @@ int esb_tx_app() {
     int ret = esb_write_payload(&payload);
     if (ret != 0) {
         LOG_WRN("esb_write_payload returned %d", ret);
-        return ret;
+        return 0;
     }
 
     ret = esb_start_tx();
     if (ret != 0 && ret != -EBUSY) {
         LOG_DBG("esb_start_tx() returned (%d)", ret);
-        return ret;
+        return 0;
     }
 
-    return 0;
+    return evt_count;
 }
 
 
