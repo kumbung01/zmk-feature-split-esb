@@ -129,8 +129,10 @@ static void event_handler(struct esb_evt const *event) {
                 rx_free(payload);
                 return;
             }
-            if (try_start_rx_work())
+            if (try_start_rx_work()) {
+                LOG_DBG("rx_event submit")
                 k_work_schedule(esb_ops->rx_work, K_NO_WAIT);
+            }
             break;
     }
 }

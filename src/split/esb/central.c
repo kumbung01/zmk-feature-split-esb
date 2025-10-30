@@ -90,12 +90,16 @@ static void rx_work_handler(struct k_work *work) {
         }
     } while (total < CAN_HANDLE_RX);
 
-    if (get_rx_count() > 0)
+    if (get_rx_count() > 0) {
+        LOG_DBG("rx_work reschedule");
         k_work_schedule(&rx_work, K_MSEC(TIMEOUT_MS));
-    else
+    }
+    else {
+        LOG_DBG("rx_work finish");
         rx_work_finished();
+    }
 
-    LOG_WRN("rx_work finished. total: %u, delta: %lld", total, total_delta);
+    LOG_WRN("rx_work end. total: %u, delta: %lld", total, total_delta);
 }
 
 
@@ -114,9 +118,12 @@ static void tx_work_handler(struct k_work *work) {
         }
     } while (total < CAN_HANDLE_TX);
 
-    if (get_tx_count() > 0)
+    if (get_tx_count() > 0) {
+        LOG_DBG("rx_work reschedule");
         k_work_submit(&tx_work);
-    LOG_WRN("tx_work finished. total: %u, delta: %lld", total, total_delta);
+    }
+    
+    LOG_WRN("tx_work end. total: %u, delta: %lld", total, total_delta);
 }
 
 static int split_central_esb_send_command(uint8_t source,
