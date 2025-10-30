@@ -115,6 +115,14 @@ static void tx_work_handler(struct k_work *work) {
     }
 }
 
+static void send_seed(uint8_t source) {
+    LOG_DBG("sending seed");
+    struct zmk_split_transport_central_command cmd = {.type = ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SEED};
+    uint32_t seed = 0xf7f7;
+    memcpy(&cmd.data, &seed, sizeof(seed));
+    split_central_esb_send_command(source, cmd);
+}
+
 static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd) {
     
@@ -208,7 +216,6 @@ static void notify_status_work_cb(struct k_work *_work) { notify_transport_statu
 
 static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
-
 static int zmk_split_esb_central_init(void) {
     esb_ops = &central_ops;
 
@@ -226,12 +233,6 @@ static int zmk_split_esb_central_init(void) {
 
     k_work_submit(&notify_status_work);
 
-    struct zmk_split_transport_central_command cmd = {.type = ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SEED};
-    uint32_t seed = 0xf7f7;
-    memcpy(&cmd.data, &seed, sizeof(seed));
-    for (int i = 0; i < ARRAY_SIZE(peripherals); ++i)
-        split_central_esb_send_command(i, cmd);
-
     return 0;
 }
 
@@ -248,11 +249,7 @@ static int central_handler(struct esb_data_envelope *env) {
     if (env->event.type == ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_HELLO_EVENT) {
         LOG_WRN("HELLO from source %d", source);
 
-        LOG_DBG("sending seed");
-        struct zmk_split_transport_central_command cmd = {.type = ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SEED};
-        uint32_t seed = 0xf7f7;
-        memcpy(&cmd.data, &seed, sizeof(seed));
-        split_central_esb_send_command(source, cmd);
+        send_seed(source);
         return 0;
     }
     
