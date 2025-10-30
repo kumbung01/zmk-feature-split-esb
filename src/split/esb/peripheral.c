@@ -158,12 +158,9 @@ void tx_thread() {
         k_sem_take(&tx_sem, K_FOREVER);
         LOG_DBG("tx thread awake");
         do {
-            int count = esb_tx_app();
-            if (count == 0)
+            if (esb_tx_app() == 0)
                 break;
-
-            total += count;
-        } while (total < CAN_HANDLE_TX);
+        } while (get_tx_count() > 0);
     }
 }
 
