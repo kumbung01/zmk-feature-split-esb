@@ -77,6 +77,7 @@ static void rx_work_handler(struct k_work *work) {
 static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
 
+static int send_hello();
 static int
 split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event) {
     if (is_timer_set()) {
