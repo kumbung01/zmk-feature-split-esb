@@ -100,6 +100,8 @@ static void event_handler(struct esb_evt const *event) {
             }
             esb_start_tx();
 #endif
+            if (get_tx_count() > 0)
+                k_work_submit(esb_ops->tx_work);
             break;
         case ESB_EVENT_RX_RECEIVED:
             LOG_DBG("RX SUCCESS");
