@@ -81,8 +81,7 @@ static void rx_work_handler(struct k_work *work) {
     do {
         size_t evt_count = handle_packet();
         if (evt_count == 0) {
-            rx_work_finished();
-            return;
+            break;
         }
 
         total += evt_count;
@@ -102,8 +101,9 @@ static void tx_work_handler(struct k_work *work) {
     int64_t start = k_uptime_get();
     do {
         size_t evt_count = esb_tx_app();
-        if (evt_count == 0)
-            return;
+        if (evt_count == 0) {
+            break;
+        }
         
         total += evt_count;
     } while (total < CAN_HANDLE_TX);
