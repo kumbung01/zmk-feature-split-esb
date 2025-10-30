@@ -16,7 +16,7 @@
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(timeslot, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
-#if CONFIG_MPSL_TIMESLOT_SESSION_COUNT == 1 || !IS_ENALBED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+#if CONFIG_MPSL_TIMESLOT_SESSION_COUNT == 1 || !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 #define ESB_ONLY 1
 #else
 #define ESB_ONLY 0
@@ -61,15 +61,14 @@ static mpsl_timeslot_signal_return_param_t signal_callback_return_param;
 K_MSGQ_DEFINE(mpsl_api_msgq, sizeof(enum mpsl_timeslot_call), 10, 4);
 
 static void schedule_request(enum mpsl_timeslot_call call) {
-    int err;
     if (call == REQ_OPEN_SESSION) {
         m_sess_open = true;
     }
     else if (call == REQ_CLOSE_SESSION) {
         m_sess_open = false;
     }
-    enum mpsl_timeslot_call api_call = call;
-    err = k_msgq_put(&mpsl_api_msgq, &api_call, K_NO_WAIT);
+
+    int err = k_msgq_put(&mpsl_api_msgq, &call, K_NO_WAIT);
     if (err) {
         LOG_ERR("Message sent error: %d", err);
         k_oops();
