@@ -64,7 +64,7 @@ static bool is_enabled = false;
 static int central_handler(struct esb_data_envelope *env);
 static void rx_work_handler(struct k_work *work);
 static void tx_work_handler(struct k_work *work);
-K_WORK_DEFINE(rx_work, rx_work_handler);
+K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
 K_WORK_DEFINE(tx_work, tx_work_handler);
 
 static struct zmk_split_esb_ops central_ops = {
@@ -80,14 +80,18 @@ static void rx_work_handler(struct k_work *work) {
 
     do {
         size_t evt_count = handle_packet();
-        if (evt_count == 0)
+        if (evt_count == 0) {
+            rx_work_finished();
             return;
+        }
 
         total += evt_count;
     } while (total < CAN_HANDLE_RX);
 
     if (get_rx_count() > 0)
-        k_work_submit(&rx_work);
+        k_work_schedule(&rx_work, K_MSEC(1));
+    else
+        rx_work_finished();
 }
 
 static void tx_work_handler(struct k_work *work) {

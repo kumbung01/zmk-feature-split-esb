@@ -51,4 +51,7 @@ size_t esb_tx_app();
 void set_esb_active(bool is_active);
 bool is_esb_active(void);
 
+bool try_start_rx_work();
+void rx_work_finished();
+
 #endif

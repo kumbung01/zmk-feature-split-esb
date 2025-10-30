@@ -85,7 +85,7 @@ typedef ssize_t (*get_data_size)(int);
 typedef void (*zmk_split_esb_process_tx_callback_t)(void);
 struct zmk_split_esb_ops {
     struct k_work *tx_work;
-    struct k_work *rx_work;
+    struct k_work_delayable *rx_work;
 
     get_data_size get_data_size_rx;
     get_data_size get_data_size_tx;

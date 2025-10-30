@@ -80,6 +80,15 @@ bool is_esb_active(void) {
     return atomic_get(&m_is_active) ? true : false;
 }
 
+static atomic_t m_is_rx_working = ATOMIC_INIT(0);
+bool try_start_rx_work() {
+    return atomic_cas(&m_is_rx_working, 0, 1);
+}
+
+void rx_work_finished() {
+    atomic_clear(&m_is_rx_working);
+}
+
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
 
@@ -120,8 +129,8 @@ static void event_handler(struct esb_evt const *event) {
                 rx_free(payload);
                 return;
             }
-
-            k_work_submit(esb_ops->rx_work);
+            if (try_start_rx_work())
+                k_work_schedule(esb_ops->rx_work, K_NO_WAIT);
             break;
     }
 }
