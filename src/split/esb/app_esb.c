@@ -116,15 +116,13 @@ ssize_t esb_tx_app() {
 
     if (esb_tx_full()) {
         LOG_DBG("esb tx full, wait for next tx event");
-        ret = -ENOMEM;
-        goto start_tx;
+        return -ENOMEM;
     }
 
     size_t evt_count = make_packet(&payload);
     if (evt_count == 0) {
         LOG_DBG("no packet to send");
-        ret = -ENODATA;
-        goto start_tx;
+        return -ENODATA;
     }
 
     LOG_DBG("sending payload through pipe %d", payload.pipe);
@@ -132,13 +130,12 @@ ssize_t esb_tx_app() {
     ret = esb_write_payload(&payload);
     if (ret != 0) {
         LOG_WRN("esb_write_payload returned %d", ret);
-        goto start_tx;    
+        return ret;
     }
 
-start_tx:
     esb_start_tx();
 
-    return ret;
+    return evt_count;
 }
 
 
