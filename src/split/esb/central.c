@@ -103,7 +103,7 @@ static void tx_work_handler(struct k_work *work) {
             return;
     } while (k_uptime_get() < deadline);
 
-    k_work_reschedule(&tx_wor, K_NO_WAIT);
+    k_work_reschedule(&tx_work, K_NO_WAIT);
 }
 
 static int split_central_esb_send_command(uint8_t source,
