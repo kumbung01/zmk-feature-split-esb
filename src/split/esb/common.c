@@ -226,8 +226,10 @@ ssize_t handle_packet() {
     //     return err;
     // }
     struct esb_payload payload;
-    if (esb_read_rx_payload(&payload) != 0) {
-        return -ENODATA;
+    int err = esb_read_rx_payload(&payload);
+    if (err) {
+        LOG_DBG("esb_read_returned (%d)", err);
+        return err;
     }
 
     struct esb_payload *rx_payload = &payload;
