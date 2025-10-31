@@ -20,9 +20,6 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 
 K_MEM_SLAB_DEFINE_STATIC(tx_slab, sizeof(struct esb_data_envelope), TX_MSGQ_SIZE, 4);
-K_MEM_SLAB_DEFINE_STATIC(rx_slab, sizeof(struct esb_payload), RX_MSGQ_SIZE, 4);
-K_MSGQ_DEFINE(rx_msgq, sizeof(void*), RX_MSGQ_SIZE, 4);
-
 K_MSGQ_DEFINE(msgq0, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq1, sizeof(void*), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(msgq2, sizeof(void*), TX_MSGQ_SIZE, 4);
@@ -218,41 +215,32 @@ size_t make_packet(struct esb_payload *payload) {
 }
 
 ssize_t handle_packet() {
-    size_t handled = 0; // at least 1 packet
-    // struct esb_payload *rx_payload = NULL;
-    // int err = k_msgq_get(&rx_msgq, &rx_payload, K_NO_WAIT);
-    // if (err < 0) {
-    //     LOG_DBG("k_msgq_get failed (err %d)", err);
-    //     return err;
-    // }
-    struct esb_payload payload;
-    int err = esb_read_rx_payload(&payload);
+    size_t handled = 0;
+    struct esb_payload rx_payload;
+    int err = esb_read_rx_payload(&rx_payload);
     if (err) {
         LOG_DBG("esb_read_returned (%d)", err);
         return err;
     }
 
-    struct esb_payload *rx_payload = &payload;
+    LOG_DBG("rx_payload pipe %d", rx_payload.pipe);
 
-    LOG_DBG("rx_payload pipe %d", rx_payload->pipe);
-
-    struct payload_buffer *buf = (struct payload_buffer*)(rx_payload->data);
+    struct payload_buffer *buf = (struct payload_buffer*)(rx_payload.data);
     uint8_t *data = buf->body;
     int type = buf->header.type;
-    size_t length = rx_payload->length - HEADER_SIZE;
+    size_t length = rx_payload.length - HEADER_SIZE;
 
     ssize_t data_size = esb_ops->get_data_size_rx(type);
     if (data_size < 0) {
         LOG_WRN("Unknown event type %d", type);
-        handled++;
-        goto CLEANUP;
+        return 0;
     }
 
     size_t count = data_size == 0 ? 1 : length / data_size;
     __ASSERT(count * data_size == length, "data_size * count != length")
 
     struct esb_data_envelope env = { .buf.type = type, 
-                                     .source = PIPE_TO_SOURCE(rx_payload->pipe),
+                                     .source = PIPE_TO_SOURCE(rx_payload.pipe),
                                     };
 
     for (size_t i = 0; i < count; ++i) {
@@ -266,8 +254,6 @@ ssize_t handle_packet() {
         handled++;
     }
 
-CLEANUP:
-    // rx_free(rx_payload);
     return handled;
 }
 
@@ -325,30 +311,6 @@ int put_tx_data(void *ptr) {
     return 0;
 }
 
-void *get_next_rx_data() {
-    void *ptr = NULL;
-    k_msgq_get(&rx_msgq, &ptr, K_NO_WAIT);
-
-    return ptr;
-}
-
-size_t get_rx_data_count() {
-    return k_msgq_num_used_get(&rx_msgq);
-}
-
-int put_rx_data(void *ptr) {
-    if (k_msgq_put(&rx_msgq, &ptr, K_NO_WAIT) != 0) {
-        void *temp;
-        if (k_msgq_get(&rx_msgq, &temp, K_NO_WAIT) == 0 && temp) {
-            tx_free(temp);
-        }
-        
-        k_msgq_put(&rx_msgq, &ptr, K_NO_WAIT);
-    }
-
-    return 0;
-}
-
 int tx_alloc(void **ptr) {
     return k_mem_slab_alloc(&tx_slab, ptr, K_NO_WAIT);
 }
@@ -357,18 +319,6 @@ void tx_free(void *ptr) {
     k_mem_slab_free(&tx_slab, ptr);
 }
 
-int rx_alloc(void **ptr) {
-    return k_mem_slab_alloc(&rx_slab, ptr, K_NO_WAIT);
-}
-
-void rx_free(void *ptr) {
-    k_mem_slab_free(&rx_slab, ptr);
-}
-
 size_t get_tx_count() {
     return k_mem_slab_num_used_get(&tx_slab);
-}
-
-size_t get_rx_count() {
-    return k_mem_slab_num_used_get(&rx_slab);
 }
