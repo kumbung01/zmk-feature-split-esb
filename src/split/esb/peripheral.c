@@ -42,12 +42,12 @@ K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
 static void tx_work_handler(struct k_work *work);
 K_WORK_DEFINE(tx_work, tx_work_handler);
 static int peripheral_handler(struct esb_data_envelope* env);
-static void tx_op() {
+static void tx_op(k_timeout_t timeout) {
     k_work_submit(&tx_work);
 }
 
-static void rx_op() {
-    k_work_schedule(&rx_work, K_MSEC(TIMEOUT_MS));
+static void rx_op(k_timeout_t timeout) {
+    k_work_schedule(&rx_work, timeout);
 }
 static struct zmk_split_esb_ops peripheral_ops = {
     .event_handler = peripheral_handler,
