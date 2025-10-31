@@ -199,12 +199,8 @@ size_t make_packet(struct esb_payload *payload) {
 
 #if IS_CENTRAL
         payload->pipe = SOURCE_TO_PIPE(env->source); // use the source as the ESB pipe number
-        break;
 #endif
 
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_SINGLE_PACKET)
-        break;
-#endif
     } while (count < CAN_HANDLE_TX);
 
     // write header and length
