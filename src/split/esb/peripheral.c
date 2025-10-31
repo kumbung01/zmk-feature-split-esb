@@ -74,6 +74,7 @@ static void rx_work_handler(struct k_work *work) {
 
 
 static void tx_work_handler(struct k_work *work) {
+    esb_start_tx();
     do {
         if (esb_tx_app() <= 0)
             return;
