@@ -39,9 +39,11 @@ static const int event_prio[] = {
 
 static void rx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
+static void tx_work_handler(struct k_work *work);
+K_WORK_DEFINE(tx_work, tx_work_handler);
 static int peripheral_handler(struct esb_data_envelope* env);
 static void tx_op() {
-    k_sem_give(&tx_sem);
+    k_work_submit(&tx_work);
 }
 
 static void rx_op() {
@@ -72,6 +74,21 @@ static void rx_work_handler(struct k_work *work) {
     }
 }
 
+static void tx_work_handler(struct k_work *work) {
+    size_t total = 0;
+    
+    do {
+        size_t evt_count = esb_tx_app();
+        if (evt_count == 0) {
+            break;                                   
+        }
+        total += evt_count;
+    } while (total < CAN_HANDLE_TX);
+
+    if (get_tx_count() > 0) {
+        k_work_submit(&tx_work);
+    }
+}
 
 static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
@@ -151,19 +168,19 @@ static int peripheral_handler(struct esb_data_envelope* env) {
     return zmk_split_transport_peripheral_command_handler(&esb_peripheral, env->command);
 }
 
-void tx_thread() {
-    while (true)
-    {
-        int  total = 0;
-        k_sem_take(&tx_sem, K_FOREVER);
-        LOG_DBG("tx thread awake");
-        do {
-            if (esb_tx_app() == 0)
-                break;
-        } while (get_tx_count() > 0);
-    }
-}
+// void tx_thread() {
+//     while (true)
+//     {
+//         int  total = 0;
+//         k_sem_take(&tx_sem, K_FOREVER);
+//         LOG_DBG("tx thread awake");
+//         do {
+//             if (esb_tx_app() == 0)
+//                 break;
+//         } while (get_tx_count() > 0);
+//     }
+// }
 
-K_THREAD_DEFINE(tx_thread_id, 1300,
-        tx_thread, NULL, NULL, NULL,
-        5, 0, 0);
+// K_THREAD_DEFINE(tx_thread_id, 1300,
+//         tx_thread, NULL, NULL, NULL,
+//         5, 0, 0);
