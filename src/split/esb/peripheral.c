@@ -74,7 +74,10 @@ static void rx_work_handler(struct k_work *work) {
 
 
 static void tx_work_handler(struct k_work *work) {
-    esb_tx_app();
+    do {
+        if (esb_tx_app() <= 0)
+            return;
+    } while(true);
 }
 
 static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
