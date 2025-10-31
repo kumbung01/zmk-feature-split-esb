@@ -99,6 +99,7 @@ static void event_handler(struct esb_evt const *event) {
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
             LOG_DBG("TX SUCCESS");
+            tx_fail_count = 0;
             if (get_tx_count() > 0) {
                 esb_ops->tx_op(K_NO_WAIT);
             }
