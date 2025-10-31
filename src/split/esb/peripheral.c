@@ -79,7 +79,7 @@ static void tx_work_handler(struct k_work *work) {
             return;
     } while (k_uptime_get() < deadline);
 
-    k_work_reschedule(&tx_wor, K_NO_WAIT);
+    k_work_reschedule(&tx_work, K_NO_WAIT);
 }
 
 static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
