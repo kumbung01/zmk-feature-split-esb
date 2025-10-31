@@ -67,11 +67,11 @@ static void tx_work_handler(struct k_work *work);
 K_WORK_DEFINE(rx_work, rx_work_handler);
 K_WORK_DEFINE(tx_work, tx_work_handler);
 
-static void tx_op(k_time_out_t timeout) {
+static void tx_op(k_timeout_t timeout) {
     k_work_submit(&tx_work);
 }
 
-static void rx_op(k_time_out_t timeout) {
+static void rx_op(k_timeout_t timeout) {
     k_work_submit(&rx_work);
 }
 
