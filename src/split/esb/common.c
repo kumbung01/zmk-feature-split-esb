@@ -217,13 +217,13 @@ size_t make_packet(struct esb_payload *payload) {
     return count;
 }
 
-size_t handle_packet() {
+ssize_t handle_packet() {
     size_t handled = 0; // at least 1 packet
     struct esb_payload *rx_payload = NULL;
     int err = k_msgq_get(&rx_msgq, &rx_payload, K_NO_WAIT);
     if (err < 0) {
         LOG_DBG("k_msgq_get failed (err %d)", err);
-        return 0;
+        return err;
     }
 
     LOG_DBG("rx_payload pipe %d", rx_payload->pipe);
@@ -236,8 +236,10 @@ size_t handle_packet() {
     ssize_t data_size = esb_ops->get_data_size_rx(type);
     if (data_size < 0) {
         LOG_WRN("Unknown event type %d", type);
+        handled++;
         goto CLEANUP;
     }
+    
     size_t count = data_size == 0 ? 1 : length / data_size;
     __ASSERT(count * data_size == length, "data_size * count != length")
 

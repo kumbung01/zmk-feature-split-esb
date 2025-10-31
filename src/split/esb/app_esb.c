@@ -100,7 +100,7 @@ static void event_handler(struct esb_evt const *event) {
         case ESB_EVENT_TX_SUCCESS:
             LOG_DBG("TX SUCCESS");
             if (get_tx_count() > 0) {
-                esb_ops->tx_op();
+                esb_ops->tx_op(K_NO_WAIT);
             }
             break;
         case ESB_EVENT_TX_FAILED:
@@ -110,7 +110,7 @@ static void event_handler(struct esb_evt const *event) {
                 tx_fail_count = 0;
                 esb_flush_tx();
                 if (get_tx_count() > 0) {
-                    esb_ops->tx_op();
+                    esb_ops->tx_op(K_NO_WAIT);
                 }
             }
             else {
@@ -137,24 +137,24 @@ static void event_handler(struct esb_evt const *event) {
                 return;
             }
             LOG_DBG("rx_event submit");
-            esb_ops->rx_op();
+            esb_ops->rx_op(K_NO_WAIT);
             break;
     }
 }
 
 
-size_t esb_tx_app() {
+ssize_t esb_tx_app() {
     struct esb_payload payload;
     
     if (esb_tx_full()) {
         LOG_DBG("esb tx full, wait for next tx event");
-        return 0;
+        return -ENOMEM;
     }
 
     size_t evt_count = make_packet(&payload);
     if (evt_count == 0) {
         LOG_DBG("no packet to send");
-        return 0;
+        return -ENODATA;
     }
 
     LOG_DBG("sending payload through pipe %d", payload.pipe);
@@ -162,7 +162,7 @@ size_t esb_tx_app() {
     int ret = esb_write_payload(&payload);
     if (ret != 0) {
         LOG_WRN("esb_write_payload returned %d", ret);
-        return 0;
+        return -EAGAIN;
     }
 
     ret = esb_start_tx();

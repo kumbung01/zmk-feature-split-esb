@@ -67,11 +67,11 @@ static void tx_work_handler(struct k_work *work);
 K_WORK_DEFINE(rx_work, rx_work_handler);
 K_WORK_DEFINE(tx_work, tx_work_handler);
 
-static void tx_op() {
+static void tx_op(k_time_out_t timeout) {
     k_work_submit(&tx_work);
 }
 
-static void rx_op() {
+static void rx_op(k_time_out_t timeout) {
     k_work_submit(&rx_work);
 }
 
@@ -84,7 +84,7 @@ static struct zmk_split_esb_ops central_ops = {
 };
 
 static void rx_work_handler(struct k_work *work) {
-    int64_t deadline = k_uptime_get() + 3;
+    int64_t deadline = k_uptime_get() + 5;
 
     do {
         if (handle_packet() == 0) {
