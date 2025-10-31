@@ -60,7 +60,7 @@ struct peripheral_slot {
 static struct peripheral_slot peripherals[PERIPHERAL_COUNT];
 static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
-
+static int central_handler(struct esb_data_envelope *env);
 static void rx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
 static void tx_work_handler(struct k_work *work);
