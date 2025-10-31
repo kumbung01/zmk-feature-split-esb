@@ -40,14 +40,14 @@ static const int event_prio[] = {
 static void rx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
 static void tx_work_handler(struct k_work *work);
-K_WORK_DEFINE(tx_work, tx_work_handler);
+K_WORK_DELAYABLE_DEFINE(tx_work, tx_work_handler);
 static int peripheral_handler(struct esb_data_envelope* env);
 static void tx_op(k_timeout_t timeout) {
-    k_work_submit(&tx_work);
+    k_work_reschedule(&rx_work, timeout);
 }
 
 static void rx_op(k_timeout_t timeout) {
-    k_work_schedule(&rx_work, timeout);
+    k_work_reschedule(&rx_work, timeout);
 }
 static struct zmk_split_esb_ops peripheral_ops = {
     .event_handler = peripheral_handler,
@@ -67,8 +67,9 @@ static void rx_work_handler(struct k_work *work) {
         }
     } while (k_uptime_get() < deadline);
 
-    k_work_submit(&rx_work);
+    k_work_reschedule(&rx_work, K_NO_WAIT);
 }
+
 
 static void tx_work_handler(struct k_work *work) {
     int64_t deadline = k_uptime_get() + TIMEOUT_MS;
@@ -78,7 +79,7 @@ static void tx_work_handler(struct k_work *work) {
             return;
     } while (k_uptime_get() < deadline);
 
-    k_work_submit(&tx_work);
+    k_work_reschedule(&tx_wor, K_NO_WAIT);
 }
 
 static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;

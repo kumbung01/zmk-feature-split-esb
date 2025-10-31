@@ -61,18 +61,17 @@ static struct peripheral_slot peripherals[PERIPHERAL_COUNT];
 static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
 
-static int central_handler(struct esb_data_envelope *env);
 static void rx_work_handler(struct k_work *work);
+K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
 static void tx_work_handler(struct k_work *work);
-K_WORK_DEFINE(rx_work, rx_work_handler);
-K_WORK_DEFINE(tx_work, tx_work_handler);
+K_WORK_DELAYABLE_DEFINE(tx_work, tx_work_handler);
 
 static void tx_op(k_timeout_t timeout) {
-    k_work_submit(&tx_work);
+    k_work_reschedule(&tx_work, timeout);
 }
 
 static void rx_op(k_timeout_t timeout) {
-    k_work_submit(&rx_work);
+    k_work_reschedule(&rx_work, timeout);
 }
 
 static struct zmk_split_esb_ops central_ops = {
@@ -92,7 +91,7 @@ static void rx_work_handler(struct k_work *work) {
         }
     } while (k_uptime_get() < deadline);
 
-    k_work_submit(&rx_work);
+    k_work_reschedule(&rx_work, K_NO_WAIT);
 }
 
 
@@ -104,7 +103,7 @@ static void tx_work_handler(struct k_work *work) {
             return;
     } while (k_uptime_get() < deadline);
 
-    k_work_submit(&tx_work);
+    k_work_reschedule(&tx_wor, K_NO_WAIT);
 }
 
 static int split_central_esb_send_command(uint8_t source,
