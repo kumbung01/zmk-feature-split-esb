@@ -87,7 +87,7 @@ static void rx_work_handler(struct k_work *work) {
     int64_t deadline = k_uptime_get() + 5;
 
     do {
-        if (handle_packet() == 0) {
+        if (handle_packet() <= 0) {
             return;
         }
     } while (k_uptime_get() < deadline);
@@ -97,19 +97,14 @@ static void rx_work_handler(struct k_work *work) {
 
 
 static void tx_work_handler(struct k_work *work) {
-    size_t total = 0;
-    
-    do {
-        size_t evt_count = esb_tx_app();
-        if (evt_count == 0) {
-            break;                                   
-        }
-        total += evt_count;
-    } while (total < CAN_HANDLE_TX);
+    int64_t deadline = k_uptime_get() + TIMEOUT_MS;
 
-    if (get_tx_count() > 0) {
-        k_work_submit(&tx_work);
-    }
+    do {
+        if (esb_tx_app() <= 0)
+            return;
+    } while (k_uptime_get() < deadline);
+
+    k_work_submit(&tx_work);
 }
 
 static int split_central_esb_send_command(uint8_t source,
