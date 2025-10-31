@@ -219,11 +219,15 @@ size_t make_packet(struct esb_payload *payload) {
 
 ssize_t handle_packet() {
     size_t handled = 0; // at least 1 packet
-    struct esb_payload *rx_payload = NULL;
-    int err = k_msgq_get(&rx_msgq, &rx_payload, K_NO_WAIT);
-    if (err < 0) {
-        LOG_DBG("k_msgq_get failed (err %d)", err);
-        return err;
+    // struct esb_payload *rx_payload = NULL;
+    // int err = k_msgq_get(&rx_msgq, &rx_payload, K_NO_WAIT);
+    // if (err < 0) {
+    //     LOG_DBG("k_msgq_get failed (err %d)", err);
+    //     return err;
+    // }
+    struct esb_payload rx_payload;
+    if (esb_read_rx_payload(&rx_payload) != 0) {
+        return -ENODATA;
     }
 
     LOG_DBG("rx_payload pipe %d", rx_payload->pipe);
@@ -239,7 +243,7 @@ ssize_t handle_packet() {
         handled++;
         goto CLEANUP;
     }
-    
+
     size_t count = data_size == 0 ? 1 : length / data_size;
     __ASSERT(count * data_size == length, "data_size * count != length")
 

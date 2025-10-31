@@ -121,23 +121,23 @@ static void event_handler(struct esb_evt const *event) {
             break;
         case ESB_EVENT_RX_RECEIVED:
             LOG_DBG("RX SUCCESS");
-            if (rx_alloc(&payload) != 0) {
-                LOG_WRN("Failed to allocate rx_slab");
-                return;
-            }
+            // if (rx_alloc(&payload) != 0) {
+            //     LOG_WRN("Failed to allocate rx_slab");
+            //     return;
+            // }
 
-            if (esb_read_rx_payload(payload) != 0) {
-                LOG_WRN("esb_read_payload fail");
-                rx_free(payload);
-                return;
-            }
+            // if (esb_read_rx_payload(payload) != 0) {
+            //     LOG_WRN("esb_read_payload fail");
+            //     rx_free(payload);
+            //     return;
+            // }
 
-            if (put_rx_data(payload) != 0) {
-                LOG_ERR("k_msgq_put failed");
-                rx_free(payload);
-                return;
-            }
-            
+            // if (put_rx_data(payload) != 0) {
+            //     LOG_ERR("k_msgq_put failed");
+            //     rx_free(payload);
+            //     return;
+            // }
+
             LOG_DBG("rx_event submit");
             esb_ops->rx_op(K_NO_WAIT);
             break;
