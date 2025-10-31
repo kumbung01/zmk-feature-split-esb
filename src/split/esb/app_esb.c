@@ -108,9 +108,7 @@ static void event_handler(struct esb_evt const *event) {
             if (tx_fail_count++ >= 10) {
                 tx_fail_count = 0;
                 esb_flush_tx();
-                if (get_tx_count() > 0) {
-                    esb_ops->tx_op(K_NO_WAIT);
-                }
+                esb_ops->tx_op(K_NO_WAIT);
             }
             else {
                 esb_start_tx();
