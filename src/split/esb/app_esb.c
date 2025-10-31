@@ -147,7 +147,7 @@ ssize_t esb_tx_app() {
 start_tx:
     esb_start_tx();
 
-    return evt_count;
+    return ret;
 }
 
 
