@@ -107,11 +107,8 @@ static void event_handler(struct esb_evt const *event) {
             if (tx_fail_count++ >= 10) {
                 tx_fail_count = 0;
                 esb_flush_tx();
-                esb_ops->tx_op(K_NO_WAIT);
             }
-            else {
-                esb_start_tx();
-            }
+            esb_ops->tx_op(K_MSEC(PERIPHERAL_ID));
 #endif
             break;
         case ESB_EVENT_RX_RECEIVED:
@@ -124,30 +121,31 @@ static void event_handler(struct esb_evt const *event) {
 
 ssize_t esb_tx_app() {
     struct esb_payload payload;
-    
+    ssize_t ret = 0;
+
     if (esb_tx_full()) {
         LOG_DBG("esb tx full, wait for next tx event");
-        return -ENOMEM;
+        ret = -ENOMEM;
+        goto start_tx;
     }
 
     size_t evt_count = make_packet(&payload);
     if (evt_count == 0) {
         LOG_DBG("no packet to send");
-        return -ENODATA;
+        ret = -ENODATA;
+        goto start_tx;
     }
 
     LOG_DBG("sending payload through pipe %d", payload.pipe);
 
-    int ret = esb_write_payload(&payload);
+    ret = esb_write_payload(&payload);
     if (ret != 0) {
         LOG_WRN("esb_write_payload returned %d", ret);
-        return -EAGAIN;
+        goto start_tx;    
     }
 
-    ret = esb_start_tx();
-    if (ret != 0 && ret != -EBUSY) {
-        LOG_DBG("esb_start_tx() returned (%d)", ret);
-    }
+start_tx:
+    esb_start_tx();
 
     return evt_count;
 }
