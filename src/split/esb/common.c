@@ -225,10 +225,12 @@ ssize_t handle_packet() {
     //     LOG_DBG("k_msgq_get failed (err %d)", err);
     //     return err;
     // }
-    struct esb_payload rx_payload;
-    if (esb_read_rx_payload(&rx_payload) != 0) {
+    struct esb_payload payload;
+    if (esb_read_rx_payload(&payload) != 0) {
         return -ENODATA;
     }
+
+    struct esb_payload *rx_payload = &payload;
 
     LOG_DBG("rx_payload pipe %d", rx_payload->pipe);
 
@@ -263,7 +265,7 @@ ssize_t handle_packet() {
     }
 
 CLEANUP:
-    rx_free(rx_payload);
+    // rx_free(rx_payload);
     return handled;
 }
 
