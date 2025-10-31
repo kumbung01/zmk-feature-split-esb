@@ -111,7 +111,8 @@ static int split_central_esb_send_command(uint8_t source,
         return err;
     }
     
-    tx_op(K_NO_WAIT);
+    if (is_esb_active())
+        tx_op(K_NO_WAIT);
 
     return 0;
 }

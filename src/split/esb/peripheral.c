@@ -87,7 +87,8 @@ static int
 split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event) {
     int err = send_event(PERIPHERAL_ID, event);
     
-    tx_op(K_NO_WAIT);
+    if (is_esb_active())
+        tx_op(K_NO_WAIT);
 
     return 0;
 }
