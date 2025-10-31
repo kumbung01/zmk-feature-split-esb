@@ -55,10 +55,10 @@ static void event_handler(struct esb_evt const *event);
 static struct esb_config config = {
     .protocol = ESB_PROTOCOL_ESB_DPL,
     .mode = ESB_MODE_PTX,
-    .bitrate = IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_BITRATE_2MBPS) ? ESB_BITRATE_2MBPS : ESB_BITRATE_1MBPS,
+    .bitrate = BITRATE,
     .crc = ESB_CRC_16BIT,
-    .retransmit_delay = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY,
-    .retransmit_count = CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT,
+    .retransmit_delay = RETRANSMIT_DELAY,
+    .retransmit_count = RETRANSMIT_COUNT,
     .tx_mode = ESB_TXMODE_MANUAL_START,
     .payload_length = CONFIG_ESB_MAX_PAYLOAD_LENGTH,
     .selective_auto_ack = true,
@@ -80,15 +80,6 @@ bool is_esb_active(void) {
     return atomic_get(&m_is_active) ? true : false;
 }
 
-static atomic_t m_is_rx_working = ATOMIC_INIT(0);
-bool try_start_rx_work() {
-    return atomic_cas(&m_is_rx_working, 0, 1);
-}
-
-void rx_work_finished() {
-    atomic_clear(&m_is_rx_working);
-}
-
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
 
@@ -108,7 +99,7 @@ static void event_handler(struct esb_evt const *event) {
                 tx_fail_count = 0;
                 esb_flush_tx();
             }
-            esb_ops->tx_op(K_MSEC(PERIPHERAL_ID));
+            esb_ops->tx_op(K_USEC(PERIPHERAL_ID * RETRANSMIT_DELAY));
 #endif
             break;
         case ESB_EVENT_RX_RECEIVED:
