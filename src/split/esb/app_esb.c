@@ -109,7 +109,7 @@ static void event_handler(struct esb_evt const *event) {
 }
 
 
-static volatile k_timeout_t m_timeout = 0;
+static volatile k_timeout_t m_timeout = K_NO_WAIT;
 void set_sleeptime(k_timeout_t timeout) {
     m_timeout = timeout;
 }
