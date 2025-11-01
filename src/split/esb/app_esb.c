@@ -67,7 +67,7 @@ static struct esb_config config = {
     .tx_output_power = -4,
 };
 
-K_SEM_DEFINE(tx_sem, 0, TX_MSGQ_SIZE);
+K_SEM_DEFINE(tx_sem, 0, 1);
 
 static app_esb_mode_t m_mode;
 
@@ -81,7 +81,6 @@ bool is_esb_active(void) {
 }
 
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
-
 
 static void event_handler(struct esb_evt const *event) {
     static volatile int tx_fail_count = 0;
@@ -110,9 +109,22 @@ static void event_handler(struct esb_evt const *event) {
 }
 
 
+static volatile k_timeout_t m_timeout = 0;
+void set_sleeptime(k_timeout_t timeout) {
+    m_timeout = timeout;
+}
+
 ssize_t esb_tx_app() {
     struct esb_payload payload;
     ssize_t ret = 0;
+
+    if (m_timeout > 0) {
+        LOG_DBG("sleep thread");
+        k_sleep(m_timeout);
+        esb_start_tx();
+        m_timeout = 0;
+        return -EAGAIN;
+    }
 
     if (esb_tx_full()) {
         LOG_DBG("esb tx full, wait for next tx event");

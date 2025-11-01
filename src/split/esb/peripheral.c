@@ -44,8 +44,8 @@ K_WORK_DELAYABLE_DEFINE(tx_work, tx_work_handler);
 static int peripheral_handler(struct esb_data_envelope* env);
 static void tx_op(k_timeout_t timeout) {
     // if (!k_work_delayable_is_pending(&tx_work))
-    //     k_work_reschedule(&tx_work, timeout);
-    esb_start_tx();
+    //     k_work_reschedule(&tx_work, timeout);    
+    set_sleeptime(timeout);
     k_sem_give(&tx_sem);
 }
 
@@ -162,17 +162,14 @@ static int peripheral_handler(struct esb_data_envelope* env) {
 }
 
 void tx_thread() {
-    int64_t uptime = k_uptime_get();
     while (true)
     {
         k_sem_take(&tx_sem, K_FOREVER);
         LOG_DBG("tx thread awake");
-        esb_tx_app();
-        int64_t now = k_uptime_get();
-        if (now - uptime > 10000) {
-            uptime = now;
-            check_stack_usage(k_current_get(), "tx_thread");
-        }
+        do {
+            if (esb_tx_app() <= 0)
+                break;
+        } while (true);
     }
 }
 
