@@ -118,7 +118,7 @@ ssize_t esb_tx_app() {
     struct esb_payload payload;
     ssize_t ret = 0;
 
-    if (m_timeout > 0) {
+    if (!K_TIMEOUT_EQ(m_timeout, K_NO_WAIT)) {
         LOG_DBG("sleep thread");
         k_sleep(m_timeout);
         esb_start_tx();
