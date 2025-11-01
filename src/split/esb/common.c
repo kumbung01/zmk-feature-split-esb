@@ -333,7 +333,7 @@ void check_stack_usage(struct k_thread *thread, const char *name)
                name, 
                used_stack, 
                total_size,
-               (uint32_t)(used_stack * 100.0 / (double)total_size));
+               (uint32_t)(used_stack * 100.0 / total_size));
 
     } else {
         LOG_WRN("Error: Failed to get stack space for %s (ret: %d)", name, ret);
