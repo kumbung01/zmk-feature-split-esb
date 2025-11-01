@@ -82,21 +82,21 @@ bool is_esb_active(void) {
 
 static volatile k_timeout_t m_timeout = K_NO_WAIT;
 static atomic_t is_timeout_set_tx = ATOMIC_INIT(0);
+bool is_timeout_set() {
+    return atomic_get(&is_timeout_set_tx);
+}
+
 void timeout_set(k_timeout_t timeout) {
-    if (K_TIMEOUT_EQ(timeout, K_NO_WAIT))
+    if (K_TIMEOUT_EQ(timeout, K_NO_WAIT) || is_timeout_set())
         return;
         
     m_timeout = timeout;
     atomic_set(&is_timeout_set_tx, 1);
 }
 
-void timeout_clear() {
+static void timeout_clear() {
     m_timeout = K_NO_WAIT;
     atomic_clear(&is_timeout_set_tx);
-}
-
-bool is_timeout_set() {
-    return atomic_get(&is_timeout_set_tx);
 }
 
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
