@@ -90,6 +90,11 @@ void timeout_set(k_timeout_t timeout) {
     atomic_set(&is_timeout_set_tx, 1);
 }
 
+void timeout_clear() {
+    m_timeout = K_NO_WAIT;
+    atomic_clear(&is_timeout_set_tx);
+}
+
 bool is_timeout_set() {
     return atomic_get(&is_timeout_set_tx);
 }
@@ -129,7 +134,7 @@ ssize_t esb_tx_app() {
     if (is_timeout_set()) {
         LOG_DBG("sleep thread");
         k_sleep(m_timeout);
-        m_timeout = K_NO_WAIT;
+        timeout_clear();
         esb_start_tx();
         return -EAGAIN;
     }
