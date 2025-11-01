@@ -270,6 +270,7 @@ int tx_msgq_init(int *_type_to_idx) {
 static int last_idx = -1;
 void *get_next_tx_data() {
     void *ptr;
+#if !SINGLE_PACKET
     if (last_idx != -1) {
         if (k_msgq_get(tx_msgq[last_idx], &ptr, K_NO_WAIT) != 0) {
             LOG_DBG("queue is empty.");
@@ -279,6 +280,7 @@ void *get_next_tx_data() {
 
         return ptr;
     }
+#endif
 
     // when last_idx == -1, search for new data
     for (int i = 0; i < tx_msgq_cnt; ++i) {
