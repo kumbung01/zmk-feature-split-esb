@@ -167,7 +167,9 @@ void tx_thread() {
         k_sem_take(&tx_sem, K_FOREVER);
         LOG_DBG("tx thread awake");
         esb_tx_app();
-        if (k_uptime_get() - uptime > 60000) {
+        int64_t now = k_uptime_get();
+        if (now - uptime > 60000) {
+            uptime = now;
             check_stack_usage(k_current_get(), "tx_thread");
         }
     }
