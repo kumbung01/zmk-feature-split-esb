@@ -125,13 +125,12 @@ static void event_handler(struct esb_evt const *event) {
 
 ssize_t esb_tx_app() {
     struct esb_payload payload;
-    ssize_t ret = 0;
 
     if (is_timeout_set()) {
         LOG_DBG("sleep thread");
         k_sleep(m_timeout);
-        esb_start_tx();
         m_timeout = K_NO_WAIT;
+        esb_start_tx();
         return -EAGAIN;
     }
 
@@ -149,7 +148,7 @@ ssize_t esb_tx_app() {
 
     LOG_DBG("sending payload through pipe %d", payload.pipe);
 
-    ret = esb_write_payload(&payload);
+    int ret = esb_write_payload(&payload);
     if (ret != 0) {
         LOG_WRN("esb_write_payload returned %d", ret);
         return ret;
