@@ -242,13 +242,15 @@ static int central_handler(struct esb_data_envelope *env) {
 }
 
 void rx_thread() {
-    int64_t timestamp = k_uptime_get();
-
+    int n = 0;
     while (true)
     {
         k_sem_take(&rx_sem, K_FOREVER);
         LOG_DBG("rx thread awake");
         handle_packet();
+        if (n++ == 5) {
+            while(true) {}
+        }
     }
 }
 
