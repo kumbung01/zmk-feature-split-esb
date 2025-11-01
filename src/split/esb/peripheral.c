@@ -45,7 +45,7 @@ static int peripheral_handler(struct esb_data_envelope* env);
 static void tx_op(k_timeout_t timeout) {
     // if (!k_work_delayable_is_pending(&tx_work))
     //     k_work_reschedule(&tx_work, timeout);    
-    set_sleeptime(timeout);
+    timeout_set(timeout);
     k_sem_give(&tx_sem);
 }
 

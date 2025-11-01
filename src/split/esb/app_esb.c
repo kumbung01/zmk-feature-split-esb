@@ -110,15 +110,24 @@ static void event_handler(struct esb_evt const *event) {
 
 
 static volatile k_timeout_t m_timeout = K_NO_WAIT;
-void set_sleeptime(k_timeout_t timeout) {
+static atomic_t is_timeout_set_tx = ATOMIC_INIT(0);
+void timeout_set(k_timeout_t timeout) {
+    if (K_TIMEOUT_EQ(timeout, K_NO_WAIT))
+        return;
+        
     m_timeout = timeout;
+    atomic_set(&is_timeout_set_tx, 1);
+}
+
+bool is_timeout_set() {
+    return atomic_get(&is_timeout_set_tx);
 }
 
 ssize_t esb_tx_app() {
     struct esb_payload payload;
     ssize_t ret = 0;
 
-    if (!K_TIMEOUT_EQ(m_timeout, K_NO_WAIT)) {
+    if (is_timeout_set()) {
         LOG_DBG("sleep thread");
         k_sleep(m_timeout);
         esb_start_tx();

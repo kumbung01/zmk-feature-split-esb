@@ -51,6 +51,7 @@ ssize_t esb_tx_app();
 void set_esb_active(bool is_active);
 bool is_esb_active(void);
 
-void set_sleeptime(k_timeout_t timeout);
+void timeout_set(k_timeout_t timeout);
+bool is_timeout_set();
 
 #endif
