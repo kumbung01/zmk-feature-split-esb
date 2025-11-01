@@ -13,6 +13,10 @@
 extern struct k_sem tx_sem;
 
 typedef enum {
+    NO_WAIT = -1
+} timeout_t;
+
+typedef enum {
     APP_ESB_EVT_TX_SUCCESS,
     APP_ESB_EVT_TX_FAIL,
     APP_ESB_EVT_RX
@@ -51,7 +55,6 @@ ssize_t esb_tx_app();
 void set_esb_active(bool is_active);
 bool is_esb_active(void);
 
-void timeout_set(k_timeout_t timeout);
-bool is_timeout_set();
+void timeout_set(int timeout_us);
 
 #endif

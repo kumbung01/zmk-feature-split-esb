@@ -80,25 +80,13 @@ bool is_esb_active(void) {
     return atomic_get(&m_is_active) ? true : false;
 }
 
-static volatile k_timeout_t m_timeout = K_NO_WAIT;
-static atomic_t is_timeout_set_tx = ATOMIC_INIT(0);
-bool is_timeout_set() {
-    return atomic_get(&is_timeout_set_tx);
-}
-
-void timeout_set(k_timeout_t timeout) {
-    if (K_TIMEOUT_EQ(timeout, K_NO_WAIT) || is_timeout_set())
+static volatile int m_timeout = 0;
+void timeout_set(int timeout) {
+    if (m_timeout == NO_WAIT)
         return;
         
     m_timeout = timeout;
-    atomic_set(&is_timeout_set_tx, 1);
 }
-
-static void timeout_clear() {
-    m_timeout = K_NO_WAIT;
-    atomic_clear(&is_timeout_set_tx);
-}
-
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
 static void event_handler(struct esb_evt const *event) {
@@ -108,7 +96,7 @@ static void event_handler(struct esb_evt const *event) {
         case ESB_EVENT_TX_SUCCESS:
             LOG_DBG("TX SUCCESS");
             tx_fail_count = 0;
-            esb_ops->tx_op(K_NO_WAIT);
+            esb_ops->tx_op(NO_WAIT);
             break;
         case ESB_EVENT_TX_FAILED:
             LOG_WRN("ESB_EVENT_TX_FAILED");            
@@ -117,12 +105,12 @@ static void event_handler(struct esb_evt const *event) {
                 tx_fail_count = 0;
                 esb_pop_tx();
             }
-            esb_ops->tx_op(K_USEC(PERIPHERAL_ID * (RETRANSMIT_DELAY / 2)));
+            esb_ops->tx_op((PERIPHERAL_ID * (RETRANSMIT_DELAY / 2)));
 #endif
             break;
         case ESB_EVENT_RX_RECEIVED:
             LOG_DBG("RX SUCCESS");
-            esb_ops->rx_op(K_NO_WAIT);
+            esb_ops->rx_op(NO_WAIT);
             break;
     }
 }
@@ -131,10 +119,10 @@ static void event_handler(struct esb_evt const *event) {
 ssize_t esb_tx_app() {
     struct esb_payload payload;
 
-    if (is_timeout_set()) {
+    if (m_timeout != NO_WAIT) {
         LOG_DBG("sleep thread");
-        k_sleep(m_timeout);
-        timeout_clear();
+        k_usleep(m_timeout);
+        m_timeout = NO_WAIT;
         esb_start_tx();
         return -EAGAIN;
     }
@@ -324,7 +312,7 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) 
         case APP_TS_STARTED:
             app_esb_resume();
             if (atomic_cas(&tx_work_submit, 0, 1)) {
-                esb_ops->tx_op(K_NO_WAIT);
+                esb_ops->tx_op(NO_WAIT);
             }
             break;
         case APP_TS_STOPPED:

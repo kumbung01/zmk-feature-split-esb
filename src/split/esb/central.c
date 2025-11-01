@@ -66,14 +66,14 @@ K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
 static void tx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(tx_work, tx_work_handler);
 
-static void tx_op(k_timeout_t timeout) {
+static void tx_op(int timeout_us) {
     if (!k_work_delayable_is_pending(&tx_work))
-        k_work_reschedule(&tx_work, timeout);
+        k_work_reschedule(&tx_work, K_USEC(timeout_us));
 }
 
-static void rx_op(k_timeout_t timeout) {
+static void rx_op(int timeout_us) {
     if (!k_work_delayable_is_pending(&rx_work))
-        k_work_reschedule(&rx_work, timeout);
+        k_work_reschedule(&rx_work, K_USEC(timeout_us));
 }
 
 static struct zmk_split_esb_ops central_ops = {
