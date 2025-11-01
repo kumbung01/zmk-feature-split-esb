@@ -115,7 +115,7 @@ extern struct zmk_split_esb_ops *esb_ops;
 ssize_t get_payload_data_size_evt(enum zmk_split_transport_peripheral_event_type _type);
 ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type _type);
 
-int send_event(uint8_t source, struct zmk_split_transport_buffer *event);
+int enqueue_event(uint8_t source, struct zmk_split_transport_buffer *event);
 
 
 int service_init();
