@@ -80,7 +80,7 @@ bool is_esb_active(void) {
     return atomic_get(&m_is_active) ? true : false;
 }
 
-static volatile int m_timeout = 0;
+static volatile int m_timeout = NO_WAIT;
 void timeout_set(int timeout) {
     if (m_timeout == NO_WAIT)
         return;
