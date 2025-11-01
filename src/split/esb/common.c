@@ -135,7 +135,7 @@ void reset_buffers() {
 }
 #endif
 
-int send_event(uint8_t source, struct zmk_split_transport_buffer *buf) {
+int enqueue_event(uint8_t source, struct zmk_split_transport_buffer *buf) {
     LOG_DBG("sending packet type (%d)", buf->type);
 
     struct esb_data_envelope *env;

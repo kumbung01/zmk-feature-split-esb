@@ -87,7 +87,7 @@ static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
 static int
 split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event) {
-    int err = send_event(PERIPHERAL_ID, event);
+    int err = enqueue_event(PERIPHERAL_ID, event);
     
     if (is_esb_active())
         tx_op(NO_WAIT);

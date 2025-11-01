@@ -107,7 +107,7 @@ static void tx_work_handler(struct k_work *work) {
 static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd) {
     
-    int err = send_event(source, &cmd);
+    int err = enqueue_event(source, &cmd);
     if (err) {
         return err;
     }
