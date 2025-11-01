@@ -82,7 +82,7 @@ bool is_esb_active(void) {
 
 static volatile int m_timeout = NO_WAIT;
 void timeout_set(int timeout) {
-    if (m_timeout == NO_WAIT)
+    if (timeout == NO_WAIT)
         return;
         
     m_timeout = timeout;
