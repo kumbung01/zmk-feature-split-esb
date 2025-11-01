@@ -68,6 +68,7 @@ static struct esb_config config = {
 };
 
 K_SEM_DEFINE(tx_sem, 0, 1);
+K_SEM_DEFINE(rx_sem, 0, 1);
 
 static app_esb_mode_t m_mode;
 

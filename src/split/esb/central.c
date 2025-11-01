@@ -72,8 +72,9 @@ static void tx_op(int timeout_us) {
 }
 
 static void rx_op(int timeout_us) {
-    if (!k_work_delayable_is_pending(&rx_work))
-        k_work_reschedule(&rx_work, K_USEC(timeout_us));
+    // if (!k_work_delayable_is_pending(&rx_work))
+    //     k_work_reschedule(&rx_work, K_USEC(timeout_us));
+    k_sem_give(&rx_sem);
 }
 
 static struct zmk_split_esb_ops central_ops = {
@@ -228,3 +229,22 @@ static int central_handler(struct esb_data_envelope *env) {
     
     return zmk_split_transport_central_peripheral_event_handler(&esb_central, source, env->event);
 }
+
+void rx_thread() {
+    int64_t timestamp = 0;
+
+    while (true)
+    {
+        k_sem_take(&rx_sem, K_FOREVER);
+        LOG_DBG("tx thread awake");
+        do {
+            check_stack_usage(k_get_current(), "rx_thread");
+            if (handle_packet() <= 0)
+                break;
+        } while (true);
+    }
+}
+
+K_THREAD_DEFINE(rx_thread_id, 2048,
+        rx_thread, NULL, NULL, NULL,
+        5, 0, 0);

@@ -11,6 +11,7 @@
 #include <esb.h>
 
 extern struct k_sem tx_sem;
+extern struct k_sem rx_sem;
 
 typedef enum {
     NO_WAIT = -1
