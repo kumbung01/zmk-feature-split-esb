@@ -169,7 +169,7 @@ void tx_thread() {
         LOG_DBG("tx thread awake");
         esb_tx_app();
         int64_t now = k_uptime_get();
-        if (now - uptime > 60000) {
+        if (now - uptime > 10000) {
             uptime = now;
             check_stack_usage(k_current_get(), "tx_thread");
         }
