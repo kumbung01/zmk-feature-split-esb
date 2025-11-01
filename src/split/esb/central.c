@@ -237,11 +237,8 @@ void rx_thread() {
     {
         k_sem_take(&rx_sem, K_FOREVER);
         LOG_DBG("rx thread awake");
-        do {
-            check_stack_usage(k_current_get(), "rx_thread", &timestamp, 5000);
-            if (handle_packet() <= 0)
-                break;
-        } while (true);
+        check_stack_usage(k_current_get(), "rx_thread", &timestamp, 5000);
+        handle_packet();
     }
 }
 
