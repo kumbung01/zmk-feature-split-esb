@@ -197,6 +197,7 @@ static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
 
 static int zmk_split_esb_central_init(void) {
+    uint32_t reset_cause;
     if (hwinfo_get_reset_cause(&reset_cause) == 0) {
         printk("=== Reset Cause: 0x%x ===\n", reset_cause);
         
