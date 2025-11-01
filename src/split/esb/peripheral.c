@@ -176,6 +176,6 @@ void tx_thread() {
     }
 }
 
-K_THREAD_DEFINE(tx_thread_id, 1300,
+K_THREAD_DEFINE(tx_thread_id, 640,
         tx_thread, NULL, NULL, NULL,
         5, 0, 0);
