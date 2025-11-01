@@ -329,11 +329,11 @@ void check_stack_usage(struct k_thread *thread, const char *name)
         size_t total_size = thread->stack_info.size; 
         size_t used_stack = total_size - unused_stack;
 
-        LOG_WRN("\"%s\": Max Used %zu bytes / Total %zu bytes (%.2f)",
+        LOG_WRN("\"%s\": Max Used %zu bytes / Total %zu bytes (%u%%)",
                name, 
                used_stack, 
                total_size,
-               (double)used_stack * 100.0 / (double)total_size);
+               (uint32_t)(used_stack * 100.0 / (double)total_size));
 
     } else {
         LOG_WRN("Error: Failed to get stack space for %s (ret: %d)", name, ret);
