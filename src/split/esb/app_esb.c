@@ -122,7 +122,7 @@ ssize_t esb_tx_app() {
         LOG_DBG("sleep thread");
         k_sleep(m_timeout);
         esb_start_tx();
-        m_timeout = 0;
+        m_timeout = K_NO_WAIT;
         return -EAGAIN;
     }
 
