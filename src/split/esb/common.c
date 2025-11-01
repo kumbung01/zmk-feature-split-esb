@@ -329,7 +329,7 @@ void check_stack_usage(struct k_thread *thread, const char *name)
         size_t total_size = thread->stack_info.size; 
         size_t used_stack = total_size - unused_stack;
 
-        LOG_WRN("\"%s\": Max Used %zu bytes / Total %zu bytes (%.2lf%%)",
+        LOG_WRN("\"%s\": Max Used %zu bytes / Total %zu bytes (%.2f)",
                name, 
                used_stack, 
                total_size,
