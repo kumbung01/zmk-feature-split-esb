@@ -63,13 +63,25 @@ typedef enum zmk_split_transport_peripheral_event_type zmk_split_transport_buffe
                                sizeof(struct zmk_split_transport_peripheral_event) : \
                                sizeof(struct zmk_split_transport_central_command))
 
+enum tx_power_set_t{
+    INCREASE_POWER,
+    DECREASE_POWER,
+};
+
 struct zmk_split_transport_buffer {
     zmk_split_transport_buffer_type type;
-    uint8_t data[ZMK_DATA_SIZE - sizeof(zmk_split_transport_buffer_type)];
+    union {
+        uint8_t data[ZMK_DATA_SIZE - sizeof(zmk_split_transport_buffer_type)];
+        enum tx_power_set_t tx_power;
+    };
 };
 
 _Static_assert(sizeof(struct zmk_split_transport_buffer) == ZMK_DATA_SIZE,
                "zmk_split_transport_buffer size mismatch");
+
+enum zmk_split_transport_central_command_type_proprietary {
+    ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_TX_POWER = 5,
+};
 
 struct esb_data_envelope {
     uint8_t source;
