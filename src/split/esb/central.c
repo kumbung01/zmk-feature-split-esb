@@ -240,7 +240,7 @@ void rx_thread() {
         do {
             int64_t now = k_uptime_get();
             if (now - timestamp > 5000) {
-                check_stack_usage(k_get_current(), "rx_thread");
+                check_stack_usage(k_current_get(), "rx_thread");
                 timestamp = now;
             }
             if (handle_packet() <= 0)
