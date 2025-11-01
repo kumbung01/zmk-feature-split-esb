@@ -318,3 +318,22 @@ void tx_free(void *ptr) {
 size_t get_tx_count() {
     return k_mem_slab_num_used_get(&tx_slab);
 }
+
+void check_stack_usage(struct k_thread *thread, const char *name)
+{
+    size_t unused_stack;
+    int ret = k_thread_stack_space_get(thread, &unused_stack);
+    if (ret == 0) {
+        size_t total_size = thread->stack_info.size; 
+        size_t used_stack = total_size - unused_stack;
+
+        printk("Thread %s: Max Used %zu bytes / Total %zu bytes (%.2f%%)\n",
+               name, 
+               used_stack, 
+               total_size,
+               (double)used_stack * 100.0 / total_size);
+
+    } else {
+        printk("Error: Failed to get stack space for %s (ret: %d)\n", name, ret);
+    }
+}

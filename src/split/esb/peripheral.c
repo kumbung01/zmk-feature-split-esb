@@ -43,8 +43,9 @@ static void tx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(tx_work, tx_work_handler);
 static int peripheral_handler(struct esb_data_envelope* env);
 static void tx_op(k_timeout_t timeout) {
-    if (!k_work_delayable_is_pending(&tx_work))
-        k_work_reschedule(&tx_work, timeout);
+    // if (!k_work_delayable_is_pending(&tx_work))
+    //     k_work_reschedule(&tx_work, timeout);
+    k_sem_give(&tx_sem);
 }
 
 static void rx_op(k_timeout_t timeout) {
@@ -159,19 +160,19 @@ static int peripheral_handler(struct esb_data_envelope* env) {
     return zmk_split_transport_peripheral_command_handler(&esb_peripheral, env->command);
 }
 
-// void tx_thread() {
-//     while (true)
-//     {
-//         int  total = 0;
-//         k_sem_take(&tx_sem, K_FOREVER);
-//         LOG_DBG("tx thread awake");
-//         do {
-//             if (esb_tx_app() == 0)
-//                 break;
-//         } while (get_tx_count() > 0);
-//     }
-// }
+void tx_thread() {
+    int64_t uptime = k_uptime_get();
+    while (true)
+    {
+        k_sem_take(&tx_sem, K_FOREVER);
+        LOG_DBG("tx thread awake");
+        esb_tx_app();
+        if (k_uptime_get() - uptime > 60000) {
+            check_stack_usage(k_current_get(), "tx_thread");
+        }
+    }
+}
 
-// K_THREAD_DEFINE(tx_thread_id, 1300,
-//         tx_thread, NULL, NULL, NULL,
-//         5, 0, 0);
+K_THREAD_DEFINE(tx_thread_id, 1300,
+        tx_thread, NULL, NULL, NULL,
+        5, 0, 0);

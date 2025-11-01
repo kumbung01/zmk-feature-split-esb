@@ -67,7 +67,7 @@ static struct esb_config config = {
     .tx_output_power = -4,
 };
 
-K_SEM_DEFINE(tx_sem, 0, 1);
+K_SEM_DEFINE(tx_sem, 0, TX_MSGQ_SIZE);
 
 static app_esb_mode_t m_mode;
 
@@ -95,9 +95,9 @@ static void event_handler(struct esb_evt const *event) {
         case ESB_EVENT_TX_FAILED:
             LOG_WRN("ESB_EVENT_TX_FAILED");            
 #if IS_PERIPHERAL
-            if (tx_fail_count++ >= 10) {
+            if (tx_fail_count++ >= 3) {
                 tx_fail_count = 0;
-                esb_flush_tx();
+                esb_pop_tx();
             }
             esb_ops->tx_op(K_USEC(PERIPHERAL_ID * RETRANSMIT_DELAY));
 #endif
