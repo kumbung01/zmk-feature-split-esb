@@ -248,9 +248,7 @@ void rx_thread() {
         k_sem_take(&rx_sem, K_FOREVER);
         LOG_DBG("rx thread awake");
         handle_packet();
-        if (n++ == 5) {
-            while(true) {}
-        }
+        k_usleep(300);
     }
 }
 
