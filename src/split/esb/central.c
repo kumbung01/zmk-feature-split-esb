@@ -236,7 +236,7 @@ void rx_thread() {
     while (true)
     {
         k_sem_take(&rx_sem, K_FOREVER);
-        LOG_DBG("tx thread awake");
+        LOG_DBG("rx thread awake");
         do {
             check_stack_usage(k_current_get(), "rx_thread", &timestamp, 5000);
             if (handle_packet() <= 0)
@@ -245,6 +245,6 @@ void rx_thread() {
     }
 }
 
-K_THREAD_DEFINE(rx_thread_id, 2048,
+K_THREAD_DEFINE(rx_thread_id, 2304,
         rx_thread, NULL, NULL, NULL,
         5, 0, 0);
