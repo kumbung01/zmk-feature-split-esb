@@ -321,9 +321,16 @@ size_t get_tx_count() {
     return k_mem_slab_num_used_get(&tx_slab);
 }
 
-void check_stack_usage(struct k_thread *thread, const char *name)
+void check_stack_usage(struct k_thread *thread, const char *name, int64_t *before, int duration)
 {
     size_t unused_stack;
+    int64_t now = k_uptime_get();
+    if (now - *before < duration) {
+        return;
+    }
+
+    *before = now;
+
     int ret = k_thread_stack_space_get(thread, &unused_stack);
     if (ret == 0) {
         size_t total_size = thread->stack_info.size; 

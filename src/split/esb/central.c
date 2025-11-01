@@ -238,11 +238,7 @@ void rx_thread() {
         k_sem_take(&rx_sem, K_FOREVER);
         LOG_DBG("tx thread awake");
         do {
-            int64_t now = k_uptime_get();
-            if (now - timestamp > 5000) {
-                check_stack_usage(k_current_get(), "rx_thread");
-                timestamp = now;
-            }
+            check_stack_usage(k_current_get(), "rx_thread", &timestamp, 5000);
             if (handle_packet() <= 0)
                 break;
         } while (true);
