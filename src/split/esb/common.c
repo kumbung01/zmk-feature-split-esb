@@ -235,7 +235,7 @@ ssize_t handle_packet() {
     }
 
     size_t count = data_size == 0 ? 1 : length / data_size;
-    __ASSERT(count * data_size == length, "data_size * count != length")
+    __ASSERT(count * data_size == length, "data_size * count != length");
 
     struct esb_data_envelope env = { .buf.type = type, 
                                      .source = PIPE_TO_SOURCE(rx_payload.pipe),
