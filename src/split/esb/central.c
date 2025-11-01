@@ -112,7 +112,7 @@ static int split_central_esb_send_command(uint8_t source,
     }
     
     if (is_esb_active())
-        tx_op(0);
+        tx_op(NO_WAIT);
 
     return 0;
 }
