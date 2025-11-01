@@ -6,10 +6,8 @@
 
 #include <zephyr/types.h>
 #include <zephyr/init.h>
-
+#include <zephyr/drivers/hwinfo.h>
 #include <zephyr/settings/settings.h>
-#include <zephyr/sys/crc.h>
-#include <zephyr/sys/ring_buffer.h>
 
 #include <zephyr/logging/log.h>
 
@@ -199,6 +197,18 @@ static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
 
 static int zmk_split_esb_central_init(void) {
+    if (hwinfo_get_reset_cause(&reset_cause) == 0) {
+        printk("=== Reset Cause: 0x%x ===\n", reset_cause);
+        
+        if (reset_cause & RESET_POR) printk("- Power-on Reset\n");
+        if (reset_cause & RESET_WATCHDOG) printk("- Watchdog Reset\n");
+        if (reset_cause & RESET_SOFTWARE) printk("- Software Reset\n");
+        if (reset_cause & RESET_CPU_LOCKUP) printk("- CPU Lockup\n");
+        if (reset_cause & RESET_PARITY) printk("- Parity Error\n");
+        
+        hwinfo_clear_reset_cause();
+    }
+
     esb_ops = &central_ops;
 
     int ret = tx_msgq_init(event_prio);
@@ -238,7 +248,6 @@ void rx_thread() {
         k_sem_take(&rx_sem, K_FOREVER);
         LOG_DBG("rx thread awake");
         handle_packet();
-        k_yield();
     }
 }
 
