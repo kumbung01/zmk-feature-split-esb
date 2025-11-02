@@ -68,7 +68,7 @@ static void rx_work_handler(struct k_work *work);
 K_WORK_DEFINE(rx_work, rx_work_handler);
 static void set_power_level_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(set_power_level_work, set_power_level_handler);
-K_THREAD_STACK_DEFINE(my_work_q_stack, 1024);
+K_THREAD_STACK_DEFINE(my_work_q_stack, 2304);
 struct k_work_q my_work_q;
 
 static void tx_op(int timeout_us) {
