@@ -153,7 +153,7 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
 
             reset_radio();
             timer0_init();
-            timer0_cc_set(TIMER_EXPIRY_US_EARLY, TIMER_EXPIRY_REQ);
+            timer0_cc_update(TIMER_EXPIRY_US_EARLY, TIMER_EXPIRY_REQ);
 
             set_timeslot_active_status(true);
             break;
