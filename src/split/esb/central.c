@@ -81,17 +81,6 @@ static struct zmk_split_esb_ops central_ops = {
     .rx_op = rx_op,
 };
 
-static void rx_work_handler(struct k_work *work) {
-    int64_t deadline = k_uptime_get() + 3;
-
-    do {
-        if (handle_packet() <= 0) {
-            return;
-        }
-    } while (k_uptime_get() < deadline);
-
-    k_work_reschedule(&rx_work, K_NO_WAIT);
-}
 
 static void tx_work_handler(struct k_work *work) {
     do {
