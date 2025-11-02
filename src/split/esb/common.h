@@ -86,7 +86,11 @@ _Static_assert(sizeof(struct zmk_split_transport_buffer) == ZMK_DATA_SIZE,
                "zmk_split_transport_buffer size mismatch");
 
 enum zmk_split_transport_central_command_type_proprietary {
-    ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_TX_POWER = 5,
+    ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_TX_POWER = 4,
+} __packed;
+
+enum zmk_split_transport_peripheral_event_type_proprietary {
+    ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_TX_POWER_CHANGED = 4,
 } __packed;
 
 struct esb_data_envelope {

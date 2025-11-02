@@ -79,6 +79,9 @@ ssize_t get_payload_data_size_evt(enum zmk_split_transport_peripheral_event_type
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT:
         size = sizeof(((struct zmk_split_transport_peripheral_event*)0)->data.battery_event);
         break;
+    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_TX_POWER_CHANGE:
+        size = 0;
+        break;
     default:
         size = -ENOTSUP;
         break;

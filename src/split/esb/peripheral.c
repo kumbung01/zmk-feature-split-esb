@@ -163,6 +163,8 @@ static int peripheral_handler(struct esb_data_envelope* env) {
         power_set_t cmd = env->buf.tx_power;
         
         tx_power_change(cmd);
+        struct zmk_split_transport_peripheral_event evt = {.type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_TX_POWER_CHANGED};
+        split_peripheral_esb_report_event(&evt);
         return 0;
     }
 

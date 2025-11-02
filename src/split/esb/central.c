@@ -49,10 +49,13 @@ enum peripheral_slot_state {
     PERIPHERAL_UP,
 };
 
+#define TX_CHANGE_SENT 0
+
 struct peripheral_slot {
     enum peripheral_slot_state state;
     int64_t last_reported;
     int rssi;
+    uint8_t flag;
 };
 
 static struct peripheral_slot peripherals[PERIPHERAL_COUNT];
@@ -213,6 +216,11 @@ static int central_handler(struct esb_data_envelope *env) {
     peripherals[source].state = PERIPHERAL_UP;
     peripherals[source].last_reported = k_uptime_get();
     peripherals[source].rssi = -(env->payload->rssi);
+
+    if (env->buf.type == ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_TX_POWER_CHANGED) {
+        WRITE_BIT(peripherals[source].flag, TX_CHANGE_SENT, 0);
+        return 0;
+    }
     
     return zmk_split_transport_central_peripheral_event_handler(&esb_central, source, env->event);
 }
@@ -227,11 +235,16 @@ static void set_power_level_handler(struct k_work *work) {
         LOG_DBG("source (%d) rssi (%d) tx_power %d", source, peripherals[source].rssi, tx_power);
         if (tx_power == POWER_OK) 
             continue;
+
+        if (periperals[source].flag & BIT(TX_CHANGE_SENT)) {
+            continue;
+        }
         
         struct zmk_split_transport_buffer buf = {.type = ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_TX_POWER,
                                                  .tx_power = tx_power,};
         
         enqueue_event(source, &buf);
+        WRITE_BIT(peripherals[source].flag, TX_CHANGE_SENT, 1);
     }
 
     if (is_esb_active() && get_tx_count() > 0)
