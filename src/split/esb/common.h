@@ -63,16 +63,30 @@ typedef enum zmk_split_transport_peripheral_event_type zmk_split_transport_buffe
                                sizeof(struct zmk_split_transport_peripheral_event) : \
                                sizeof(struct zmk_split_transport_central_command))
 
-enum tx_power_set_t{
-    INCREASE_POWER,
-    DECREASE_POWER,
-};
+#define RSSI_BASELINE (-60)
+typedef enum{
+    POWER_OK,
+    POWER_UP,
+    POWER_DOWN
+} power_set_t;
+
+inline power_set_t check_rssi(int rssi) {
+    if (rssi < RSSI_BASELINE - 3) {
+        return POWER_UP;
+    }
+    else if (rssi > RSSI_BASELINE + 3) {
+        return POWER_DOWN;
+    }
+    else {
+        return POEWR_OK;
+    }
+}
 
 struct zmk_split_transport_buffer {
     zmk_split_transport_buffer_type type;
     union {
         uint8_t data[ZMK_DATA_SIZE - sizeof(zmk_split_transport_buffer_type)];
-        enum tx_power_set_t tx_power;
+        power_set_t tx_power; 
     };
 };
 
@@ -81,7 +95,7 @@ _Static_assert(sizeof(struct zmk_split_transport_buffer) == ZMK_DATA_SIZE,
 
 enum zmk_split_transport_central_command_type_proprietary {
     ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_TX_POWER = 5,
-};
+} __packed;
 
 struct esb_data_envelope {
     uint8_t source;

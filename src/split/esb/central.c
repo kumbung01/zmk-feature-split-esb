@@ -59,10 +59,10 @@ static struct peripheral_slot peripherals[PERIPHERAL_COUNT];
 static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
 static int central_handler(struct esb_data_envelope *env);
-static void rx_work_handler(struct k_work *work);
-K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
 static void tx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(tx_work, tx_work_handler);
+static void set_power_level_handler(struct k_work *work)
+K_WORK_DELAYABLE_DEFINE(set_power_level_work, set_power_level_handler);
 
 static void tx_op(int timeout_us) {
     if (!k_work_delayable_is_pending(&tx_work))
@@ -210,6 +210,7 @@ static int zmk_split_esb_central_init(void) {
     }
 
     k_work_submit(&notify_status_work);
+    k_work_reschedule(&set_power_level_work, K_SECONDS(10));
     return 0;
 }
 
@@ -227,13 +228,36 @@ static int central_handler(struct esb_data_envelope *env) {
     return zmk_split_transport_central_peripheral_event_handler(&esb_central, source, env->event);
 }
 
+static void set_power_level_handler(struct k_work *work) {
+    for (int source = 0; i < PERIPHERAL_COUNT; ++i) {
+        if (peripherals[source].state == PERIPHERAL_DOWN)
+            continue;
+
+        power_set_t tx_power = check_rssi(peripherals[source].rssi);
+
+        LOG_DBG("source (%d) rssi (%d) tx_power %d", source, peripherals[source].rssi, tx_power);
+        if (tx_power == POWER_OK) 
+            continue;
+        
+        struct zmk_split_transport_buffer buf = {.type = ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_TX_POWER,
+                                                 .tx_power = tx_power,};
+        
+        enqueue_event(source, &buf);
+    }
+
+    if (is_esb_active())
+        tx_op(K_NO_WAIT);
+
+    k_work_reschedule(&set_power_level_work, K_SECONDS(10));
+}
+                                                        
 void rx_thread() {
     while (true)
     {
         k_sem_take(&rx_sem, K_FOREVER);
         LOG_DBG("rx thread awake");
         handle_packet();
-        k_yield();
+        k_yield();                                                                                                                                                                                                  
     }
 }
 
