@@ -157,7 +157,15 @@ static int zmk_split_esb_peripheral_init(void) {
 
 SYS_INIT(zmk_split_esb_peripheral_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 
+
 static int peripheral_handler(struct esb_data_envelope* env) {
+    if (env->buf.type == ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_TX_POWER) {
+        power_set_t cmd = env->buf.tx_power;
+        LOG_DBG("change tx power: %d", cmd);
+
+        return 0;
+    }
+
     return zmk_split_transport_peripheral_command_handler(&esb_peripheral, env->command);
 }
 
