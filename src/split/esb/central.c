@@ -68,10 +68,12 @@ static void rx_work_handler(struct k_work *work);
 K_WORK_DEFINE(rx_work, rx_work_handler);
 static void set_power_level_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(set_power_level_work, set_power_level_handler);
+K_THREAD_STACK_DEFINE(my_work_q_stack, 1024);
+struct k_work_q my_work_q;
 
 static void tx_op(int timeout_us) {
     if (!k_work_delayable_is_pending(&tx_work))
-        k_work_reschedule(&tx_work, K_USEC(timeout_us));
+        k_work_reschedule_for_queue(&my_work_q, &tx_work, K_USEC(timeout_us));
 }
 
 static void rx_op(int timeout_us) {
@@ -192,8 +194,6 @@ static void notify_status_work_cb(struct k_work *_work) { notify_transport_statu
 
 static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
-K_THREAD_STACK_DEFINE(my_work_q_stack, 1024);
-struct k_work_q my_work_q;
 static int zmk_split_esb_central_init(void) {
     esb_ops = &central_ops;
 
