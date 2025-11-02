@@ -70,17 +70,7 @@ typedef enum{
     POWER_DOWN
 } power_set_t;
 
-inline power_set_t check_rssi(int rssi) {
-    if (rssi < RSSI_BASELINE - 3) {
-        return POWER_UP;
-    }
-    else if (rssi > RSSI_BASELINE + 3) {
-        return POWER_DOWN;
-    }
-    else {
-        return POWER_OK;
-    }
-}
+power_set_t check_rssi(int rssi);
 
 struct zmk_split_transport_buffer {
     zmk_split_transport_buffer_type type;
