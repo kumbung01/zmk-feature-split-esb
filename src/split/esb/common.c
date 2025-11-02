@@ -210,11 +210,11 @@ size_t make_packet(struct esb_payload *payload) {
         offset += data_size;
         count++;
 
-        tx_free(env);
-
 #if IS_CENTRAL
         payload->pipe = SOURCE_TO_PIPE(env->source); // use the source as the ESB pipe number
 #endif
+
+        tx_free(env);
 
     } while (count < CAN_HANDLE_TX);
 
