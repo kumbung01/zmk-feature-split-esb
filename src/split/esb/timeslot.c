@@ -75,11 +75,14 @@ static void schedule_request(enum mpsl_timeslot_call call) {
     }
 }
 
-
+static uint32_t m_channel0 = 0;
+static uint32_t m_channel1  = 0;
 
 static void reset_radio() {
     // Reset the radio to make sure no configuration remains from BLE
     NVIC_ClearPendingIRQ(RADIO_IRQn);
+    m_channel0 = 0;
+    m_channel1 = 0;
     NRF_RADIO->POWER = RADIO_POWER_POWER_Disabled << RADIO_POWER_POWER_Pos;
     NRF_RADIO->POWER = RADIO_POWER_POWER_Enabled << RADIO_POWER_POWER_Pos;
     NVIC_ClearPendingIRQ(RADIO_IRQn);
@@ -99,9 +102,11 @@ static void timer0_disable() {
     nrf_timer_int_disable(NRF_TIMER0, NRF_TIMER_INT_COMPARE1_MASK);
 }
 
-static void timer0_cc_set(uint32_t channel0, uint32_t channel1) {
-    nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL0, channel0);
-    nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL1, channel1);
+static void timer0_cc_update(uint32_t channel0, uint32_t channel1) {
+    m_channel0 += channel0;
+    m_channel1 += channel1;
+    nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL0, m_channel0);
+    nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL1, m_channel1);
 }
 
 static void timer0_event_clear(int compare) {
@@ -189,9 +194,8 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
             signal_callback_return_param.callback_action = MPSL_TIMESLOT_SIGNAL_ACTION_NONE;
 
             // Set next trigger time to be the current + Timer expiry early
-            uint32_t cc0 = nrf_timer_cc_get(NRF_TIMER0, NRF_TIMER_CC_CHANNEL0);
-            uint32_t cc1 = nrf_timer_cc_get(NRF_TIMER0, NRF_TIMER_CC_CHANNEL1);
-            timer0_cc_set(cc0 + TIMESLOT_LENGTH_US, cc1 + TIMESLOT_LENGTH_US);
+            timer0_cc_update(TIMESLOT_LENGTH_US, TIMESLOT_LENGTH_US);
+            timer0_enable();
             p_ret_val = &signal_callback_return_param;
             break;
 
