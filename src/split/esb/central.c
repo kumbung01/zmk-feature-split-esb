@@ -96,10 +96,7 @@ static void tx_work_handler(struct k_work *work) {
 }
 
 static void rx_work_handler(struct k_work *work) {
-    do {
-        if (handle_packet() <= 0)
-            return;
-    } while(true);
+    handle_packet();
 }
 
 static int split_central_esb_send_command(uint8_t source,
