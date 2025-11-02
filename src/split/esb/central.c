@@ -213,7 +213,7 @@ static int zmk_split_esb_central_init(void) {
 
     k_work_queue_start(&my_work_q, my_work_q_stack,
                        K_THREAD_STACK_SIZEOF(my_work_q_stack),
-                       5, NULL);
+                       0, NULL);
 
     ret = zmk_split_esb_init(APP_ESB_MODE_PRX);
     if (ret) {
