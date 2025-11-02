@@ -192,7 +192,8 @@ static void notify_status_work_cb(struct k_work *_work) { notify_transport_statu
 
 static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
-
+K_THREAD_STACK_DEFINE(my_work_q_stack, 1024);
+struct k_work_q my_work_q;
 static int zmk_split_esb_central_init(void) {
     esb_ops = &central_ops;
 
@@ -202,6 +203,10 @@ static int zmk_split_esb_central_init(void) {
         return ret;
     }
 
+    k_work_queue_start(&my_work_q, my_work_q_stack,
+                       K_THREAD_STACK_SIZEOF(my_work_q_stack),
+                       5, NULL);
+
     ret = zmk_split_esb_init(APP_ESB_MODE_PRX);
     if (ret) {
         LOG_ERR("zmk_split_esb_init failed (err %d)", ret);
@@ -209,7 +214,7 @@ static int zmk_split_esb_central_init(void) {
     }
 
     k_work_submit(&notify_status_work);
-    k_work_reschedule(&set_power_level_work, K_SECONDS(10));
+    k_work_reschedule_for_queue(&my_work_q, &set_power_level_work, K_SECONDS(10));
     return 0;
 }
 
@@ -258,7 +263,7 @@ static void set_power_level_handler(struct k_work *work) {
     if (is_esb_active() && get_tx_count() > 0)
         tx_op(NO_WAIT);
 
-    k_work_reschedule(&set_power_level_work, K_SECONDS(10));
+    k_work_reschedule_for_queue(&my_work_q, &set_power_level_work, K_SECONDS(10));
 }
                                                         
 // void rx_thread() {
