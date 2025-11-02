@@ -51,6 +51,7 @@ ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type 
     case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_TX_POWER:
         LOG_DBG("tx_power");
         size = 1;
+        break;
     default:
         size = -ENOTSUP;
         break;
