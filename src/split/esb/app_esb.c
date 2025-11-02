@@ -51,6 +51,37 @@ uint8_t esb_addr_prefix[8] = DT_INST_PROP(0, addr_prefix);
 #error "Need to create a node with compatible of 'zmk,esb-split` with `all `address` property set."
 #endif
 
+const enum esb_tx_power tx_power[] = {
+#if defined(RADIO_TXPOWER_TXPOWER_Pos4dBm)
+	/** 4 dBm radio transmit power. */
+	ESB_TX_POWER_4DBM,
+#endif /* defined(RADIO_TXPOWER_TXPOWER_Pos4dBm) */
+
+#if defined(RADIO_TXPOWER_TXPOWER_Pos3dBm)
+	/** 3 dBm radio transmit power. */
+	ESB_TX_POWER_3DBM,
+#endif /* defined(RADIO_TXPOWER_TXPOWER_Pos3dBm) */
+
+	/** 0 dBm radio transmit power. */
+	ESB_TX_POWER_0DBM,
+	/** -4 dBm radio transmit power. */
+	ESB_TX_POWER_NEG4DBM,
+	/** -8 dBm radio transmit power. */
+	ESB_TX_POWER_NEG8DBM,
+	/** -12 dBm radio transmit power. */
+	ESB_TX_POWER_NEG12DBM,
+	/** -16 dBm radio transmit power. */
+	ESB_TX_POWER_NEG16DBM,
+	/** -20 dBm radio transmit power. */
+	ESB_TX_POWER_NEG20DBM,
+	/** -30 dBm radio transmit power. */
+	ESB_TX_POWER_NEG30DBM,
+	/** -40 dBm radio transmit power. */
+#if defined(RADIO_TXPOWER_TXPOWER_Neg40dBm)
+	ESB_TX_POWER_NEG40DBM,
+#endif /* defined(RADIO_TXPOWER_TXPOWER_Neg40dBm) */
+};
+
 static void event_handler(struct esb_evt const *event);
 static struct esb_config config = {
     .protocol = ESB_PROTOCOL_ESB_DPL,
