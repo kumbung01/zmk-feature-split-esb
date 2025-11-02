@@ -131,7 +131,6 @@ static void set_timeslot_active_status(bool active) {
     }
 }
 
-static void timer0_update_cc
 
 static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot_session_id_t session_id, 
                                                                   uint32_t signal_type) {
