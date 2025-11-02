@@ -218,6 +218,7 @@ static int central_handler(struct esb_data_envelope *env) {
     peripherals[source].rssi = -(env->payload->rssi);
 
     if (env->buf.type == ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_TX_POWER_CHANGED) {
+        LOG_DBG("source (%d) tx power_changed");
         WRITE_BIT(peripherals[source].flag, TX_CHANGE_SENT, 0);
         return 0;
     }
