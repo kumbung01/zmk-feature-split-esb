@@ -15,7 +15,7 @@
 #include <zmk/split/transport/peripheral.h>
 #endif
 #include <esb.h>
-
+#include <zephyr/drivers/hwinfo.h>
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 
