@@ -365,3 +365,34 @@ void check_stack_usage(struct k_thread *thread, const char *name, int64_t *befor
         LOG_WRN("Error: Failed to get stack space for %s (ret: %d)", name, ret);
     }
 }
+
+void print_reset_reason(void)
+{
+    uint32_t cause = 0;
+    int ret = hwinfo_get_reset_cause(&cause);
+
+    if (ret < 0) {
+        LOG_ERR("Failed to get reset cause (err %d)", ret);
+        return;
+    }
+
+    LOG_INF("Reset cause raw value: 0x%08x", cause);
+
+    if (cause & RESET_PIN) {
+        LOG_INF("Reset reason: Pin reset");
+    }
+    if (cause & RESET_SOFTWARE) {
+        LOG_INF("Reset reason: Software reset");
+    }
+    if (cause & RESET_WATCHDOG) {
+        LOG_INF("Reset reason: Watchdog");
+    }
+    if (cause & RESET_BROWNOUT) {
+        LOG_INF("Reset reason: Brownout / Power failure");
+    }
+    if (cause & RESET_POR) {
+        LOG_INF("Reset reason: Power-on reset");
+    }
+
+    hwinfo_clear_reset_cause();
+}

@@ -23,7 +23,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #include <zmk/pointing/input_split.h>
 #include <zmk/hid_indicators_types.h>
 #include <zmk/physical_layouts.h>
-
+#include <zephyr/drivers/hwinfo.h>
 #include "app_esb.h"
 #include "common.h"
 #include <esb.h>
@@ -204,7 +204,7 @@ static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
 static int zmk_split_esb_central_init(void) {
     esb_ops = &central_ops;
-
+    print_reset_reason();
     int ret = tx_msgq_init(event_prio);
     if (ret) {
         LOG_ERR("tx_msgq_init failed(%d)", ret);
