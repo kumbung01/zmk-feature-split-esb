@@ -75,14 +75,14 @@ int tx_power_change(power_set_t cmd) {
 
     else if (cmd == POWER_UP) {
         if (tx_power_idx == 0) {
-            return -ENOSUP;
+            return -ENOTSUP;
         }
 
         tx_power_idx--;
     }
     else if (cmd == POWER_DOWN) {
         if (tx_power_idx == ARRAY_SIZE(tx_power) - 1) {
-            return -ENOSUP;
+            return -ENOTSUP;
         }
 
         tx_power_idx++;
