@@ -302,12 +302,6 @@ static void mpsl_nonpreemptible_thread(void) {
                         LOG_ERR("Timeslot session open error: %d", err);
                         k_oops();
                     }
-
-                    err = mpsl_timeslot_request(session_id, &timeslot_request_earliest);
-                    if (err) {
-                        LOG_ERR("Timeslot request error: %d", err);
-                        k_oops();
-                    }
                     break;
                 case REQ_MAKE_REQUEST:
                     // LOG_DBG("req request");
@@ -341,6 +335,7 @@ void zmk_split_esb_timeslot_close_session(void) {
 
 void zmk_split_esb_timeslot_open_session(void) {
     schedule_request(REQ_OPEN_SESSION);
+    schedule_request(REQ_MAKE_REQUEST);
 }
 
 void zmk_split_esb_timeslot_init(zmk_split_esb_timeslot_callback_t callback) {
