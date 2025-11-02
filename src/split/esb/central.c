@@ -23,7 +23,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #include <zmk/pointing/input_split.h>
 #include <zmk/hid_indicators_types.h>
 #include <zmk/physical_layouts.h>
-#include <zephyr/drivers/hwinfo.h>
+
 #include "app_esb.h"
 #include "common.h"
 #include <esb.h>
@@ -42,6 +42,7 @@ static const int event_prio[] = {
     [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_INVOKE_BEHAVIOR]      = 1,
     [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_PHYSICAL_LAYOUT]  = 2,
     [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_HID_INDICATORS]   = 3,
+    [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_TX_POWER]         = 3,
 };
 
 enum peripheral_slot_state {
