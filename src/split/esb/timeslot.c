@@ -78,7 +78,7 @@ static void schedule_request(enum mpsl_timeslot_call call) {
 static uint32_t m_channel0 = 0;
 static uint32_t m_channel1  = 0;
 
-static void reset_radio() {
+static inline void reset_radio() {
     // Reset the radio to make sure no configuration remains from BLE
     NVIC_ClearPendingIRQ(RADIO_IRQn);
     m_channel0 = 0;
@@ -88,28 +88,28 @@ static void reset_radio() {
     NVIC_ClearPendingIRQ(RADIO_IRQn);
 }
 
-static void timer0_init() {
+static inline void timer0_init() {
     nrf_timer_bit_width_set(NRF_TIMER0, NRF_TIMER_BIT_WIDTH_32);
 }
 
-static void timer0_enable() {
+static inline void timer0_enable() {
     nrf_timer_int_enable(NRF_TIMER0, NRF_TIMER_INT_COMPARE0_MASK);
     nrf_timer_int_enable(NRF_TIMER0, NRF_TIMER_INT_COMPARE1_MASK);
 }
 
-static void timer0_disable() {
+static inline void timer0_disable() {
     nrf_timer_int_disable(NRF_TIMER0, NRF_TIMER_INT_COMPARE0_MASK);
     nrf_timer_int_disable(NRF_TIMER0, NRF_TIMER_INT_COMPARE1_MASK);
 }
 
-static void timer0_cc_update(uint32_t channel0, uint32_t channel1) {
+static inline void timer0_cc_update(uint32_t channel0, uint32_t channel1) {
     m_channel0 += channel0;
     m_channel1 += channel1;
     nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL0, m_channel0);
     nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL1, m_channel1);
 }
 
-static void timer0_event_clear(int compare) {
+static inline void timer0_event_clear(int compare) {
     if (compare == 0) {
         nrf_timer_int_disable(NRF_TIMER0, NRF_TIMER_INT_COMPARE0_MASK);
         nrf_timer_event_clear(NRF_TIMER0, NRF_TIMER_EVENT_COMPARE0);
@@ -120,17 +120,15 @@ static void timer0_event_clear(int compare) {
     }
 }
 
-static void set_timeslot_active_status(bool active) {
+static inline void set_timeslot_active_status(bool active) {
     if (active) {
         if (!m_in_timeslot) {
             m_in_timeslot = true;
-            timer0_enable();
             m_callback(APP_TS_STARTED);
         }
     } else {
         if (m_in_timeslot) {
             m_in_timeslot = false;
-            timer0_disable();
             m_callback(APP_TS_STOPPED);
         }
     }
@@ -154,6 +152,7 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
             reset_radio();
             timer0_init();
             timer0_cc_update(TIMER_EXPIRY_US_EARLY, TIMER_EXPIRY_REQ);
+            timer0_enable();
 
             set_timeslot_active_status(true);
             break;
