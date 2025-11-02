@@ -78,7 +78,7 @@ inline power_set_t check_rssi(int rssi) {
         return POWER_DOWN;
     }
     else {
-        return POEWR_OK;
+        return POWER_OK;
     }
 }
 
