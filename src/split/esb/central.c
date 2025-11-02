@@ -256,8 +256,7 @@ void rx_thread() {
     {
         k_sem_take(&rx_sem, K_FOREVER);
         LOG_DBG("rx thread awake");
-        handle_packet();
-        k_yield();                                                                                                                                                                                                  
+        handle_packet();                                                                                                                                                                                        
     }
 }
 
