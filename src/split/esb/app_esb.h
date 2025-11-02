@@ -13,8 +13,6 @@
 extern struct k_sem tx_sem;
 extern struct k_sem rx_sem;
 
-extern const enum esb_tx_power tx_power[];
-
 #define RSSI_BASELINE (-60)
 typedef enum{
     POWER_OK,

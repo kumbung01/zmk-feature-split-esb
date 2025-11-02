@@ -51,7 +51,7 @@ uint8_t esb_addr_prefix[8] = DT_INST_PROP(0, addr_prefix);
 #error "Need to create a node with compatible of 'zmk,esb-split` with `all `address` property set."
 #endif
 
-const enum esb_tx_power tx_power[] = {
+static const enum esb_tx_power tx_power[] = {
 #if defined(RADIO_TXPOWER_TXPOWER_Pos4dBm)
 	/** 4 dBm radio transmit power. */
 	ESB_TX_POWER_4DBM,
