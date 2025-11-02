@@ -72,7 +72,7 @@ K_THREAD_STACK_DEFINE(my_work_q_stack, 2304);
 struct k_work_q my_work_q;
 
 static void tx_op(int timeout_us) {
-    if (tmieout_us == NO_WAIT) {
+    if (timeout_us == NO_WAIT) {
         timeout_us = 0;
     }
 
@@ -83,7 +83,7 @@ static void tx_op(int timeout_us) {
 }
 
 static void rx_op(int timeout_us) {
-    if (tmieout_us == NO_WAIT) {
+    if (timeout_us == NO_WAIT) {
         timeout_us = 0;
     }
     k_work_reschedule_for_queue(&my_work_q, &rx_work, K_USEC(timeout_us));
