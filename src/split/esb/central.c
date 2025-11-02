@@ -234,7 +234,7 @@ static void set_power_level_handler(struct k_work *work) {
         enqueue_event(source, &buf);
     }
 
-    if (is_esb_active())
+    if (is_esb_active() && get_tx_count() > 0)
         tx_op(NO_WAIT);
 
     k_work_reschedule(&set_power_level_work, K_SECONDS(10));
