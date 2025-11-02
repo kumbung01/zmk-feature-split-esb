@@ -150,3 +150,4 @@ int tx_alloc(void **ptr);
 void tx_free(void *ptr);
 size_t get_tx_count();
 void check_stack_usage(struct k_thread *thread, const char *name, int64_t *before, int duration);
+power_set_t check_rssi(int rssi);
