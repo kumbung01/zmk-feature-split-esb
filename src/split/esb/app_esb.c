@@ -73,7 +73,7 @@ int tx_power_change(power_set_t cmd) {
         return 0;
     }
 
-    else (cmd == POWER_UP) {
+    else if (cmd == POWER_UP) {
         if (tx_power_idx == 0) {
             return -ENOSUP;
         }

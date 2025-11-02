@@ -237,7 +237,7 @@ static void set_power_level_handler(struct k_work *work) {
         if (tx_power == POWER_OK) 
             continue;
 
-        if (periperals[source].flag & BIT(TX_CHANGE_SENT)) {
+        if (peripherals[source].flag & BIT(TX_CHANGE_SENT)) {
             continue;
         }
         
