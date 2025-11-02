@@ -239,6 +239,7 @@ ssize_t handle_packet() {
 
     struct esb_data_envelope env = { .buf.type = type, 
                                      .source = PIPE_TO_SOURCE(rx_payload.pipe),
+                                     .payload = &rx_payload,
                                     };
 
     for (size_t i = 0; i < count; ++i) {

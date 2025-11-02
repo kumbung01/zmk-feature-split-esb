@@ -85,7 +85,7 @@ enum zmk_split_transport_central_command_type_proprietary {
 
 struct esb_data_envelope {
     uint8_t source;
-    // int64_t timestamp;
+    struct esb_payload *payload;
     union {
         struct zmk_split_transport_peripheral_event event;
         struct zmk_split_transport_central_command command;

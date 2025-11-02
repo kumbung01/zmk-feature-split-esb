@@ -76,12 +76,6 @@ static void schedule_request(enum mpsl_timeslot_call call) {
 }
 
 static void set_timeslot_active_status(bool active) {
-#if ESB_ONLY
-    if (m_sess_open && m_in_timeslot) {
-        return;
-    }
-#endif
-
     if (active) {
         if (!m_in_timeslot) {
             m_in_timeslot = true;
@@ -96,13 +90,6 @@ static void set_timeslot_active_status(bool active) {
 }
 
 static void reset_radio() {
-#if ESB_ONLY
-    if (m_sess_open && m_in_timeslot) {
-        // LOG_DBG("ignore reset radio");
-        return;
-    }
-#endif
-
     // Reset the radio to make sure no configuration remains from BLE
     NVIC_ClearPendingIRQ(RADIO_IRQn);
     NRF_RADIO->POWER = RADIO_POWER_POWER_Disabled << RADIO_POWER_POWER_Pos;
