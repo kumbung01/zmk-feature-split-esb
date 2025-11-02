@@ -64,7 +64,7 @@ static struct esb_config config = {
     .selective_auto_ack = true,
     .use_fast_ramp_up = false,
     .event_handler = event_handler,
-    .tx_output_power = -4,
+    .tx_output_power = TX_POWER_INIT,
 };
 
 K_SEM_DEFINE(tx_sem, 0, 1);
