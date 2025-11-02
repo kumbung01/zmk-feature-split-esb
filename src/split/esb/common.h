@@ -65,14 +65,6 @@ typedef enum zmk_split_transport_peripheral_event_type zmk_split_transport_buffe
                                sizeof(struct zmk_split_transport_peripheral_event) : \
                                sizeof(struct zmk_split_transport_central_command))
 
-#define RSSI_BASELINE (-60)
-typedef enum{
-    POWER_OK,
-    POWER_UP,
-    POWER_DOWN
-} power_set_t;
-
-power_set_t check_rssi(int rssi);
 
 struct zmk_split_transport_buffer {
     zmk_split_transport_buffer_type type;

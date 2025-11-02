@@ -44,6 +44,13 @@ const enum esb_tx_power tx_power[] = {
 #endif /* defined(RADIO_TXPOWER_TXPOWER_Neg40dBm) */
 };
 
+#define RSSI_BASELINE (-60)
+typedef enum{
+    POWER_OK,
+    POWER_UP,
+    POWER_DOWN
+} power_set_t;
+
 typedef enum {
     NO_WAIT = -1
 } timeout_t;
@@ -86,7 +93,7 @@ int pull_packet_from_tx_msgq(void);
 ssize_t esb_tx_app();
 void set_esb_active(bool is_active);
 bool is_esb_active(void);
-
+power_set_t check_rssi(int rssi);
 void timeout_set(int timeout_us);
 int tx_power_change(power_set_t cmd);
 #endif
