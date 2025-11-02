@@ -75,19 +75,7 @@ static void schedule_request(enum mpsl_timeslot_call call) {
     }
 }
 
-static void set_timeslot_active_status(bool active) {
-    if (active) {
-        if (!m_in_timeslot) {
-            m_in_timeslot = true;
-            m_callback(APP_TS_STARTED);
-        }
-    } else {
-        if (m_in_timeslot) {
-            m_in_timeslot = false;
-            m_callback(APP_TS_STOPPED);
-        }
-    }
-}
+
 
 static void reset_radio() {
     // Reset the radio to make sure no configuration remains from BLE
@@ -96,6 +84,54 @@ static void reset_radio() {
     NRF_RADIO->POWER = RADIO_POWER_POWER_Enabled << RADIO_POWER_POWER_Pos;
     NVIC_ClearPendingIRQ(RADIO_IRQn);
 }
+
+static void timer0_init() {
+    nrf_timer_bit_width_set(NRF_TIMER0, NRF_TIMER_BIT_WIDTH_32);
+}
+
+static void timer0_enable() {
+    nrf_timer_int_enable(NRF_TIMER0, NRF_TIMER_INT_COMPARE0_MASK);
+    nrf_timer_int_enable(NRF_TIMER0, NRF_TIMER_INT_COMPARE1_MASK);
+}
+
+static void timer0_disable() {
+    nrf_timer_int_disable(NRF_TIMER0, NRF_TIMER_INT_COMPARE0_MASK);
+    nrf_timer_int_disable(NRF_TIMER0, NRF_TIMER_INT_COMPARE1_MASK);
+}
+
+static void timer0_cc_set(uint32_t channel0, uint32_t channel1) {
+    nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL0, channel0);
+    nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL1, channel1);
+}
+
+static void timer0_event_clear(int compare) {
+    if (compare == 0) {
+        nrf_timer_int_disable(NRF_TIMER0, NRF_TIMER_INT_COMPARE0_MASK);
+        nrf_timer_event_clear(NRF_TIMER0, NRF_TIMER_EVENT_COMPARE0);
+    }
+    else {
+        nrf_timer_int_disable(NRF_TIMER0, NRF_TIMER_INT_COMPARE1_MASK);
+        nrf_timer_event_clear(NRF_TIMER0, NRF_TIMER_EVENT_COMPARE1);
+    }
+}
+
+static void set_timeslot_active_status(bool active) {
+    if (active) {
+        if (!m_in_timeslot) {
+            m_in_timeslot = true;
+            timer0_enable();
+            m_callback(APP_TS_STARTED);
+        }
+    } else {
+        if (m_in_timeslot) {
+            m_in_timeslot = false;
+            timer0_disable();
+            m_callback(APP_TS_STOPPED);
+        }
+    }
+}
+
+static void timer0_update_cc
 
 static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot_session_id_t session_id, 
                                                                   uint32_t signal_type) {
@@ -112,14 +148,8 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
             timeslot_extension_failed = false;
 
             reset_radio();
-
-            nrf_timer_bit_width_set(NRF_TIMER0, NRF_TIMER_BIT_WIDTH_32);
-            
-            nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL0, TIMER_EXPIRY_US_EARLY);
-            nrf_timer_int_enable(NRF_TIMER0, NRF_TIMER_INT_COMPARE0_MASK);
-
-            nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL1, TIMER_EXPIRY_REQ);
-            nrf_timer_int_enable(NRF_TIMER0, NRF_TIMER_INT_COMPARE1_MASK);
+            timer0_init();
+            timer0_cc_set(TIMER_EXPIRY_US_EARLY, TIMER_EXPIRY_REQ);
 
             set_timeslot_active_status(true);
             break;
@@ -133,16 +163,12 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
             }
 
             if(nrf_timer_event_check(NRF_TIMER0, NRF_TIMER_EVENT_COMPARE0)) {
-                nrf_timer_int_disable(NRF_TIMER0, NRF_TIMER_INT_COMPARE0_MASK);
-                nrf_timer_event_clear(NRF_TIMER0, NRF_TIMER_EVENT_COMPARE0);
-
+                timer0_event_clear(0);
                 signal_callback_return_param.callback_action = MPSL_TIMESLOT_SIGNAL_ACTION_EXTEND;
                 signal_callback_return_param.params.extend.length_us = TIMESLOT_LENGTH_US;	
             }
             else if(nrf_timer_event_check(NRF_TIMER0, NRF_TIMER_EVENT_COMPARE1)) {
-                nrf_timer_int_disable(NRF_TIMER0, NRF_TIMER_INT_COMPARE1_MASK);
-                nrf_timer_event_clear(NRF_TIMER0, NRF_TIMER_EVENT_COMPARE1);
-
+                timer0_event_clear(1);
                 if(timeslot_extension_failed) {
                     signal_callback_return_param.callback_action = MPSL_TIMESLOT_SIGNAL_ACTION_REQUEST;
                     signal_callback_return_param.params.request.p_next = &timeslot_request_earliest;
@@ -164,16 +190,9 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
             signal_callback_return_param.callback_action = MPSL_TIMESLOT_SIGNAL_ACTION_NONE;
 
             // Set next trigger time to be the current + Timer expiry early
-            uint32_t current_cc = nrf_timer_cc_get(NRF_TIMER0, NRF_TIMER_CC_CHANNEL0);
-            nrf_timer_bit_width_set(NRF_TIMER0, NRF_TIMER_BIT_WIDTH_32);
-            nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL0, current_cc + TIMESLOT_LENGTH_US);
-            nrf_timer_int_enable(NRF_TIMER0, NRF_TIMER_INT_COMPARE0_MASK);
-
-            current_cc = nrf_timer_cc_get(NRF_TIMER0, NRF_TIMER_CC_CHANNEL1);
-            nrf_timer_bit_width_set(NRF_TIMER0, NRF_TIMER_BIT_WIDTH_32);
-            nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL1, current_cc + TIMESLOT_LENGTH_US);
-            nrf_timer_int_enable(NRF_TIMER0, NRF_TIMER_INT_COMPARE1_MASK);
-
+            uint32_t cc0 = nrf_timer_cc_get(NRF_TIMER0, NRF_TIMER_CC_CHANNEL0);
+            uint32_t cc1 = nrf_timer_cc_get(NRF_TIMER0, NRF_TIMER_CC_CHANNEL1);
+            timer0_cc_set(cc0 + TIMESLOT_LENGTH_US, cc1 + TIMESLOT_LENGTH_US);
             p_ret_val = &signal_callback_return_param;
             break;
 
@@ -235,7 +254,6 @@ static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot
 
         case MPSL_TIMESLOT_SIGNAL_SESSION_IDLE:
             // LOG_DBG("idle");
-
             // Request a new timeslot in this case
             schedule_request(REQ_MAKE_REQUEST);
 
