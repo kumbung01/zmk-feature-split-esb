@@ -13,6 +13,37 @@
 extern struct k_sem tx_sem;
 extern struct k_sem rx_sem;
 
+const enum esb_tx_power tx_power[] = {
+#if defined(RADIO_TXPOWER_TXPOWER_Pos4dBm)
+	/** 4 dBm radio transmit power. */
+	ESB_TX_POWER_4DBM,
+#endif /* defined(RADIO_TXPOWER_TXPOWER_Pos4dBm) */
+
+#if defined(RADIO_TXPOWER_TXPOWER_Pos3dBm)
+	/** 3 dBm radio transmit power. */
+	ESB_TX_POWER_3DBM,
+#endif /* defined(RADIO_TXPOWER_TXPOWER_Pos3dBm) */
+
+	/** 0 dBm radio transmit power. */
+	ESB_TX_POWER_0DBM,
+	/** -4 dBm radio transmit power. */
+	ESB_TX_POWER_NEG4DBM,
+	/** -8 dBm radio transmit power. */
+	ESB_TX_POWER_NEG8DBM,
+	/** -12 dBm radio transmit power. */
+	ESB_TX_POWER_NEG12DBM,
+	/** -16 dBm radio transmit power. */
+	ESB_TX_POWER_NEG16DBM,
+	/** -20 dBm radio transmit power. */
+	ESB_TX_POWER_NEG20DBM,
+	/** -30 dBm radio transmit power. */
+	ESB_TX_POWER_NEG30DBM,
+	/** -40 dBm radio transmit power. */
+#if defined(RADIO_TXPOWER_TXPOWER_Neg40dBm)
+	ESB_TX_POWER_NEG40DBM,
+#endif /* defined(RADIO_TXPOWER_TXPOWER_Neg40dBm) */
+};
+
 typedef enum {
     NO_WAIT = -1
 } timeout_t;
@@ -57,5 +88,5 @@ void set_esb_active(bool is_active);
 bool is_esb_active(void);
 
 void timeout_set(int timeout_us);
-
+int tx_power_change(power_set_t cmd);
 #endif

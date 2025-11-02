@@ -67,6 +67,33 @@ static struct esb_config config = {
     .tx_output_power = TX_POWER_INIT,
 };
 
+static size_t tx_power_idx = 3;
+int tx_power_change(power_set_t cmd) {
+    if (cmd == POWER_OK) {
+        return 0;
+    }
+
+    else (cmd == POWER_UP) {
+        if (tx_power_idx == 0) {
+            return -ENOSUP;
+        }
+
+        tx_power_idx--;
+    }
+    else if (cmd == POWER_DOWN) {
+        if (tx_power_idx == ARRAY_SIZE(tx_power) - 1) {
+            return -ENOSUP;
+        }
+
+        tx_power_idx++;
+    }
+
+    config.tx_output_power = tx_power[tx_power_idx];
+    LOG_DBG("setting tx power to %d", tx_power[tx_power_idx]);
+    return esb_set_tx_power(tx_power[tx_power_idx]);
+}
+
+
 K_SEM_DEFINE(tx_sem, 0, 1);
 K_SEM_DEFINE(rx_sem, 0, RX_MSGQ_SIZE);
 
