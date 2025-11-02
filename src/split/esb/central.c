@@ -229,7 +229,7 @@ static int central_handler(struct esb_data_envelope *env) {
 }
 
 static void set_power_level_handler(struct k_work *work) {
-    for (int source = 0; i < PERIPHERAL_COUNT; ++i) {
+    for (int source = 0; source < PERIPHERAL_COUNT; ++source) {
         if (peripherals[source].state == PERIPHERAL_DOWN)
             continue;
 
