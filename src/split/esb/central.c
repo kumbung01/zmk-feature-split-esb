@@ -76,7 +76,7 @@ static void tx_op(int timeout_us) {
 
 static void rx_op(int timeout_us) {
     // k_sem_give(&rx_sem);
-    k_work_submit(&tx_work);
+    k_work_submit(&rx_work);
 }
 
 static struct zmk_split_esb_ops central_ops = {
