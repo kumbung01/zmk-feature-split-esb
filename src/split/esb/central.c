@@ -31,22 +31,15 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #define MPSL_THREAD_PRIO             CONFIG_MPSL_THREAD_COOP_PRIO
 #define STACKSIZE                    CONFIG_MAIN_STACK_SIZE
 
-#if IS_ENABLED(CONFIG_ZMK_BATTERY_REPORT_INTERVAL)
-#define PERIPHERAL_REPORT_INTERVAL CONFIG_ZMK_BATTERY_REPORT_INTERVAL
-#else
-#define PERIPHERAL_REPORT_INTERVAL 5
-#endif
-
 
 enum peripheral_slot_state {
     PERIPHERAL_DOWN,
     PERIPHERAL_UP,
 };
-// Flag define
-#define TX_CHANGE_SENT 0
 
 // rssi sample count
-#define RSSI_SAMPLE_CNT 3
+#define RSSI_SAMPLE_CNT 4
+#define PERIPHERAL_REPORT_INTERVAL 10
 struct peripheral_slot {
     enum peripheral_slot_state state;
     int64_t last_reported;
