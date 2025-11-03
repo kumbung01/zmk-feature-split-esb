@@ -79,7 +79,7 @@ struct k_work_q my_work_q;
 static void tx_op(int timeout_us) {
     timeout_set(timeout_us);
     if (!k_work_delayable_is_pending(&tx_work)) {
-        k_work_reschedule_for_queue(&my_work_q, &tx_work, K_USEC(timeout_us));
+        k_work_reschedule(&tx_work, K_USEC(timeout_us));
     }
 
 }
@@ -217,7 +217,7 @@ static int zmk_split_esb_central_init(void) {
     }
 
     k_work_submit(&notify_status_work);
-    k_work_reschedule_for_queue(&my_work_q, &set_power_level_work, K_SECONDS(10));
+    k_work_reschedule(&set_power_level_work, K_SECONDS(10));
     return 0;
 }
 
@@ -268,7 +268,7 @@ static void set_power_level_handler(struct k_work *work) {
     if (is_esb_active() && get_tx_count() > 0)
         tx_op(NO_WAIT);
 
-    k_work_reschedule_for_queue(&my_work_q, &set_power_level_work, K_SECONDS(10));
+    k_work_reschedule(&set_power_level_work, K_SECONDS(10));
 }
                                                         
 // void rx_thread() {
