@@ -63,7 +63,7 @@ ssize_t get_payload_data_size_evt(enum zmk_split_transport_peripheral_event_type
         size = sizeof(((struct zmk_split_transport_peripheral_event*)0)->data.input_event);
         break;
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT:
-        size = sizeof(((struct zmk_split_transport_peripheral_event*)0)->data.key_position_event);
+        size = POSITION_STATE_DATA_LEN;
         break;
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT:
         size = sizeof(((struct zmk_split_transport_peripheral_event*)0)->data.sensor_event);
