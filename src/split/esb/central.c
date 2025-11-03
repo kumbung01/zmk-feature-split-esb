@@ -37,13 +37,6 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #define PERIPHERAL_REPORT_INTERVAL 60
 #endif
 
-static const int event_prio[] = {
-    [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_POLL_EVENTS]          = 0,
-    [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_INVOKE_BEHAVIOR]      = 1,
-    [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_PHYSICAL_LAYOUT]  = 2,
-    [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_HID_INDICATORS]   = 3,
-    [ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_TX_POWER]         = 3,
-};
 
 enum peripheral_slot_state {
     PERIPHERAL_DOWN,
@@ -69,7 +62,7 @@ static void rx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
 static void set_power_level_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(set_power_level_work, set_power_level_handler);
-K_THREAD_STACK_DEFINE(my_work_q_stack, 2304);
+K_THREAD_STACK_DEFINE(my_work_q_stack, 1024);
 struct k_work_q my_work_q;
 
 static void tx_op(int timeout_us) {
@@ -270,20 +263,20 @@ static void set_power_level_handler(struct k_work *work) {
     }
 
     if (is_esb_active() && get_tx_count() > 0)
-        tx_op(1000);
+        tx_op(NO_WAIT);
 
     k_work_reschedule_for_queue(&my_work_q, &set_power_level_work, K_SECONDS(10));
 }
                                                         
-// void rx_thread() {
-//     while (true)
-//     {
-//         k_sem_take(&rx_sem, K_FOREVER);
-//         LOG_DBG("rx thread awake");
-//         handle_packet();                                                                                                                                                                                        
-//     }
-// }
+void rx_thread() {
+    while (true)
+    {
+        k_sem_take(&rx_sem, K_FOREVER);
+        LOG_DBG("rx thread awake");
+        handle_packet();                                                                                                                                                                                        
+    }
+}
 
-// K_THREAD_DEFINE(rx_thread_id, 2304,
-//         rx_thread, NULL, NULL, NULL,
-//         -1, 0, 0);
+K_THREAD_DEFINE(rx_thread_id, 2304,
+        rx_thread, NULL, NULL, NULL,
+        -1, 0, 0);

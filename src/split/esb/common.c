@@ -20,14 +20,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 
 K_MEM_SLAB_DEFINE_STATIC(tx_slab, sizeof(struct esb_data_envelope), TX_MSGQ_SIZE, 4);
-K_MSGQ_DEFINE(msgq0, sizeof(void*), TX_MSGQ_SIZE, 4);
-K_MSGQ_DEFINE(msgq1, sizeof(void*), TX_MSGQ_SIZE, 4);
-K_MSGQ_DEFINE(msgq2, sizeof(void*), TX_MSGQ_SIZE, 4);
-K_MSGQ_DEFINE(msgq3, sizeof(void*), TX_MSGQ_SIZE, 4);
-static struct k_msgq* tx_msgq[] = {&msgq0, &msgq1, &msgq2, &msgq3};
-static int idx_to_type[ARRAY_SIZE(tx_msgq)];
-static int *type_to_idx;
-static const size_t tx_msgq_cnt = ARRAY_SIZE(tx_msgq);
+K_MSGQ_DEFINE(tx_msgq, sizeof(void*), TX_MSGQ_SIZE, 4);
 const char *ACTIVE_STATE_CHAR[] = {"ACTIVE", "IDLE", "SLEEP"};
 
 struct zmk_split_esb_ops *esb_ops;
@@ -179,57 +172,33 @@ int enqueue_event(uint8_t source, struct zmk_split_transport_buffer *buf) {
 
 
 size_t make_packet(struct esb_payload *payload) {
-    size_t count = 0;
-    size_t offset = 0;
-    uint8_t type;
     struct payload_buffer *buf = (struct payload_buffer *)payload->data;
     const size_t body_size = sizeof(buf->body);
-    // int64_t now = k_uptime_get();
-
-#if IS_PERIPHERAL
-    payload->pipe = SOURCE_TO_PIPE(PERIPHERAL_ID); // use the peripheral_id as the ESB pipe number
-#endif
     payload->noack = !CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK;
 
-    do {
-        struct esb_data_envelope *env = get_next_tx_data();
-        if (env == NULL) {
-            break;
-        }
+    struct esb_data_envelope *env = get_next_tx_data();
+    if (env == NULL) {
+        return -ENODATA;
+    }
 
-        type = env->buf.type;
-        ssize_t data_size = esb_ops->get_data_size_tx(type);
-        __ASSERT(data_size >= 0, "data_size can't be negative");
+    buf->header.type = env->buf.type;
+    ssize_t data_size = esb_ops->get_data_size_tx(buf->header.type);
+    __ASSERT(data_size >= 0, "data_size can't be negative");
 
-        if (offset + data_size > body_size) {
-            LOG_DBG("packet full (%u + %u > %d)", offset, data_size, body_size);
-            put_tx_data(env);
-            break;
-        }
+    LOG_DBG("adding type %u size %u to packet", buf->header.type, data_size);
 
-        LOG_DBG("adding type %u size %u to packet", type, data_size);
+    memcpy(buf->body, env->buf.data, data_size);
+    payload->pipe = SOURCE_TO_PIPE(env->source); // use the source as the ESB pipe number
 
-        memcpy(&buf->body[offset], env->buf.data, data_size);
-        offset += data_size;
-        count++;
-
-#if IS_CENTRAL
-        payload->pipe = SOURCE_TO_PIPE(env->source); // use the source as the ESB pipe number
-#endif
-
-        tx_free(env);
-
-    } while (count < CAN_HANDLE_TX);
+    tx_free(env);
 
     // write header and length
-    buf->header.type = type;
-    payload->length = offset + HEADER_SIZE;
+    payload->length = data + HEADER_SIZE;
 
-    return count;
+    return 0;
 }
 
 ssize_t handle_packet() {
-    size_t handled = 0;
     struct esb_payload rx_payload;
     int err = esb_read_rx_payload(&rx_payload);
     if (err) {
@@ -247,85 +216,37 @@ ssize_t handle_packet() {
     ssize_t data_size = esb_ops->get_data_size_rx(type);
     if (data_size < 0) {
         LOG_WRN("Unknown event type %d", type);
-        return 0;
+        return -ENOTSUP;
     }
-
-    size_t count = data_size == 0 ? 1 : length / data_size;
-    __ASSERT(count * data_size == length, "data_size * count != length");
 
     struct esb_data_envelope env = { .buf.type = type, 
                                      .source = PIPE_TO_SOURCE(rx_payload.pipe),
                                      .payload = &rx_payload,
                                     };
 
-    for (size_t i = 0; i < count; ++i) {
-        memcpy(env.buf.data, &data[i * data_size], data_size);
+    memcpy(env.buf.data, data, data_size);
 
-        err = esb_ops->event_handler(&env);
-        if (err < 0) {
-            LOG_WRN("zmk handler failed(%d)", err);
-        }
-
-        handled++;
-    }
-
-    return handled;
-}
-
-int tx_msgq_init(int *_type_to_idx) {
-    __ASSERT(type_to_idx != NULL, "type_to_idx must not NULL");
-    type_to_idx = _type_to_idx;
-
-    for (int i = 0; i < tx_msgq_cnt; ++i) {
-        int idx = type_to_idx[i];
-        __ASSERT(idx >= 0 && idx < tx_msgq_cnt, "idx out of valid range");
-        idx_to_type[idx] = i;
+    err = esb_ops->event_handler(&env);
+    if (err < 0) {
+        LOG_WRN("zmk handler failed(%d)", err);
     }
 
     return 0;
 }
 
-
-static int last_idx = -1;
 void *get_next_tx_data() {
     void *ptr;
-#if !SINGLE_PACKET
-    if (last_idx != -1) {
-        if (k_msgq_get(tx_msgq[last_idx], &ptr, K_NO_WAIT) != 0) {
-            LOG_DBG("queue is empty.");
-            last_idx = -1;
-            return NULL;
-        }
-
-        return ptr;
-    }
-#endif
-
-    // when last_idx == -1, search for new data
-    for (int i = 0; i < tx_msgq_cnt; ++i) {
-        if (k_msgq_get(tx_msgq[i], &ptr, K_NO_WAIT) == 0) {
-            last_idx = i;
-            return ptr;
-        }
+    int err = k_msgq_get(&tx_msgq, &ptr, K_NO_WAIT);
+    if (err) {
+        LOG_DBG("queue is empty.");
     }
 
-    LOG_DBG("no more data.");
-    return NULL;
+    return ptr;
 }
 
 int put_tx_data(void *ptr) {
-    __ASSERT(type_to_idx != NULL && ptr != NULL, "type_to_idx and ptr must not null");
-    int idx = type_to_idx[((struct esb_data_envelope*)ptr)->buf.type];
-    if (k_msgq_put(tx_msgq[idx], &ptr, K_NO_WAIT) != 0) {
-        void *temp;
-        if (k_msgq_get(tx_msgq[idx], &temp, K_NO_WAIT) == 0 && temp) {
-            tx_free(temp);
-        }
-        
-        k_msgq_put(tx_msgq[idx], &ptr, K_NO_WAIT);
-    }
-
-    return 0;
+    __ASSERT(ptr != NULL, "ptr must not null");
+    return k_msgq_put(&tx_msgq, &ptr, K_NO_WAIT);
 }
 
 int tx_alloc(void **ptr) {

@@ -105,19 +105,14 @@ int tx_power_change(power_set_t cmd) {
     }
 
     else if (cmd == POWER_UP) {
-        if (tx_power_idx == 0) {
-            return -ENOTSUP;
-        }
-
         tx_power_idx--;
     }
     else if (cmd == POWER_DOWN) {
-        if (tx_power_idx == ARRAY_SIZE(tx_power) - 1) {
-            return -ENOTSUP;
-        }
-
         tx_power_idx++;
     }
+
+    if (tx_power_idx < 0 || tx_power_idx > ARRAY_SIZE(tx_power))
+        return -ENOTSUP;
 
     config.tx_output_power = tx_power[tx_power_idx];
     LOG_DBG("setting tx power to %d", tx_power[tx_power_idx]);
