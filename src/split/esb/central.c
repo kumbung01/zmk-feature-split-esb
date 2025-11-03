@@ -62,7 +62,7 @@ static void rx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
 static void set_power_level_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(set_power_level_work, set_power_level_handler);
-K_THREAD_STACK_DEFINE(my_work_q_stack, 1024);
+K_THREAD_STACK_DEFINE(my_work_q_stack, 2304);
 struct k_work_q my_work_q;
 
 static void tx_op(int timeout_us) {
@@ -77,7 +77,7 @@ static void tx_op(int timeout_us) {
 }
 
 static void rx_op(int timeout_us) {
-    k_sem_give(&rx_sem);
+    k_work_reschedule_for_queue(&my_work_q, &rx_work, K_NO_WAIT);
 }
 
 static struct zmk_split_esb_ops central_ops = {
@@ -260,15 +260,15 @@ static void set_power_level_handler(struct k_work *work) {
     k_work_reschedule_for_queue(&my_work_q, &set_power_level_work, K_SECONDS(10));
 }
                                                         
-void rx_thread() {
-    while (true)
-    {
-        k_sem_take(&rx_sem, K_FOREVER);
-        LOG_DBG("rx thread awake");
-        handle_packet();                                                                                                                                                                                        
-    }
-}
+// void rx_thread() {
+//     while (true)
+//     {
+//         k_sem_take(&rx_sem, K_FOREVER);
+//         LOG_DBG("rx thread awake");
+//         handle_packet();                                                                                                                                                                                        
+//     }
+// }
 
-K_THREAD_DEFINE(rx_thread_id, 2304,
-        rx_thread, NULL, NULL, NULL,
-        -1, 0, 0);
+// K_THREAD_DEFINE(rx_thread_id, 2304,
+//         rx_thread, NULL, NULL, NULL,
+//         -1, 0, 0);
