@@ -78,7 +78,7 @@ struct k_work_q my_work_q;
 
 static void tx_op(int timeout_us) {
     timeout_set(timeout_us);
-    k_work_reschedule(&tx_work, K_NO_WAIT);
+    k_work_reschedule_for_queue(&my_work_q, &tx_work, K_NO_WAIT);
 }
 
 static void rx_op(int timeout_us) {
@@ -100,10 +100,7 @@ static void tx_work_handler(struct k_work *work) {
 }
 
 static void rx_work_handler(struct k_work *work) {
-    do {
-        if (handle_packet() != 0)
-            break;
-    } while(true);
+    handle_packet();
 }
 
 static int split_central_esb_send_command(uint8_t source,
@@ -215,7 +212,7 @@ static int zmk_split_esb_central_init(void) {
     }
 
     k_work_submit(&notify_status_work);
-    k_work_reschedule(&set_power_level_work, K_SECONDS(PERIPHERAL_REPORT_INTERVAL));
+    k_work_reschedule_for_queue(&my_work_q, &set_power_level_work, K_SECONDS(PERIPHERAL_REPORT_INTERVAL));
     return 0;
 }
 
@@ -231,12 +228,6 @@ static int central_handler(struct esb_data_envelope *env) {
     int rssi = -(env->payload->rssi);
     peripherals[source].rssi_avg = (peripherals[source].rssi_avg * (RSSI_SAMPLE_CNT - 1) + rssi) / RSSI_SAMPLE_CNT; //sliding average
     LOG_DBG("source (%d) rssi-new (%d) rssi-avg (%d)", source, rssi, peripherals[source].rssi_avg);
-
-    if (env->buf.type == ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_TX_POWER_CHANGED) {
-        LOG_WRN("source (%d) tx power_changed", source);
-        WRITE_BIT(peripherals[source].flag, TX_CHANGE_SENT, 0);
-        return 0;
-    }
     
     return zmk_split_transport_central_peripheral_event_handler(&esb_central, source, env->event);
 }
@@ -246,21 +237,10 @@ static void set_power_level_handler(struct k_work *work) {
         if (peripherals[source].state == PERIPHERAL_DOWN)
             continue;
 
-        power_set_t tx_power = check_rssi(peripherals[source].rssi_avg);
-
-        LOG_DBG("source (%d) rssi_avg (%d) tx_power %d", source, peripherals[source].rssi_avg, tx_power);
-        if (tx_power == POWER_OK) 
-            continue;
-
-        if (peripherals[source].flag & BIT(TX_CHANGE_SENT)) {
-            LOG_WRN("source %d tx_power already sent.", source);
-            continue;
-        }
         struct zmk_split_transport_buffer buf = {.type = ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_TX_POWER,
-                                                 .tx_power = tx_power,};
+                                                 .rssi = peripherals[source].rssi_avg,};
         
         enqueue_event(source, &buf);
-        WRITE_BIT(peripherals[source].flag, TX_CHANGE_SENT, 1);
     }
 
     if (is_esb_active()) 
@@ -268,7 +248,7 @@ static void set_power_level_handler(struct k_work *work) {
 
     split_central_esb_get_status();
 
-    k_work_reschedule(&set_power_level_work, K_SECONDS(PERIPHERAL_REPORT_INTERVAL));
+    k_work_reschedule_for_queue(&my_work_q, &set_power_level_work, K_SECONDS(PERIPHERAL_REPORT_INTERVAL));
 }
                                                         
 // void rx_thread() {

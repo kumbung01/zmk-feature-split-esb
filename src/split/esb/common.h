@@ -72,7 +72,7 @@ struct zmk_split_transport_buffer {
     zmk_split_transport_buffer_type type;
     union {
         uint8_t data[ZMK_DATA_SIZE - sizeof(zmk_split_transport_buffer_type)];
-        power_set_t tx_power; 
+        int8_t rssi; 
     };
 };
 

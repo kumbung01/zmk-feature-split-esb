@@ -100,22 +100,24 @@ static struct esb_config config = {
 
 static int tx_power_idx = 3;
 int tx_power_change(power_set_t cmd) {
+    int new_idx = tx_power_idx;
     if (cmd == POWER_OK) {
         return 0;
     }
 
     else if (cmd == POWER_UP) {
-        tx_power_idx--;
+        new_idx--;
     }
     else if (cmd == POWER_DOWN) {
-        tx_power_idx++;
+        new_idx++;
     }
 
-    if (tx_power_idx < 0 || tx_power_idx >= ARRAY_SIZE(tx_power))
+    if (new_idx < 0 || new_idx >= ARRAY_SIZE(tx_power))
         return -ENOTSUP;
 
+    tx_power_idx = new_idx;
     config.tx_output_power = tx_power[tx_power_idx];
-    LOG_DBG("setting tx power to %d", (int8_t)tx_power[tx_power_idx]);
+    LOG_WRN("setting tx power to %d", (int8_t)tx_power[tx_power_idx]);
     return esb_set_tx_power((int8_t)tx_power[tx_power_idx]);
 }
 
@@ -159,6 +161,9 @@ static void event_handler(struct esb_evt const *event) {
                 tx_fail_count = 0;
                 esb_pop_tx();
             }
+            else if (tx_fail_count == 1) {
+                tx_power_change(POWER_UP);
+            }
 #endif
             esb_ops->tx_op(SLEEP_DELAY);
             break;
@@ -179,7 +184,7 @@ int esb_tx_app() {
         esb_start_tx();
         return -EAGAIN;
     }
-    
+
     if (esb_tx_full()) {
         LOG_DBG("esb tx full, wait for next tx event");
         esb_start_tx();
