@@ -75,7 +75,8 @@ static void tx_op(int timeout_us) {
 }
 
 static void rx_op(int timeout_us) {
-    k_work_reschedule(&rx_work, K_NO_WAIT);
+    // k_work_reschedule(&rx_work, K_NO_WAIT);
+    k_sem_give(&rx_sem);
 }
 
 static struct zmk_split_esb_ops central_ops = {
@@ -244,15 +245,15 @@ static void set_power_level_handler(struct k_work *work) {
     k_work_reschedule_for_queue(&my_work_q, &set_power_level_work, K_SECONDS(PERIPHERAL_REPORT_INTERVAL));
 }
                                                         
-// void rx_thread() {
-//     while (true)
-//     {
-//         k_sem_take(&rx_sem, K_FOREVER);
-//         LOG_DBG("rx thread awake");
-//         handle_packet();                                                                                                                                                                                        
-//     }
-// }
+void rx_thread() {
+    while (true)
+    {
+        k_sem_take(&rx_sem, K_FOREVER);
+        LOG_DBG("rx thread awake");
+        handle_packet();                                                                                                                                            
+    }
+}
 
-// K_THREAD_DEFINE(rx_thread_id, 2304,
-//         rx_thread, NULL, NULL, NULL,
-//         -1, 0, 0);
+K_THREAD_DEFINE(rx_thread_id, 2304,
+        rx_thread, NULL, NULL, NULL,
+        5, 0, 0);
