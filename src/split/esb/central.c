@@ -42,17 +42,28 @@ enum peripheral_slot_state {
     PERIPHERAL_DOWN,
     PERIPHERAL_UP,
 };
-
+// Flag define
 #define TX_CHANGE_SENT 0
 
+// rssi sample count
+#define RSSI_SAMPLE_CNT 5
 struct peripheral_slot {
     enum peripheral_slot_state state;
     int64_t last_reported;
-    int rssi;
+    int rssi_avg;
     uint8_t flag;
 };
-
 static struct peripheral_slot peripherals[PERIPHERAL_COUNT];
+
+static void peripheral_init() {
+    for (int source = 0; source < PERIPHERAL_COUNT; ++source) {
+        peripherals[source].state = PERIPHERAL_DOWN;
+        peripherals[source].last_reported = 0;
+        peripherals[source].rssi_avg = RSSI_BASELINE;
+        peripherals[source].flag = 0;
+    }
+}
+
 static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
 static int central_handler(struct esb_data_envelope *env);
@@ -218,8 +229,9 @@ static int central_handler(struct esb_data_envelope *env) {
 
     peripherals[source].state = PERIPHERAL_UP;
     peripherals[source].last_reported = k_uptime_get();
-    peripherals[source].rssi = -(env->payload->rssi);
-    LOG_DBG("source (%d) rssi %d", source, peripherals[source].rssi);
+    int rssi = -(env->payload->rssi);
+    peripherals[source].rssi_avg = (peripherals[source].rssi_avg * (RSSI_SAMPLE_CNT - 1) + rssi) / RSSI_SAMPLE_CNT; //sliding average
+    LOG_DBG("source (%d) rssi-new (%d) rssi-avg (%d)", source, rssi, peripherals[source].rssi_avg);
 
     if (env->buf.type == ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_TX_POWER_CHANGED) {
         LOG_WRN("source (%d) tx power_changed", source);
@@ -235,9 +247,9 @@ static void set_power_level_handler(struct k_work *work) {
         if (peripherals[source].state == PERIPHERAL_DOWN)
             continue;
 
-        power_set_t tx_power = check_rssi(peripherals[source].rssi);
+        power_set_t tx_power = check_rssi(peripherals[source].rssi_avg);
 
-        LOG_DBG("source (%d) rssi (%d) tx_power %d", source, peripherals[source].rssi, tx_power);
+        LOG_DBG("source (%d) rssi_avg (%d) tx_power %d", source, peripherals[source].rssi_avg, tx_power);
         if (tx_power == POWER_OK) 
             continue;
 
