@@ -101,12 +101,12 @@ static void rx_work_handler(struct k_work *work) {
     handle_packet();
 }
 
-static int packet_maker(struct esb_envelope *env, struct payload_buffer *buf) {
+static ssize_t packet_maker(struct esb_envelope *env, struct payload_buffer *buf) {
     buf->header.type = env->buf.type;
 
     switch (env->buf.type) {
     default:
-        make_packet(env, buf);
+        return make_packet(env, buf);
         break;
     }
 

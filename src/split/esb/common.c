@@ -166,13 +166,17 @@ int enqueue_event(uint8_t source, struct zmk_split_transport_buffer *buf) {
     return 0;
 }
 
-int make_packet_default(struct esb_envelope *env, struct payload_buffer *buf) {
+ssize_t make_packet_default(struct esb_envelope *env, struct payload_buffer *buf) {
     ssize_t data_size = esb_ops->get_data_size_tx(buf->header.type);
-    __ASSERT(data_size >= 0, "data_size can't be negative");
+    if (data_size < 0) {
+        return data_size;
+    }
 
     LOG_DBG("adding type %u size %u to packet", buf->header.type, data_size);
 
     memcpy(buf->body, env->buf.data, data_size);
+
+    return data_size;
 }
 
 int make_packet(struct esb_payload *payload) {
@@ -185,7 +189,10 @@ int make_packet(struct esb_payload *payload) {
         return -ENODATA;
     }
 
-    esb_ops->packet_make(env, buf);
+    ssize_t data_size = esb_ops->packet_make(env, buf);
+    if (data_size < 0) {
+        return -ENOTSUP;
+    }
 
     payload->pipe = SOURCE_TO_PIPE(env->source); // use the source as the ESB pipe number
 

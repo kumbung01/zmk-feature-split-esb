@@ -73,17 +73,20 @@ static void tx_work_handler(struct k_work *work) {
     } while(true);
 }
 
-static int packet_maker(struct esb_envelope *env, struct payload_buffer *buf) {
+static ssize_t packet_maker(struct esb_envelope *env, struct payload_buffer *buf) {
+    ssize_t data_size = 0;
+    
     switch (env->buf.type) {
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT:
         memcpy(buf->body, position_state, sizeof(position_state));
+        data_size = sizeof(position_state);
         break;
     default:
-        make_packet(env, buf);
+        data_size = make_packet(env, buf);
         break;
     }
 
-    return 0;
+    return data_size;
 }
 
 static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
