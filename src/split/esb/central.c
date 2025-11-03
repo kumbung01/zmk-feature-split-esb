@@ -308,4 +308,4 @@ void rx_thread() {
 
 K_THREAD_DEFINE(rx_thread_id, 2304,
         rx_thread, NULL, NULL, NULL,
-        5, 0, 0);
+        0, 0, 0);

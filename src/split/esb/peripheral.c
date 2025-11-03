@@ -75,7 +75,7 @@ static void tx_work_handler(struct k_work *work) {
 
 static ssize_t packet_maker_peripheral(struct esb_data_envelope *env, struct payload_buffer *buf) {
     ssize_t data_size = 0;
-    
+
     switch (env->buf.type) {
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT:
         memcpy(buf->body, position_state, sizeof(position_state));
@@ -198,4 +198,4 @@ void tx_thread() {
 
 K_THREAD_DEFINE(tx_thread_id, 640,
         tx_thread, NULL, NULL, NULL,
-        5, 0, 0);
+        0, 0, 0);
