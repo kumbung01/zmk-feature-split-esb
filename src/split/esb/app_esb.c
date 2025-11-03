@@ -115,8 +115,8 @@ int tx_power_change(power_set_t cmd) {
         return -ENOTSUP;
 
     config.tx_output_power = tx_power[tx_power_idx];
-    LOG_DBG("setting tx power to %d", tx_power[tx_power_idx]);
-    return esb_set_tx_power(tx_power[tx_power_idx]);
+    LOG_DBG("setting tx power to %d", (int8_t)tx_power[tx_power_idx]);
+    return esb_set_tx_power((int8_t)tx_power[tx_power_idx]);
 }
 
 
