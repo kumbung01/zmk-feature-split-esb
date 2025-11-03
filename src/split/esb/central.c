@@ -46,7 +46,7 @@ enum peripheral_slot_state {
 #define TX_CHANGE_SENT 0
 
 // rssi sample count
-#define RSSI_SAMPLE_CNT 5
+#define RSSI_SAMPLE_CNT 3
 struct peripheral_slot {
     enum peripheral_slot_state state;
     int64_t last_reported;
