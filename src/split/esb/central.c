@@ -230,7 +230,7 @@ SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DE
 
 static int key_position_handler(struct esb_data_envelope *env) {
     int source = env->source;
-    struct peripheral_slot *slot = peripherals[source];
+    struct peripheral_slot *slot = &peripherals[source];
     uint8_t *data = env->buf.data;
     for (int i = 0; i < POSITION_STATE_DATA_LEN; i++) {
         slot->changed_positions[i] = data[i] ^ slot->position_state[i];
