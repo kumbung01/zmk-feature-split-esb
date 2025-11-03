@@ -34,7 +34,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #if IS_ENABLED(CONFIG_ZMK_BATTERY_REPORT_INTERVAL)
 #define PERIPHERAL_REPORT_INTERVAL CONFIG_ZMK_BATTERY_REPORT_INTERVAL
 #else
-#define PERIPHERAL_REPORT_INTERVAL 60
+#define PERIPHERAL_REPORT_INTERVAL 5
 #endif
 
 
@@ -78,10 +78,7 @@ struct k_work_q my_work_q;
 
 static void tx_op(int timeout_us) {
     timeout_set(timeout_us);
-    if (!k_work_delayable_is_pending(&tx_work)) {
-        k_work_reschedule(&tx_work, K_USEC(timeout_us));
-    }
-
+    k_work_reschedule(&tx_work, K_NO_WAIT);
 }
 
 static void rx_op(int timeout_us) {
@@ -217,7 +214,7 @@ static int zmk_split_esb_central_init(void) {
     }
 
     k_work_submit(&notify_status_work);
-    k_work_reschedule(&set_power_level_work, K_SECONDS(10));
+    k_work_reschedule(&set_power_level_work, K_SECONDS(PERIPHERAL_REPORT_INTERVAL));
     return 0;
 }
 
@@ -268,7 +265,9 @@ static void set_power_level_handler(struct k_work *work) {
     if (is_esb_active() && get_tx_count() > 0)
         tx_op(NO_WAIT);
 
-    k_work_reschedule(&set_power_level_work, K_SECONDS(10));
+    split_central_esb_get_status();
+
+    k_work_reschedule(&set_power_level_work, K_SECONDS(PERIPHERAL_REPORT_INTERVAL));
 }
                                                         
 // void rx_thread() {
