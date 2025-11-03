@@ -252,7 +252,7 @@ static int key_position_handler(struct esb_data_envelope *env) {
                         }
                     }
                 };
-                zmk_split_transport_central_peripheral_event_handler(source, evt);
+                zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
             }
         }
     }
