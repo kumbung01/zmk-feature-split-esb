@@ -232,7 +232,7 @@ int handle_packet() {
         LOG_WRN("zmk handler failed(%d)", err);
     }
 
-    return 0;
+    return err;
 }
 
 void *get_next_tx_data() {
