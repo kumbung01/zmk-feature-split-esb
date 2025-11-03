@@ -61,7 +61,7 @@
 #define SOURCE_TO_PIPE(source) (source + 1)
 extern const char *ACTIVE_STATE_CHAR[];
 extern struct k_msgq rx_msgq;
-
+#define POSITION_STATE_DATA_LEN 16
 typedef enum zmk_split_transport_peripheral_event_type zmk_split_transport_buffer_type;
 #define ZMK_DATA_SIZE (size_t)(sizeof(struct zmk_split_transport_peripheral_event) > sizeof(struct zmk_split_transport_central_command) ? \
                                sizeof(struct zmk_split_transport_peripheral_event) : \
@@ -102,7 +102,6 @@ struct payload_header {
 } __packed;
 
 #define HEADER_SIZE sizeof(struct payload_header)
-
 struct payload_buffer {
     struct payload_header header;
     uint8_t body[CONFIG_ESB_MAX_PAYLOAD_LENGTH - HEADER_SIZE];
@@ -114,6 +113,7 @@ _Static_assert(sizeof(struct payload_buffer) == CONFIG_ESB_MAX_PAYLOAD_LENGTH,
 typedef int (*zmk_split_transport_handler)(struct esb_data_envelope*);
 typedef void (*esb_op)(int timeout_us);
 typedef ssize_t (*get_data_size)(int type);
+typedef int (*packet_maker)(struct esb_data_envelope *env, struct payload_buffer *buf);
 
 typedef void (*zmk_split_esb_process_tx_callback_t)(void);
 struct zmk_split_esb_ops {
@@ -123,6 +123,7 @@ struct zmk_split_esb_ops {
     get_data_size get_data_size_rx;
     get_data_size get_data_size_tx;
 
+    packet_maker packet_make;
     zmk_split_transport_handler event_handler;
 };
 
@@ -154,3 +155,4 @@ size_t get_tx_count();
 void check_stack_usage(struct k_thread *thread, const char *name, int64_t *before, int duration);
 power_set_t check_rssi(int rssi);
 void print_reset_reason(void);
+int make_packet_default(struct esb_envelope *env, struct payload_buffer *buf);

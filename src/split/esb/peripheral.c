@@ -29,12 +29,13 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 #include "app_esb.h"
 #include "common.h"
-
+static uint8_t position_state[POSITION_STATE_DATA_LEN] = {0, };
 static void rx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
 static void tx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(tx_work, tx_work_handler);
 static int peripheral_handler(struct esb_data_envelope* env);
+static int packet_maker(struct esb_envelope *env, struct payload_buffer *buf);
 static void tx_op(int timeout_us) {
     // if (!k_work_delayable_is_pending(&tx_work))
     //     k_work_reschedule(&tx_work, timeout);    
@@ -52,6 +53,7 @@ static struct zmk_split_esb_ops peripheral_ops = {
     .get_data_size_tx = get_payload_data_size_evt,
     .tx_op = tx_op,
     .rx_op = rx_op,
+    .packet_make = packet_maker,
 };
 
 
@@ -71,10 +73,33 @@ static void tx_work_handler(struct k_work *work) {
     } while(true);
 }
 
+static int packet_maker(struct esb_envelope *env, struct payload_buffer *buf) {
+    switch (env->buf.type) {
+    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT:
+        memcpy(buf->body, position_state, sizeof(position_state));
+        break;
+    default:
+        make_packet(env, buf);
+        break;
+    }
+
+    return 0;
+}
+
 static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
+
+static int zmk_split_bt_position_state(uint8_t position, bool is_pressed) {
+    WRITE_BIT(position_state[position / 8], position % 8, is_pressed);
+    return 0;
+}
+
 static int
 split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event) {
+    if (event->type == ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT) {
+        zmk_split_bt_position_state(event->data.key_position_event.position, event->data.key_position_event.pressed);
+    }
+
     int err = enqueue_event(PERIPHERAL_ID, event);
     
     if (is_esb_active())
@@ -161,7 +186,6 @@ void tx_thread() {
     {
         k_sem_take(&tx_sem, K_FOREVER);
         LOG_DBG("tx thread awake");
-        check_stack_usage(k_current_get(), "tx_thread", &before, 5000);
         do {
             if (esb_tx_app() != 0)
                 break;
@@ -169,6 +193,6 @@ void tx_thread() {
     }
 }
 
-K_THREAD_DEFINE(tx_thread_id, 2048,
+K_THREAD_DEFINE(tx_thread_id, 640,
         tx_thread, NULL, NULL, NULL,
         5, 0, 0);

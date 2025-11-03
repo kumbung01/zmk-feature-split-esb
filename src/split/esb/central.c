@@ -42,6 +42,8 @@ enum peripheral_slot_state {
 #define PERIPHERAL_REPORT_INTERVAL 10
 struct peripheral_slot {
     enum peripheral_slot_state state;
+    uint8_t changed_positions[POSITION_STATE_DATA_LEN];
+    uint8_t position_state[POSITION_STATE_DATA_LEN];
     int64_t last_reported;
     int rssi_avg;
     uint8_t flag;
@@ -59,6 +61,7 @@ static void peripheral_init() {
 
 static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
+static int packet_maker(struct esb_envelope *env, struct payload_buffer *buf);
 static int central_handler(struct esb_data_envelope *env);
 static void tx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(tx_work, tx_work_handler);
@@ -66,7 +69,7 @@ static void rx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
 static void set_power_level_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(set_power_level_work, set_power_level_handler);
-K_THREAD_STACK_DEFINE(my_work_q_stack, 2304);
+K_THREAD_STACK_DEFINE(my_work_q_stack, 640);
 struct k_work_q my_work_q;
 
 static void tx_op(int timeout_us) {
@@ -85,6 +88,7 @@ static struct zmk_split_esb_ops central_ops = {
     .get_data_size_tx = get_payload_data_size_cmd,
     .tx_op = tx_op,
     .rx_op = rx_op,
+    .packet_make = packet_maker,
 };
 
 
@@ -95,6 +99,18 @@ static void tx_work_handler(struct k_work *work) {
 
 static void rx_work_handler(struct k_work *work) {
     handle_packet();
+}
+
+static int packet_maker(struct esb_envelope *env, struct payload_buffer *buf) {
+    buf->header.type = env->buf.type;
+
+    switch (env->buf.type) {
+    default:
+        make_packet(env, buf);
+        break;
+    }
+
+    return 0;
 }
 
 static int split_central_esb_send_command(uint8_t source,
@@ -212,6 +228,35 @@ static int zmk_split_esb_central_init(void) {
 
 SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 
+static int key_position_handler(struct esb_data_envelope *env) {
+    int source = env->source;
+    struct peripheral_slot *slot = peripherals[source];
+    uint8_t *data = env->buf.data;
+    for (int i = 0; i < POSITION_STATE_DATA_LEN; i++) {
+        slot->changed_positions[i] = data[i] ^ slot->position_state[i];
+        slot->position_state[i] = data[i];
+    }
+    LOG_HEXDUMP_DBG(slot->position_state, POSITION_STATE_DATA_LEN, "data");
+
+    for (int i = 0; i < POSITION_STATE_DATA_LEN; i++) {
+        for (int j = 0; j < 8; j++) {
+            if (slot->changed_positions[i] & BIT(j)) {
+                uint32_t position = (i * 8) + j;
+                bool pressed = slot->position_state[i] & BIT(j);
+                struct zmk_split_transport_peripheral_event evt = {
+                    .type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT,
+                    .data = {
+                        .key_position_event = {
+                            .position = position,
+                            .pressed = pressed
+                        }
+                    }
+                };
+                zmk_split_transport_central_peripheral_event_handler(source, evt);
+            }
+        }
+    }
+}
 
 static int central_handler(struct esb_data_envelope *env) {
     int source = env->source;
@@ -222,8 +267,15 @@ static int central_handler(struct esb_data_envelope *env) {
     int rssi = -(env->payload->rssi);
     peripherals[source].rssi_avg = (peripherals[source].rssi_avg * (RSSI_SAMPLE_CNT - 1) + rssi) / RSSI_SAMPLE_CNT; //sliding average
     LOG_DBG("source (%d) rssi-new (%d) rssi-avg (%d)", source, rssi, peripherals[source].rssi_avg);
+
+    switch (env->event.type) {
+    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT:
+        return key_position_handler(env);
+    default:
+        return zmk_split_transport_central_peripheral_event_handler(&esb_central, source, env->event);
+    }
     
-    return zmk_split_transport_central_peripheral_event_handler(&esb_central, source, env->event);
+    return 0;
 }
 
 static void set_power_level_handler(struct k_work *work) {
