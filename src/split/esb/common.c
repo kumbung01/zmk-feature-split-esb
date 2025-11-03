@@ -166,7 +166,7 @@ int enqueue_event(uint8_t source, struct zmk_split_transport_buffer *buf) {
     return 0;
 }
 
-ssize_t make_packet_default(struct esb_envelope *env, struct payload_buffer *buf) {
+ssize_t make_packet_default(struct esb_data_envelope *env, struct payload_buffer *buf) {
     ssize_t data_size = esb_ops->get_data_size_tx(buf->header.type);
     if (data_size < 0) {
         return data_size;

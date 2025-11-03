@@ -35,7 +35,7 @@ K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
 static void tx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(tx_work, tx_work_handler);
 static int peripheral_handler(struct esb_data_envelope* env);
-static ssize_t packet_maker_peripheral(struct esb_envelope *env, struct payload_buffer *buf);
+static ssize_t packet_maker_peripheral(struct esb_data_envelope *env, struct payload_buffer *buf);
 static void tx_op(int timeout_us) {
     // if (!k_work_delayable_is_pending(&tx_work))
     //     k_work_reschedule(&tx_work, timeout);    
@@ -73,7 +73,7 @@ static void tx_work_handler(struct k_work *work) {
     } while(true);
 }
 
-static ssize_t packet_maker_peripheral(struct esb_envelope *env, struct payload_buffer *buf) {
+static ssize_t packet_maker_peripheral(struct esb_data_envelope *env, struct payload_buffer *buf) {
     ssize_t data_size = 0;
     
     switch (env->buf.type) {

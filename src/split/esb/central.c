@@ -61,7 +61,7 @@ static void peripheral_init() {
 
 static zmk_split_transport_central_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
-static ssize_t packet_maker_central(struct esb_envelope *env, struct payload_buffer *buf);
+static ssize_t packet_maker_central(struct esb_data_envelope *env, struct payload_buffer *buf);
 static int central_handler(struct esb_data_envelope *env);
 static void tx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(tx_work, tx_work_handler);
@@ -101,7 +101,7 @@ static void rx_work_handler(struct k_work *work) {
     handle_packet();
 }
 
-static ssize_t packet_maker_central(struct esb_envelope *env, struct payload_buffer *buf) {
+static ssize_t packet_maker_central(struct esb_data_envelope *env, struct payload_buffer *buf) {
     buf->header.type = env->buf.type;
 
     switch (env->buf.type) {
