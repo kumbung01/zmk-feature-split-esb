@@ -42,7 +42,7 @@ ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type 
         size = sizeof(((struct zmk_split_transport_central_command*)0)->data.set_hid_indicators);
         break;
     case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_TX_POWER:
-        LOG_DBG("tx_power");
+        LOG_WRN("set tx_power");
         size = 1;
         break;
     default:
@@ -73,6 +73,7 @@ ssize_t get_payload_data_size_evt(enum zmk_split_transport_peripheral_event_type
         size = sizeof(((struct zmk_split_transport_peripheral_event*)0)->data.battery_event);
         break;
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_TX_POWER_CHANGED:
+        LOG_WRN("tx_power changed");
         size = 0;
         break;
     default:
