@@ -224,7 +224,7 @@ static int central_handler(struct esb_data_envelope *env) {
     peripherals[source].rssi = -(env->payload->rssi);
 
     if (env->buf.type == ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_TX_POWER_CHANGED) {
-        LOG_DBG("source (%d) tx power_changed");
+        LOG_WRN("source (%d) tx power_changed");
         WRITE_BIT(peripherals[source].flag, TX_CHANGE_SENT, 0);
         return 0;
     }
@@ -244,6 +244,7 @@ static void set_power_level_handler(struct k_work *work) {
             continue;
 
         if (peripherals[source].flag & BIT(TX_CHANGE_SENT)) {
+            LOG_WRN("packet already sent.");
             continue;
         }
         

@@ -200,10 +200,9 @@ int esb_tx_app() {
         LOG_WRN("esb_write_payload returned %d", ret);
         return ret;
     }
-#if IS_PERIPHERAL
+
     LOG_DBG("start tx");
     esb_start_tx();
-#endif
     return ret;
 }
 
