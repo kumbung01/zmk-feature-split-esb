@@ -98,7 +98,7 @@ static struct esb_config config = {
     .tx_output_power = TX_POWER_INIT,
 };
 
-static size_t tx_power_idx = 3;
+static int tx_power_idx = 3;
 int tx_power_change(power_set_t cmd) {
     if (cmd == POWER_OK) {
         return 0;
@@ -111,7 +111,7 @@ int tx_power_change(power_set_t cmd) {
         tx_power_idx++;
     }
 
-    if (tx_power_idx < 0 || tx_power_idx > ARRAY_SIZE(tx_power))
+    if (tx_power_idx < 0 || tx_power_idx >= ARRAY_SIZE(tx_power))
         return -ENOTSUP;
 
     config.tx_output_power = tx_power[tx_power_idx];
