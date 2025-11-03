@@ -106,7 +106,7 @@ static ssize_t packet_maker(struct esb_envelope *env, struct payload_buffer *buf
 
     switch (env->buf.type) {
     default:
-        return make_packet(env, buf);
+        return make_packet_default(env, buf);
         break;
     }
 

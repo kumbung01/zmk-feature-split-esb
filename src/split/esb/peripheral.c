@@ -82,7 +82,7 @@ static ssize_t packet_maker(struct esb_envelope *env, struct payload_buffer *buf
         data_size = sizeof(position_state);
         break;
     default:
-        data_size = make_packet(env, buf);
+        data_size = make_packet_default(env, buf);
         break;
     }
 
