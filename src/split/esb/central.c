@@ -77,10 +77,7 @@ static void tx_op(int timeout_us) {
 }
 
 static void rx_op(int timeout_us) {
-    if (timeout_us == NO_WAIT) {
-        timeout_us = 0;
-    }
-    k_work_reschedule_for_queue(&my_work_q, &rx_work, K_USEC(timeout_us));
+    k_sem_give(&rx_sem);
 }
 
 static struct zmk_split_esb_ops central_ops = {
