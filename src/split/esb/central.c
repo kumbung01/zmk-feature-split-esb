@@ -226,6 +226,7 @@ static int central_handler(struct esb_data_envelope *env) {
 
     if (env->buf.type == ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_TX_POWER_CHANGED) {
         LOG_WRN("source (%d) tx power_changed", source);
+        WRITE_BIT(peripherals[source].flag, TX_CHANGE_SENT, 0);
         return 0;
     }
     
@@ -242,11 +243,16 @@ static void set_power_level_handler(struct k_work *work) {
         LOG_DBG("source (%d) rssi (%d) tx_power %d", source, peripherals[source].rssi, tx_power);
         if (tx_power == POWER_OK) 
             continue;
-        
+
+        if (peripherals[source].flag & BIT(TX_CHANGE_SENT)) {
+            LOG_WRN("source %d tx_power already sent.", source);
+            continue;
+        }
         struct zmk_split_transport_buffer buf = {.type = ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_TX_POWER,
                                                  .tx_power = tx_power,};
         
         enqueue_event(source, &buf);
+        WRITE_BIT(peripherals[source].flag, TX_CHANGE_SENT, 1);
     }
 
     if (is_esb_active() && get_tx_count() > 0)
