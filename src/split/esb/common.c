@@ -235,7 +235,7 @@ ssize_t handle_packet() {
 }
 
 void *get_next_tx_data() {
-    void *ptr;
+    void *ptr = NULL;
     int err = k_msgq_get(&tx_msgq, &ptr, K_NO_WAIT);
     if (err) {
         LOG_DBG("queue is empty.");

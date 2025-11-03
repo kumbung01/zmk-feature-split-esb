@@ -90,10 +90,7 @@ static struct zmk_split_esb_ops central_ops = {
 
 
 static void tx_work_handler(struct k_work *work) {
-    do {
-        if (esb_tx_app() <= 0)
-            return;
-    } while(true);
+    esb_tx_app();
 }
 
 static void rx_work_handler(struct k_work *work) {

@@ -365,9 +365,11 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) 
     switch (type) {
         case APP_TS_STARTED:
             app_esb_resume();
+#if IS_PERIPHERAL
             if (atomic_cas(&tx_work_submit, 0, 1)) {
                 esb_ops->tx_op(NO_WAIT);
             }
+#endif
             break;
         case APP_TS_STOPPED:
             app_esb_suspend();
