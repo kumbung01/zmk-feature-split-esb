@@ -56,6 +56,8 @@ static void peripheral_init() {
         peripherals[source].last_reported = 0;
         peripherals[source].rssi_avg = RSSI_BASELINE;
         peripherals[source].flag = 0;
+        memset(peripherals[source].changed_positions, 0, POSITION_STATE_DATA_LEN);
+        memset(peripherals[source].position_state, 0, POSITION_STATE_DATA_LEN);
     }
 }
 
