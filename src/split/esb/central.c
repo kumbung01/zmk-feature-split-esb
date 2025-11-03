@@ -222,7 +222,7 @@ static int central_handler(struct esb_data_envelope *env) {
     peripherals[source].state = PERIPHERAL_UP;
     peripherals[source].last_reported = k_uptime_get();
     peripherals[source].rssi = -(env->payload->rssi);
-    LOG_DBG("source (%d) rssi %d", peripherals[source].rssi);
+    LOG_DBG("source (%d) rssi %d", source, peripherals[source].rssi);
 
     if (env->buf.type == ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_TX_POWER_CHANGED) {
         LOG_WRN("source (%d) tx power_changed", source);
