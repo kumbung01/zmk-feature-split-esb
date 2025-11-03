@@ -104,8 +104,6 @@ static void rx_work_handler(struct k_work *work) {
 }
 
 static ssize_t packet_maker_central(struct esb_data_envelope *env, struct payload_buffer *buf) {
-    buf->header.type = env->buf.type;
-
     switch (env->buf.type) {
     default:
         return make_packet_default(env, buf);
