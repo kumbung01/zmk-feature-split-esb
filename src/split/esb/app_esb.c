@@ -160,7 +160,7 @@ static void event_handler(struct esb_evt const *event) {
                 esb_pop_tx();
             }
 #endif
-            esb_ops->tx_op((PERIPHERAL_ID * (RETRANSMIT_DELAY / 2)));
+            esb_ops->tx_op(SLEEP_DELAY);
             break;
         case ESB_EVENT_RX_RECEIVED:
             LOG_DBG("RX SUCCESS");
