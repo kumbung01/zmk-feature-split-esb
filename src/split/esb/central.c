@@ -201,7 +201,7 @@ static int zmk_split_esb_central_init(void) {
                        K_THREAD_STACK_SIZEOF(my_work_q_stack),
                        0, NULL);
 
-    ret = zmk_split_esb_init(APP_ESB_MODE_PRX);
+    int ret = zmk_split_esb_init(APP_ESB_MODE_PRX);
     if (ret) {
         LOG_ERR("zmk_split_esb_init failed (err %d)", ret);
         return ret;
