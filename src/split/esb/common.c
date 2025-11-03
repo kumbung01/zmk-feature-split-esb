@@ -193,7 +193,7 @@ size_t make_packet(struct esb_payload *payload) {
     tx_free(env);
 
     // write header and length
-    payload->length = data + HEADER_SIZE;
+    payload->length = data_size + HEADER_SIZE;
 
     return 0;
 }

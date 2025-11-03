@@ -199,11 +199,6 @@ static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 static int zmk_split_esb_central_init(void) {
     esb_ops = &central_ops;
     print_reset_reason();
-    int ret = tx_msgq_init(event_prio);
-    if (ret) {
-        LOG_ERR("tx_msgq_init failed(%d)", ret);
-        return ret;
-    }
 
     k_work_queue_start(&my_work_q, my_work_q_stack,
                        K_THREAD_STACK_SIZEOF(my_work_q_stack),
