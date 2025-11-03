@@ -95,6 +95,7 @@ static struct zmk_split_esb_ops central_ops = {
 
 
 static void tx_work_handler(struct k_work *work) {
+    LOG_DBG("tx work start");
     esb_tx_app();
 }
 
@@ -262,7 +263,7 @@ static void set_power_level_handler(struct k_work *work) {
         WRITE_BIT(peripherals[source].flag, TX_CHANGE_SENT, 1);
     }
 
-    if (is_esb_active() && get_tx_count() > 0)
+    if (is_esb_active() && get_tx_count() > 0) 
         tx_op(NO_WAIT);
 
     split_central_esb_get_status();
