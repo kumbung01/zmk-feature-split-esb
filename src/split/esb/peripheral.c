@@ -63,7 +63,7 @@ static void rx_work_handler(struct k_work *work) {
 static void tx_work_handler(struct k_work *work) {
     esb_start_tx();
     do {
-        if (esb_tx_app() <= 0)
+        if (esb_tx_app() != 0)
             return;
     } while(true);
 }
@@ -160,7 +160,7 @@ void tx_thread() {
         LOG_DBG("tx thread awake");
         check_stack_usage(k_current_get(), "tx_thread", &before, 5000);
         do {
-            if (esb_tx_app() <= 0)
+            if (esb_tx_app() != 0)
                 break;
         } while (true);
     }

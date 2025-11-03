@@ -59,7 +59,7 @@ int zmk_split_esb_set_enable(bool enabled);
 bool zmk_split_esb_get_enable();
 
 int pull_packet_from_tx_msgq(void);
-ssize_t esb_tx_app();
+int esb_tx_app();
 void set_esb_active(bool is_active);
 bool is_esb_active(void);
 power_set_t check_rssi(int rssi);

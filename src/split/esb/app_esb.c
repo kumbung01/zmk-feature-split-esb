@@ -170,7 +170,7 @@ static void event_handler(struct esb_evt const *event) {
 }
 
 
-ssize_t esb_tx_app() {
+int esb_tx_app() {
     struct esb_payload payload;
 #if IS_PERIPHERAL
     if (m_timeout != NO_WAIT) {

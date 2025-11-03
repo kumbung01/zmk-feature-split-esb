@@ -171,7 +171,7 @@ int enqueue_event(uint8_t source, struct zmk_split_transport_buffer *buf) {
 }
 
 
-size_t make_packet(struct esb_payload *payload) {
+int make_packet(struct esb_payload *payload) {
     struct payload_buffer *buf = (struct payload_buffer *)payload->data;
     const size_t body_size = sizeof(buf->body);
     payload->noack = !CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK;
@@ -198,7 +198,7 @@ size_t make_packet(struct esb_payload *payload) {
     return 0;
 }
 
-ssize_t handle_packet() {
+int handle_packet() {
     struct esb_payload rx_payload;
     int err = esb_read_rx_payload(&rx_payload);
     if (err) {
