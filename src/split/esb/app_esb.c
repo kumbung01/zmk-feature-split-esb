@@ -274,7 +274,7 @@ esb_initialize(app_esb_mode_t mode)
         return err;
     }
 
-    const uint32_t channel = 22;
+    const uint32_t channel = 12;
     LOG_DBG("setting rf channel to %d", channel);
     err = esb_set_rf_channel(channel);
     if (err < 0) {
