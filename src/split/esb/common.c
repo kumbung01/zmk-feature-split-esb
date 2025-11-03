@@ -189,6 +189,7 @@ int make_packet(struct esb_payload *payload) {
         return -ENODATA;
     }
 
+    buf->header.type = env->buf.type;
     ssize_t data_size = esb_ops->packet_make(env, buf);
     if (data_size < 0) {
         tx_free(env);
