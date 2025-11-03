@@ -56,15 +56,7 @@ static struct zmk_split_esb_ops peripheral_ops = {
 
 
 static void rx_work_handler(struct k_work *work) {
-    int64_t deadline = k_uptime_get() + 3;
-
-    do {
-        if (handle_packet() <= 0) {
-            return;
-        }
-    } while (k_uptime_get() < deadline);
-
-    k_work_reschedule(&rx_work, K_NO_WAIT);
+    handle_packet();
 }
 
 
@@ -131,6 +123,7 @@ static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
 static int zmk_split_esb_peripheral_init(void) {
     esb_ops = &peripheral_ops;
+    print_reset_reason();
 
     int ret = zmk_split_esb_init(APP_ESB_MODE_PTX);
     if (ret < 0) {
@@ -159,10 +152,13 @@ static int peripheral_handler(struct esb_data_envelope* env) {
 }
 
 void tx_thread() {
+    int64_t before = 0;
+
     while (true)
     {
         k_sem_take(&tx_sem, K_FOREVER);
         LOG_DBG("tx thread awake");
+        check_stack_usage(k_current_get(, "tx_thread", &before, 5000);
         do {
             if (esb_tx_app() <= 0)
                 break;
@@ -170,6 +166,6 @@ void tx_thread() {
     }
 }
 
-K_THREAD_DEFINE(tx_thread_id, 640,
+K_THREAD_DEFINE(tx_thread_id, 2048,
         tx_thread, NULL, NULL, NULL,
-        0, 0, 0);
+        5, 0, 0);
