@@ -187,23 +187,24 @@ int esb_tx_app() {
         return -ENOMEM;
     }
 
-    size_t evt_count = make_packet(&payload);
-    if (evt_count == 0) {
+    int ret = make_packet(&payload);
+    if (ret != 0) {
         LOG_DBG("no packet to send");
         return -ENODATA;
     }
 
     LOG_DBG("sending payload through pipe %d", payload.pipe);
 
-    int ret = esb_write_payload(&payload);
+    ret = esb_write_payload(&payload);
     if (ret != 0) {
         LOG_WRN("esb_write_payload returned %d", ret);
         return ret;
     }
 #if IS_PERIPHERAL
+    LOG_DBG("start tx");
     esb_start_tx();
 #endif
-    return evt_count;
+    return ret;
 }
 
 
