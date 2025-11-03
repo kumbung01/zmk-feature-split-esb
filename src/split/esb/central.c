@@ -231,7 +231,7 @@ static void set_power_level_handler(struct k_work *work) {
         if (peripherals[source].state == PERIPHERAL_DOWN)
             continue;
 
-        struct zmk_split_transport_buffer buf = {.type = ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_TX_POWER,
+        struct zmk_split_transport_buffer buf = {.type = ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_RSSI,
                                                  .rssi = peripherals[source].rssi_avg,};
         
         enqueue_event(source, &buf);
