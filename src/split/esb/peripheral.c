@@ -56,7 +56,10 @@ static struct zmk_split_esb_ops peripheral_ops = {
 
 
 static void rx_work_handler(struct k_work *work) {
-    handle_packet();
+    do {
+        if (handle_packet() != 0)
+            return;
+    } while(true);
 }
 
 
