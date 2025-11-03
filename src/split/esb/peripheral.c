@@ -158,7 +158,7 @@ void tx_thread() {
     {
         k_sem_take(&tx_sem, K_FOREVER);
         LOG_DBG("tx thread awake");
-        check_stack_usage(k_current_get(, "tx_thread", &before, 5000);
+        check_stack_usage(k_current_get(), "tx_thread", &before, 5000);
         do {
             if (esb_tx_app() <= 0)
                 break;
