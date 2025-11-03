@@ -66,10 +66,7 @@ K_THREAD_STACK_DEFINE(my_work_q_stack, 2304);
 struct k_work_q my_work_q;
 
 static void tx_op(int timeout_us) {
-    if (timeout_us == NO_WAIT) {
-        timeout_us = 0;
-    }
-
+    timeout_set(timeout_us);
     if (!k_work_delayable_is_pending(&tx_work)) {
         k_work_reschedule_for_queue(&my_work_q, &tx_work, K_USEC(timeout_us));
     }
@@ -109,7 +106,7 @@ static int split_central_esb_send_command(uint8_t source,
     }
     
     if (is_esb_active())
-        tx_op(0);
+        tx_op(NO_WAIT);
 
     return 0;
 }
