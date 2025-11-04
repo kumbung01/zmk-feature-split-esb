@@ -325,3 +325,11 @@ void print_reset_reason(void)
 
     hwinfo_clear_reset_cause();
 }
+
+inline int get_bit_count(uint8_t x) {
+    x = x - ((x >> 1) & 0x55);
+    x = (x & 0x33) + ((x >> 2) & 0x33);
+    x = (x + (x >> 4)) & 0x0F;
+    
+    return x;
+}

@@ -156,3 +156,4 @@ void check_stack_usage(struct k_thread *thread, const char *name, int64_t *befor
 power_set_t check_rssi(int rssi);
 void print_reset_reason(void);
 ssize_t make_packet_default(struct esb_data_envelope *env, struct payload_buffer *buf);
+int get_bit_count(uint8_t x);

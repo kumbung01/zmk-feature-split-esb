@@ -232,12 +232,15 @@ static int key_position_handler(struct esb_data_envelope *env) {
     int source = env->source;
     struct peripheral_slot *slot = &peripherals[source];
     uint8_t *data = env->buf.data;
+    size_t changed_position_count = 0;
     for (int i = 0; i < POSITION_STATE_DATA_LEN; i++) {
         slot->changed_positions[i] = data[i] ^ slot->position_state[i];
         slot->position_state[i] = data[i];
+        changed_position_count += get_bit_count(slot->changed_positions[i]);
     }
-    LOG_HEXDUMP_DBG(slot->position_state, POSITION_STATE_DATA_LEN, "data");
+    // LOG_HEXDUMP_DBG(slot->position_state, POSITION_STATE_DATA_LEN, "data");
 
+    LOG_DBG("changed position count = %d", changed_position_count);
     for (int i = 0; i < POSITION_STATE_DATA_LEN; i++) {
         for (int j = 0; j < 8; j++) {
             if (slot->changed_positions[i] & BIT(j)) {
@@ -253,9 +256,14 @@ static int key_position_handler(struct esb_data_envelope *env) {
                     }
                 };
                 zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
+                if (--changed_position_count == 0) {
+                    return 0;
+                }
             }
         }
     }
+
+    return 0;
 }
 
 static int central_handler(struct esb_data_envelope *env) {
