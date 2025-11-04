@@ -116,9 +116,10 @@ int tx_power_change(power_set_t cmd) {
         return -ENOTSUP;
 
     tx_power_idx = new_idx;
-    config.tx_output_power = tx_power[tx_power_idx];
-    LOG_WRN("setting tx power to %d", (int8_t)tx_power[tx_power_idx]);
-    return esb_set_tx_power((int8_t)tx_power[tx_power_idx]);
+    int8_t new_tx_output_power = (int8_t)tx_power[tx_power_idx];
+    config.tx_output_power = new_tx_output_power;
+    LOG_WRN("setting tx power to %d", new_tx_output_power);
+    return esb_set_tx_power(new_tx_output_power);
 }
 
 
