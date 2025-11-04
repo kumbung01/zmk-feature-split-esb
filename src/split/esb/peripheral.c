@@ -41,8 +41,7 @@ static void tx_op() {
 }
 
 static void rx_op() {
-    if (!k_work_delayable_is_pending(&rx_work))
-        k_work_reschedule(&rx_work, K_USEC(timeout_us));
+    k_work_submit(&rx_work.work);
 }
 static struct zmk_split_esb_ops peripheral_ops = {
     .event_handler = peripheral_handler,
