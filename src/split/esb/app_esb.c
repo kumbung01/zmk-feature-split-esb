@@ -136,14 +136,6 @@ bool is_esb_active(void) {
     return atomic_get(&m_is_active) ? true : false;
 }
 
-static volatile int m_timeout = NO_WAIT;
-void timeout_set(int timeout) {
-    if (timeout == NO_WAIT)
-        return;
-        
-    m_timeout = timeout;
-}
-
 static atomic_t m_is_tx_delayed = ATOMIC_INIT(0);
 void set_tx_delayed(bool _is_tx_delayed) {
     atomic_set(&m_is_tx_delayed, _is_tx_delayed ? 1 : 0);

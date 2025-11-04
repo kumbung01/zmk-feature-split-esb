@@ -76,7 +76,6 @@ K_THREAD_STACK_DEFINE(my_work_q_stack, 640);
 struct k_work_q my_work_q;
 
 static void tx_op(int timeout_us) {
-    timeout_set(timeout_us);
     k_work_reschedule_for_queue(&my_work_q, &tx_work, K_NO_WAIT);
 }
 
