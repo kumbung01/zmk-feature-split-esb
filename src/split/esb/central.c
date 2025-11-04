@@ -300,7 +300,8 @@ static void set_power_level_handler(struct k_work *work) {
         struct zmk_split_transport_buffer buf = {.type = ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_RSSI,
                                                  .rssi = peripherals[source].rssi_avg,};
         
-        split_central_esb_send_command(source, &buf);
+        struct zmk_split_transport_central_command *cmd = &buf;
+        split_central_esb_send_command(source, *cmd);
     }
 
     split_central_esb_get_status();
