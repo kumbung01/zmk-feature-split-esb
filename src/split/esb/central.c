@@ -235,40 +235,40 @@ static int key_position_handler(struct esb_data_envelope *env) {
     for (int i = 0; i < POSITION_STATE_DATA_LEN; i++) {
         slot->changed_positions[i] = data[i] ^ slot->position_state[i];
         slot->position_state[i] = data[i];
-        changed_position_count += get_bit_count(slot->changed_positions[i]);
+        changed_position_count += __builtin_popcount(slot->changed_positions[i]);
     }
     // LOG_HEXDUMP_DBG(slot->position_state, POSITION_STATE_DATA_LEN, "data");
 
-    static int yield = 0;
     LOG_DBG("changed position count = %d", changed_position_count);
     for (int i = 0; i < POSITION_STATE_DATA_LEN; i++) {
-        for (int j = 0; j < 8; j++) {
-            if (slot->changed_positions[i] & BIT(j)) {
-                uint32_t position = (i * 8) + j;
-                bool pressed = slot->position_state[i] & BIT(j);
-                struct zmk_split_transport_peripheral_event evt = {
-                    .type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT,
-                    .data = {
-                        .key_position_event = {
-                            .position = position,
-                            .pressed = pressed
-                        }
-                    }
-                };
-                if (!is_in_timeslot()) {
-                    LOG_WRN("outside timeslot");
-                    k_yield();
-                }
-                zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
+        uint8_t changed = slot->changed_positions[i];
 
-                if (--changed_position_count == 0) {
-                    goto RETURN;
+        while (changed) {
+            int j = __builtin_ctz(changed);
+            uint32_t position = (i * 8) + j;
+            bool pressed = slot->position_state[i] & BIT(j);
+            struct zmk_split_transport_peripheral_event evt = {
+                .type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT,
+                .data = {
+                    .key_position_event = {
+                        .position = position,
+                        .pressed = pressed
+                    }
                 }
+            };
+            if (!is_in_timeslot()) {
+                LOG_WRN("outside timeslot");
+                k_yield();
+            }
+            zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
+
+            changed &= (changed - 1);
+            if (--changed_position_count == 0) {
+                return 0;
             }
         }
     }
 
-RETURN:
     return 0;
 }
 
