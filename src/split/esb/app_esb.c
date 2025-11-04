@@ -174,9 +174,10 @@ static void event_handler(struct esb_evt const *event) {
                 tx_power_change(POWER_UP);
             }
 #endif
-            set_tx_delayed(true);
-            if (SLEEP_DELAY > 0)
+            if (SLEEP_DELAY > 0) {
+                set_tx_delayed(true);
                 k_work_reschedule(&start_tx_work, K_USEC(SLEEP_DELAY));
+            }
             else 
                 esb_start_tx();
             esb_ops->tx_op();
