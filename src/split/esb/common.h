@@ -101,7 +101,7 @@ _Static_assert(sizeof(struct payload_buffer) == CONFIG_ESB_MAX_PAYLOAD_LENGTH,
                "zmk_split_transport_buffer size mismatch");
 
 typedef int (*zmk_split_transport_handler)(struct esb_data_envelope*);
-typedef void (*esb_op)(int timeout_us);
+typedef void (*esb_op)(void);
 typedef ssize_t (*get_data_size)(int type);
 typedef ssize_t (*packet_maker)(struct esb_data_envelope *env, struct payload_buffer *buf);
 

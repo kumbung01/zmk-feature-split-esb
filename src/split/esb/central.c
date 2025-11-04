@@ -67,7 +67,7 @@ static bool is_enabled = false;
 static ssize_t packet_maker_central(struct esb_data_envelope *env, struct payload_buffer *buf);
 static int central_handler(struct esb_data_envelope *env);
 static void tx_work_handler(struct k_work *work);
-K_WORK_DELAYABLE_DEFINE(tx_work, tx_work_handler);
+K_WORK_DEFINE(tx_work, tx_work_handler);
 static void rx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
 static void set_power_level_handler(struct k_work *work);
@@ -75,11 +75,11 @@ K_WORK_DELAYABLE_DEFINE(set_power_level_work, set_power_level_handler);
 K_THREAD_STACK_DEFINE(my_work_q_stack, 640);
 struct k_work_q my_work_q;
 
-static void tx_op(int timeout_us) {
-    k_work_reschedule_for_queue(&my_work_q, &tx_work, K_NO_WAIT);
+static void tx_op() {
+    k_work_submit_to_queue(&my_work_q, &tx_work);
 }
 
-static void rx_op(int timeout_us) {
+static void rx_op() {
     k_sem_give(&rx_sem);
 }
 

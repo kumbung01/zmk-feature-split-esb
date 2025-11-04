@@ -146,6 +146,7 @@ bool is_tx_delayed(void) {
 }
 
 static void start_tx_work_handler(struct k_work *work) {
+    LOG_DBG("start_tx_work");
     set_tx_delayed(false);
     esb_start_tx();
 }
@@ -160,7 +161,7 @@ static void event_handler(struct esb_evt const *event) {
         case ESB_EVENT_TX_SUCCESS:
             LOG_DBG("TX SUCCESS");
             tx_fail_count = 0;
-            esb_ops->tx_op(NO_WAIT);
+            esb_ops->tx_op();
             break;
         case ESB_EVENT_TX_FAILED:
             LOG_WRN("ESB_EVENT_TX_FAILED");            
@@ -174,12 +175,13 @@ static void event_handler(struct esb_evt const *event) {
             }
 #endif
             set_tx_delayed(true);
-            k_work_reschedule(&start_tx_work, K_USEC(SLEEP_DELAY));
-            esb_ops->tx_op(SLEEP_DELAY);
+            if (SLEEP_DELAY > 0)
+                k_work_reschedule(&start_tx_work, K_USEC(SLEEP_DELAY));
+            esb_ops->tx_op();
             break;
         case ESB_EVENT_RX_RECEIVED:
             LOG_DBG("RX SUCCESS");
-            esb_ops->rx_op(NO_WAIT);
+            esb_ops->rx_op();
             break;
     }
 }
