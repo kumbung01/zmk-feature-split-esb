@@ -177,6 +177,12 @@ static void event_handler(struct esb_evt const *event) {
 
 int esb_tx_app() {
     struct esb_payload payload;
+
+    if (!is_esb_active()) {
+        LOG_DBG("esb not active");
+        return -EACCES;
+    }
+
     if (m_timeout != NO_WAIT) {
         LOG_DBG("sleep thread");
         k_usleep(m_timeout);

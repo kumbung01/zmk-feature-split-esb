@@ -37,8 +37,6 @@ K_WORK_DELAYABLE_DEFINE(tx_work, tx_work_handler);
 static int peripheral_handler(struct esb_data_envelope* env);
 static ssize_t packet_maker_peripheral(struct esb_data_envelope *env, struct payload_buffer *buf);
 static void tx_op(int timeout_us) {
-    // if (!k_work_delayable_is_pending(&tx_work))
-    //     k_work_reschedule(&tx_work, timeout);    
     timeout_set(timeout_us);
     k_sem_give(&tx_sem);
 }
@@ -105,8 +103,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
 
     int err = enqueue_event(PERIPHERAL_ID, event);
     
-    if (is_esb_active())
-        tx_op(NO_WAIT);
+    tx_op(NO_WAIT);
 
     return 0;
 }

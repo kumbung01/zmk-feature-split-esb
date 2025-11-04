@@ -81,7 +81,6 @@ static void tx_op(int timeout_us) {
 }
 
 static void rx_op(int timeout_us) {
-    // k_work_reschedule(&rx_work, K_NO_WAIT);
     k_sem_give(&rx_sem);
 }
 
@@ -122,8 +121,7 @@ static int split_central_esb_send_command(uint8_t source,
         return err;
     }
     
-    if (is_esb_active())
-        tx_op(NO_WAIT);
+    tx_op(NO_WAIT);
 
     return 0;
 }
@@ -302,11 +300,8 @@ static void set_power_level_handler(struct k_work *work) {
         struct zmk_split_transport_buffer buf = {.type = ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_RSSI,
                                                  .rssi = peripherals[source].rssi_avg,};
         
-        enqueue_event(source, &buf);
+        split_central_esb_send_command(source, &buf);
     }
-
-    if (is_esb_active()) 
-        tx_op(NO_WAIT);
 
     split_central_esb_get_status();
 
