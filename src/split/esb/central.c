@@ -240,7 +240,7 @@ static int key_position_handler(struct esb_data_envelope *env) {
     }
     // LOG_HEXDUMP_DBG(slot->position_state, POSITION_STATE_DATA_LEN, "data");
 
-    bool yield = false;
+    static bool yield = false;
     LOG_DBG("changed position count = %d", changed_position_count);
     for (int i = 0; i < POSITION_STATE_DATA_LEN; i++) {
         for (int j = 0; j < 8; j++) {
@@ -257,14 +257,19 @@ static int key_position_handler(struct esb_data_envelope *env) {
                     }
                 };
                 zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
-                k_yield();
+                uint64_t now = k_ticks_to_us_ceil64(k_uptime_ticks());
+                if (yield)
+                    k_yield();
+                yield = !yield;
+
                 if (--changed_position_count == 0) {
-                    return 0;
+                    goto RETURN;
                 }
             }
         }
     }
 
+RETURN:
     return 0;
 }
 
