@@ -20,4 +20,6 @@ void zmk_split_esb_timeslot_open_session(void);
 
 void zmk_split_esb_timeslot_close_session(void);
 
+bool is_in_timeslot(void);
+
 #endif

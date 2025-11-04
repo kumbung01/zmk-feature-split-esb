@@ -134,6 +134,9 @@ static inline void set_timeslot_active_status(bool active) {
     }
 }
 
+bool is_in_timeslot() {
+    return m_in_timeslot;
+}
 
 static mpsl_timeslot_signal_return_param_t *mpsl_timeslot_callback(mpsl_timeslot_session_id_t session_id, 
                                                                   uint32_t signal_type) {

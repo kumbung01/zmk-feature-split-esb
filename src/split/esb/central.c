@@ -26,6 +26,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 #include "app_esb.h"
 #include "common.h"
+#include "timeslot.h"
 #include <esb.h>
 
 #define MPSL_THREAD_PRIO             CONFIG_MPSL_THREAD_COOP_PRIO
@@ -256,11 +257,10 @@ static int key_position_handler(struct esb_data_envelope *env) {
                         }
                     }
                 };
-                zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
-                if (yield++ >= 5) {
-                    yield = 0;
+                if (!is_in_timeslot()) {
                     k_yield();
                 }
+                zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
 
                 if (--changed_position_count == 0) {
                     goto RETURN;
@@ -323,4 +323,4 @@ void rx_thread() {
 
 K_THREAD_DEFINE(rx_thread_id, 2304,
         rx_thread, NULL, NULL, NULL,
-        -1, 0, 0);
+        -2, 0, 0);
