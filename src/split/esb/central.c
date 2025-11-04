@@ -231,7 +231,7 @@ SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DE
 static int key_position_handler(struct esb_data_envelope *env) {
     int source = env->source;
     struct peripheral_slot *slot = &peripherals[source];
-    uint8_t *data = env->buf.data;
+    const uint8_t *data = env->buf.data;
     size_t changed_position_count = 0;
     for (int i = 0; i < POSITION_STATE_DATA_LEN; i++) {
         slot->changed_positions[i] = data[i] ^ slot->position_state[i];
@@ -240,6 +240,7 @@ static int key_position_handler(struct esb_data_envelope *env) {
     }
     // LOG_HEXDUMP_DBG(slot->position_state, POSITION_STATE_DATA_LEN, "data");
 
+    bool yield = false;
     LOG_DBG("changed position count = %d", changed_position_count);
     for (int i = 0; i < POSITION_STATE_DATA_LEN; i++) {
         for (int j = 0; j < 8; j++) {
@@ -256,12 +257,19 @@ static int key_position_handler(struct esb_data_envelope *env) {
                     }
                 };
                 zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
-                k_yield();
+                if (yield) {
+                    k_yield();
+                }
+                yield = !yield;
                 if (--changed_position_count == 0) {
                     return 0;
                 }
             }
         }
+    }
+
+    if (yield) {
+        k_yield();
     }
 
     return 0;
