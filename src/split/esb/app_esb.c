@@ -177,6 +177,8 @@ static void event_handler(struct esb_evt const *event) {
             set_tx_delayed(true);
             if (SLEEP_DELAY > 0)
                 k_work_reschedule(&start_tx_work, K_USEC(SLEEP_DELAY));
+            else 
+                esb_start_tx();
             esb_ops->tx_op();
             break;
         case ESB_EVENT_RX_RECEIVED:
