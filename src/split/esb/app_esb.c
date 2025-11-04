@@ -143,10 +143,26 @@ void timeout_set(int timeout) {
         
     m_timeout = timeout;
 }
+
+static atomic_t m_is_tx_delayed = ATOMIC_INIT(0);
+void set_tx_delayed(bool _is_tx_delayed) {
+    atomic_set(&m_is_tx_delayed, _is_tx_delayed ? 1 : 0);
+}
+
+bool is_tx_delayed(void) {
+    return atomic_get(&m_is_tx_delayed) ? true : false;
+}
+
+static void start_tx_work_handler(struct k_work *work) {
+    set_tx_delayed(false);
+    esb_start_tx();
+}
+K_WORK_DELAYABLE_DEFINE(start_tx_work, start_tx_work_handler);
+
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
 static void event_handler(struct esb_evt const *event) {
-    static volatile int tx_fail_count = 0;
+    static int tx_fail_count = 0;
 
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
@@ -165,6 +181,8 @@ static void event_handler(struct esb_evt const *event) {
                 tx_power_change(POWER_UP);
             }
 #endif
+            set_tx_delayed(true);
+            k_work_reschedule(&start_tx_work, K_USEC(SLEEP_DELAY));
             esb_ops->tx_op(SLEEP_DELAY);
             break;
         case ESB_EVENT_RX_RECEIVED:
@@ -183,16 +201,8 @@ int esb_tx_app() {
         return -EACCES;
     }
 
-    if (m_timeout != NO_WAIT) {
-        LOG_DBG("sleep thread");
-        k_usleep(m_timeout);
-        m_timeout = NO_WAIT;
-        esb_start_tx();
-    }
-
     if (esb_tx_full()) {
         LOG_DBG("esb tx full, wait for next tx event");
-        esb_start_tx();
         return -ENOMEM;
     }
 
@@ -210,9 +220,14 @@ int esb_tx_app() {
         return ret;
     }
 
+    if (is_tx_delayed()) {
+        LOG_DBG("tx_delayed");
+        return 0;
+    }
+
     LOG_DBG("start tx");
     esb_start_tx();
-    return ret;
+    return 0;
 }
 
 
