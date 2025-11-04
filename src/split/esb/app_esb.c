@@ -93,7 +93,7 @@ static struct esb_config config = {
     .tx_mode = ESB_TXMODE_MANUAL_START,
     .payload_length = CONFIG_ESB_MAX_PAYLOAD_LENGTH,
     .selective_auto_ack = true,
-    .use_fast_ramp_up = false,
+    .use_fast_ramp_up = true,
     .event_handler = event_handler,
     .tx_output_power = TX_POWER_INIT,
 };
