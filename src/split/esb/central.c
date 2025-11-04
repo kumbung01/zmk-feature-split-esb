@@ -257,7 +257,6 @@ static int key_position_handler(struct esb_data_envelope *env) {
                     }
                 };
                 zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
-                uint64_t now = k_ticks_to_us_ceil64(k_uptime_ticks());
                 if (yield)
                     k_yield();
                 yield = !yield;
