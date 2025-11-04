@@ -36,11 +36,11 @@ static void tx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(tx_work, tx_work_handler);
 static int peripheral_handler(struct esb_data_envelope* env);
 static ssize_t packet_maker_peripheral(struct esb_data_envelope *env, struct payload_buffer *buf);
-static void tx_op(int timeout_us) {
+static void tx_op() {
     k_sem_give(&tx_sem);
 }
 
-static void rx_op(int timeout_us) {
+static void rx_op() {
     if (!k_work_delayable_is_pending(&rx_work))
         k_work_reschedule(&rx_work, K_USEC(timeout_us));
 }
