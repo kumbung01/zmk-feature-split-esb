@@ -379,7 +379,6 @@ static int app_esb_resume(void) {
     return err;
 }
 
-static atomic_t tx_work_submit = ATOMIC_INIT(0);
 /* Callback function signalling that a timeslot is started or stopped */
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) {
     switch (type) {
@@ -404,7 +403,6 @@ static int on_activity_state(const zmk_event_t *eh) {
     if (m_mode == APP_ESB_MODE_PTX) {
         if (state_ev->state != ZMK_ACTIVITY_ACTIVE && zmk_split_esb_get_enable()) {
             zmk_split_esb_set_enable(false);
-            atomic_set(&tx_work_submit, 0);
         }
         else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !zmk_split_esb_get_enable()) {
             zmk_split_esb_set_enable(true);
