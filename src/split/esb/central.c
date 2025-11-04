@@ -258,6 +258,7 @@ static int key_position_handler(struct esb_data_envelope *env) {
                     }
                 };
                 if (!is_in_timeslot()) {
+                    LOG_WRN("outside timeslot");
                     k_yield();
                 }
                 zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
