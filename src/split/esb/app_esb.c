@@ -182,7 +182,6 @@ int esb_tx_app() {
         k_usleep(m_timeout);
         m_timeout = NO_WAIT;
         esb_start_tx();
-        return -EAGAIN;
     }
 
     if (esb_tx_full()) {
