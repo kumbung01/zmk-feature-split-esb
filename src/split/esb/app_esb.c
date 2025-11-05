@@ -194,6 +194,7 @@ static void event_handler(struct esb_evt const *event) {
 int esb_tx_app() {
     static struct esb_payload payload;
     static bool write_payload_failed = false;
+    int ret = 0;
 
     if (esb_tx_full()) {
         LOG_DBG("esb tx full, wait for next tx event");
@@ -206,7 +207,7 @@ int esb_tx_app() {
     }
 
     if (!write_payload_failed) {
-        int ret = make_packet(&payload);
+        ret = make_packet(&payload);
         if (ret != 0) {
             LOG_DBG("no packet to send");
             return -ENODATA;
