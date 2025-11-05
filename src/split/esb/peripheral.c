@@ -159,6 +159,17 @@ static int zmk_split_esb_peripheral_init(void) {
 
 SYS_INIT(zmk_split_esb_peripheral_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 
+inline static int command_handler_wrapper(
+    const struct zmk_split_transport_peripheral *transport,
+    struct zmk_split_transport_central_command cmd) {
+
+    if (!is_in_timeslot()) {
+        LOG_DBG("outside timeslot");
+        k_yield();
+    }
+
+    return zmk_split_transport_peripheral_command_handler(transport, cmd);
+}
 
 static int peripheral_handler(struct esb_data_envelope* env) {
     static const char* str[] = {"OK", "UP", "DOWN"};
@@ -170,7 +181,7 @@ static int peripheral_handler(struct esb_data_envelope* env) {
         return 0;
     }
 
-    return zmk_split_transport_peripheral_command_handler(&esb_peripheral, env->command);
+    command_handler_wrapper(&esb_peripheral, cmd);
 }
 
 void tx_thread() {

@@ -92,6 +92,16 @@ static struct zmk_split_esb_ops central_ops = {
     .packet_make = packet_maker_central,
 };
 
+inline static int event_handler_wrapper(
+    const struct zmk_split_transport_central *transport, uint8_t source,
+    struct zmk_split_transport_peripheral_event ev) {
+    if (!is_in_timeslot()) {
+        LOG_WRN("outside_timeslot");
+        k_yield();
+    }
+
+    zmk_split_transport_central_peripheral_event_handler(transport, source, ev);
+}
 
 static void tx_work_handler(struct k_work *work) {
     LOG_DBG("tx work start");
@@ -255,11 +265,8 @@ static int key_position_handler(struct esb_data_envelope *env) {
                     }
                 }
             };
-            if (!is_in_timeslot()) {
-                LOG_WRN("outside timeslot");
-                k_yield();
-            }
-            zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
+
+            event_handler_wrapper(&esb_central, source, evt);
 
             changed &= (changed - 1);
             if (--changed_position_count == 0) {
@@ -285,7 +292,7 @@ static int central_handler(struct esb_data_envelope *env) {
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT:
         return key_position_handler(env);
     default:
-        return zmk_split_transport_central_peripheral_event_handler(&esb_central, source, env->event);
+        return event_handler_wrapper(&esb_central, source, env->event);
     }
     
     return 0;
