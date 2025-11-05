@@ -181,7 +181,7 @@ static int peripheral_handler(struct esb_data_envelope* env) {
         return 0;
     }
 
-    command_handler_wrapper(&esb_peripheral, cmd);
+    command_handler_wrapper(&esb_peripheral, env->command);
 }
 
 void tx_thread() {
