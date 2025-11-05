@@ -27,6 +27,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #include <zmk/hid_indicators_types.h>
 #include <zmk/physical_layouts.h>
 
+#include "timeslot.h"
 #include "app_esb.h"
 #include "common.h"
 static uint8_t position_state[POSITION_STATE_DATA_LEN] = {0, };
@@ -189,7 +190,7 @@ void tx_thread() {
         do {
             if (!is_in_timeslot())
                 k_yield();
-                
+
             if (esb_tx_app() != 0)
                 break;
         } while (true);
