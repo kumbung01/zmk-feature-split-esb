@@ -286,7 +286,7 @@ static int central_handler(struct esb_data_envelope *env) {
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT:
         return key_position_handler(env);
     default:
-        if (!is_in_timeslot()) {
+        if (!is_esb_active()) {
             LOG_WRN("outside_timeslot");
             k_yield();
         }
