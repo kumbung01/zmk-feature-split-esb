@@ -163,11 +163,6 @@ inline static int command_handler_wrapper(
     const struct zmk_split_transport_peripheral *transport,
     struct zmk_split_transport_central_command cmd) {
 
-    if (!is_in_timeslot()) {
-        LOG_DBG("outside timeslot");
-        k_yield();
-    }
-
     return zmk_split_transport_peripheral_command_handler(transport, cmd);
 }
 
@@ -192,6 +187,9 @@ void tx_thread() {
         k_sem_take(&tx_sem, K_FOREVER);
         LOG_DBG("tx thread awake");
         do {
+            if (!is_in_timeslot())
+                k_yield();
+                
             if (esb_tx_app() != 0)
                 break;
         } while (true);
@@ -200,4 +198,4 @@ void tx_thread() {
 
 K_THREAD_DEFINE(tx_thread_id, 640,
         tx_thread, NULL, NULL, NULL,
-        0, 0, 0);
+        -1, 0, 0);
