@@ -260,7 +260,7 @@ static int key_position_handler(struct esb_data_envelope *env) {
                 k_yield();
             }
 
-            zmk_split_transport_central_peripheral_event_handler(transport, source, ev);
+            zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
 
             changed &= (changed - 1);
             if (--changed_position_count == 0) {
@@ -291,7 +291,7 @@ static int central_handler(struct esb_data_envelope *env) {
             k_yield();
         }
 
-        return event_handler_wrapper(&esb_central, source, env->event);
+        return zmk_split_transport_central_peripheral_event_handler(&esb_central, source, env->event);
     }
     
     return 0;
