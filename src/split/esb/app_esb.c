@@ -220,7 +220,7 @@ int esb_tx_app() {
 
     if (is_tx_delayed()) {
         LOG_DBG("tx_delayed");
-        return 0;
+        return -EAGAIN;
     }
 
     LOG_DBG("start tx");

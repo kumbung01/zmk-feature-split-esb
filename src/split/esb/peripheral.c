@@ -181,8 +181,6 @@ static int peripheral_handler(struct esb_data_envelope* env) {
 }
 
 void tx_thread() {
-    int64_t before = 0;
-
     while (true)
     {
         k_sem_take(&tx_sem, K_FOREVER);
@@ -193,7 +191,7 @@ void tx_thread() {
 
             if (esb_tx_app() != 0)
                 break;
-        } while (true);
+        } while (TX_MSGQ_SIZE);
     }
 }
 
