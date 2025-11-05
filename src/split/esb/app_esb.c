@@ -192,27 +192,31 @@ static void event_handler(struct esb_evt const *event) {
 
 
 int esb_tx_app() {
-    struct esb_payload payload;
-
-    if (!is_esb_active()) {
-        LOG_DBG("esb not active");
-        return -EACCES;
-    }
+    static struct esb_payload payload;
+    static bool write_payload_failed = false;
 
     if (esb_tx_full()) {
         LOG_DBG("esb tx full, wait for next tx event");
         return -ENOMEM;
     }
 
-    int ret = make_packet(&payload);
-    if (ret != 0) {
-        LOG_DBG("no packet to send");
-        return -ENODATA;
+    if (!is_esb_active()) {
+        LOG_DBG("esb not active");
+        return -EACCES;
+    }
+
+    if (!write_payload_failed) {
+        int ret = make_packet(&payload);
+        if (ret != 0) {
+            LOG_DBG("no packet to send");
+            return -ENODATA;
+        }
     }
 
     LOG_DBG("sending payload through pipe %d", payload.pipe);
 
     ret = esb_write_payload(&payload);
+    write_payload_failed = (ret != 0);
     if (ret != 0) {
         LOG_WRN("esb_write_payload returned %d", ret);
         return ret;

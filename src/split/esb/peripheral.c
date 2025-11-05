@@ -160,13 +160,6 @@ static int zmk_split_esb_peripheral_init(void) {
 
 SYS_INIT(zmk_split_esb_peripheral_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 
-inline static int command_handler_wrapper(
-    const struct zmk_split_transport_peripheral *transport,
-    struct zmk_split_transport_central_command cmd) {
-
-    return zmk_split_transport_peripheral_command_handler(transport, cmd);
-}
-
 static int peripheral_handler(struct esb_data_envelope* env) {
     static const char* str[] = {"OK", "UP", "DOWN"};
     if (env->buf.type == ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_RSSI) {
@@ -177,7 +170,7 @@ static int peripheral_handler(struct esb_data_envelope* env) {
         return 0;
     }
 
-    command_handler_wrapper(&esb_peripheral, env->command);
+    return zmk_split_transport_peripheral_command_handler(&esb_peripheral, env->command);
 }
 
 void tx_thread() {
