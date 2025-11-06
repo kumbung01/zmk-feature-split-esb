@@ -40,7 +40,7 @@ enum peripheral_slot_state {
 
 // rssi sample count
 #define RSSI_SAMPLE_CNT 4
-#define PERIPHERAL_REPORT_INTERVAL 10
+#define PERIPHERAL_REPORT_INTERVAL 5
 struct peripheral_slot {
     enum peripheral_slot_state state;
     uint8_t changed_positions[POSITION_STATE_DATA_LEN];
