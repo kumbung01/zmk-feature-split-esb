@@ -170,15 +170,13 @@ static void event_handler(struct esb_evt const *event) {
             if (tx_fail_count++ >= 3) {
                 tx_fail_count = 0;
                 esb_pop_tx();
+            }
+            else if (tx_fail_count == 1) {
                 tx_power_change(POWER_UP);
             }
 #endif
-            if (SLEEP_DELAY > 0) {
-                set_tx_delayed(true);
-                k_work_reschedule(&start_tx_work, K_USEC(SLEEP_DELAY));
-            }
-            else 
-                esb_start_tx();
+            set_tx_delayed(true);
+            k_work_reschedule(&start_tx_work, K_USEC(SLEEP_DELAY));
             esb_ops->tx_op();
             break;
         case ESB_EVENT_RX_RECEIVED:
