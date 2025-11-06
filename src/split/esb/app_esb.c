@@ -194,6 +194,7 @@ int esb_tx_app() {
 
     if (esb_tx_full()) {
         LOG_DBG("esb tx full, wait for next tx event");
+        k_yield();
         return -ENOMEM;
     }
 
@@ -222,6 +223,7 @@ int esb_tx_app() {
 
     if (is_tx_delayed()) {
         LOG_DBG("tx_delayed");
+        k_yield();
         return -EAGAIN;
     }
 
