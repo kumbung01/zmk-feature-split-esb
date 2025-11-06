@@ -167,7 +167,7 @@ static struct zmk_split_transport_status split_central_esb_get_status() {
     case 0:
         conn = ZMK_SPLIT_TRANSPORT_CONNECTIONS_STATUS_DISCONNECTED;
         break;
-    case CONFIG_ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS:
+    case PERIPHERAL_COUNT:
         conn = ZMK_SPLIT_TRANSPORT_CONNECTIONS_STATUS_ALL_CONNECTED;
         break;
     default:
@@ -262,6 +262,10 @@ static int key_position_handler(struct esb_data_envelope *env) {
     return 0;
 }
 
+static inline void update_rssi(int source, int rssi) {
+    peripherals[source].rssi_avg = (peripherals[source].rssi_avg * (RSSI_SAMPLE_CNT - 1) + rssi) / RSSI_SAMPLE_CNT; //sliding average
+}
+
 static int central_handler(struct esb_data_envelope *env) {
     int source = env->source;
     __ASSERT(0 <= source && source < ARRAY_SIZE(peripherals), "source must within valid range");
@@ -269,7 +273,8 @@ static int central_handler(struct esb_data_envelope *env) {
     peripherals[source].state = PERIPHERAL_UP;
     peripherals[source].last_reported = k_uptime_get();
     int rssi = -(env->payload->rssi);
-    peripherals[source].rssi_avg = (peripherals[source].rssi_avg * (RSSI_SAMPLE_CNT - 1) + rssi) / RSSI_SAMPLE_CNT; //sliding average
+    update_rssi(source, rssi);
+
     LOG_DBG("source (%d) rssi-new (%d) rssi-avg (%d)", source, rssi, peripherals[source].rssi_avg);
 
     switch (env->event.type) {
