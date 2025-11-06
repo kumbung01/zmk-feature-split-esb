@@ -44,13 +44,13 @@
 #define TIMEOUT_MS CONFIG_ZMK_SPLIT_ESB_KEYBOARD_EVENT_TIMEOUT_MS
 #define SAFE_DIV(x, y) ((x) / (y) > 0 ? (x) / (y) : 1)
 #if IS_CENTRAL
-    #define ENABLED_PIPES GENMASK(PERIPHERAL_COUNT, 0)
+    #define ENABLED_PIPES GENMASK(PERIPHERAL_COUNT - 1, 0)
 #else
     #define ENABLED_PIPES BIT(PERIPHERAL_ID)
 #endif
 
-#define PIPE_TO_SOURCE(pipe)   (pipe - 1)
-#define SOURCE_TO_PIPE(source) (source + 1)
+#define PIPE_TO_SOURCE(pipe)   (pipe)
+#define SOURCE_TO_PIPE(source) (source)
 extern const char *ACTIVE_STATE_CHAR[];
 extern struct k_msgq rx_msgq;
 #define POSITION_STATE_DATA_LEN 16
