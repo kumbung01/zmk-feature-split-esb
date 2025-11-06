@@ -123,7 +123,7 @@ int tx_power_change(power_set_t cmd) {
 }
 
 
-K_SEM_DEFINE(tx_sem, 0, TX_FIFO_SIZE);
+K_SEM_DEFINE(tx_sem, 0, 1);
 K_SEM_DEFINE(rx_sem, 0, RX_FIFO_SIZE);
 
 static app_esb_mode_t m_mode;
