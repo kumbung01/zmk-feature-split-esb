@@ -43,8 +43,8 @@ enum peripheral_slot_state {
 #define PERIPHERAL_REPORT_INTERVAL 5
 struct peripheral_slot {
     enum peripheral_slot_state state;
-    uint8_t changed_positions[POSITION_STATE_DATA_LEN];
     uint8_t position_state[POSITION_STATE_DATA_LEN];
+
     int64_t last_reported;
     int rssi_avg;
     uint8_t flag;
@@ -57,7 +57,6 @@ static void peripheral_init() {
         peripherals[source].last_reported = 0;
         peripherals[source].rssi_avg = RSSI_BASELINE;
         peripherals[source].flag = 0;
-        memset(peripherals[source].changed_positions, 0, POSITION_STATE_DATA_LEN);
         memset(peripherals[source].position_state, 0, POSITION_STATE_DATA_LEN);
     }
 }
@@ -229,17 +228,11 @@ static int key_position_handler(struct esb_data_envelope *env) {
     int source = env->source;
     struct peripheral_slot *slot = &peripherals[source];
     const uint8_t *data = env->buf.data;
-    size_t changed_position_count = 0;
-    for (int i = 0; i < POSITION_STATE_DATA_LEN; i++) {
-        slot->changed_positions[i] = data[i] ^ slot->position_state[i];
-        slot->position_state[i] = data[i];
-        changed_position_count += __builtin_popcount(slot->changed_positions[i]);
-    }
     // LOG_HEXDUMP_DBG(slot->position_state, POSITION_STATE_DATA_LEN, "data");
 
-    LOG_DBG("changed position count = %d", changed_position_count);
     for (int i = 0; i < POSITION_STATE_DATA_LEN; i++) {
-        uint8_t changed = slot->changed_positions[i];
+        uint8_t changed = data[i] ^ slot->position_state[i];
+        slot->position_state[i] = data[i];
 
         while (changed) {
             int j = __builtin_ctz(changed);
@@ -263,9 +256,6 @@ static int key_position_handler(struct esb_data_envelope *env) {
             zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
 
             changed &= (changed - 1);
-            if (--changed_position_count == 0) {
-                return 0;
-            }
         }
     }
 
