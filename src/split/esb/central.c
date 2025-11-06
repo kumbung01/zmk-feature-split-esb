@@ -40,7 +40,7 @@ enum peripheral_slot_state {
 
 // rssi sample count
 #define RSSI_SAMPLE_CNT 4
-#define PERIPHERAL_REPORT_INTERVAL 5
+#define PERIPHERAL_STATUS_UPDATE_INTERVAL 5
 struct peripheral_slot {
     enum peripheral_slot_state state;
     uint8_t position_state[POSITION_STATE_DATA_LEN];
@@ -217,7 +217,7 @@ static int zmk_split_esb_central_init(void) {
     }
 
     k_work_submit(&notify_status_work);
-    k_work_reschedule_for_queue(&my_work_q, &set_power_level_work, K_SECONDS(PERIPHERAL_REPORT_INTERVAL));
+    k_work_reschedule_for_queue(&my_work_q, &update_peripheral_status_work, K_SECONDS(PERIPHERAL_STATUS_UPDATE_INTERVAL));
     return 0;
 }
 
@@ -308,7 +308,7 @@ static void update_peripheral_status_handler(struct k_work *work) {
     set_power_level();
     split_central_esb_get_status();
 
-    k_work_reschedule_for_queue(&my_work_q, &update_peripheral_status_work, K_SECONDS(PERIPHERAL_REPORT_INTERVAL));
+    k_work_reschedule_for_queue(&my_work_q, &update_peripheral_status_work, K_SECONDS(PERIPHERAL_STATUS_UPDATE_INTERVAL));
 }
                                                         
 void rx_thread() {
