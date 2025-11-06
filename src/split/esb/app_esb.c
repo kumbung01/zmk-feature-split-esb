@@ -170,8 +170,6 @@ static void event_handler(struct esb_evt const *event) {
             if (tx_fail_count++ >= 3) {
                 tx_fail_count = 0;
                 esb_pop_tx();
-            }
-            else if (tx_fail_count == 1) {
                 tx_power_change(POWER_UP);
             }
 #endif

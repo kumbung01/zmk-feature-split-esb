@@ -255,8 +255,8 @@ static int key_position_handler(struct esb_data_envelope *env) {
                 }
             };
 
-            if (!is_in_timeslot()) {
-                LOG_WRN("outside_timeslot");
+            if (!is_esb_active()) {
+                LOG_WRN("esb not active");
                 k_yield();
             }
 
@@ -287,7 +287,7 @@ static int central_handler(struct esb_data_envelope *env) {
         return key_position_handler(env);
     default:
         if (!is_esb_active()) {
-            LOG_WRN("outside_timeslot");
+            LOG_WRN("esb not active");
             k_yield();
         }
 
