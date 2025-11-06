@@ -49,6 +49,8 @@
     #define ENABLED_PIPES BIT(PERIPHERAL_ID)
 #endif
 
+#define PERIPHERAL_SLEEP_TIMEOUT 600000
+
 #define PIPE_TO_SOURCE(pipe)   (pipe)
 #define SOURCE_TO_PIPE(source) (source)
 extern const char *ACTIVE_STATE_CHAR[];

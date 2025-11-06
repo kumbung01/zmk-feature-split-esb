@@ -69,8 +69,8 @@ static void tx_work_handler(struct k_work *work);
 K_WORK_DEFINE(tx_work, tx_work_handler);
 static void rx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
-static void set_power_level_handler(struct k_work *work);
-K_WORK_DELAYABLE_DEFINE(set_power_level_work, set_power_level_handler);
+static void update_peripheral_status_handler(struct k_work *work);
+K_WORK_DELAYABLE_DEFINE(update_peripheral_status_work, update_peripheral_status_handler);
 K_THREAD_STACK_DEFINE(my_work_q_stack, 640);
 struct k_work_q my_work_q;
 
@@ -92,7 +92,6 @@ static struct zmk_split_esb_ops central_ops = {
 };
 
 static void tx_work_handler(struct k_work *work) {
-    LOG_DBG("tx work start");
     esb_tx_app();
 }
 
@@ -155,7 +154,7 @@ static struct zmk_split_transport_status split_central_esb_get_status() {
     size_t peripherals_connected = 0;
     enum zmk_split_transport_connections_status conn;
     for (int i = 0; i < ARRAY_SIZE(peripherals); ++i) {
-        if (now - peripherals[i].last_reported >= PERIPHERAL_REPORT_INTERVAL) {
+        if (now - peripherals[i].last_reported >= PERIPHERAL_SLEEP_TIMEOUT) {
             peripherals[i].state = PERIPHERAL_DOWN;
             continue;
         }
@@ -292,7 +291,7 @@ static int central_handler(struct esb_data_envelope *env) {
     return 0;
 }
 
-static void set_power_level_handler(struct k_work *work) {
+static void set_power_level(void) {
     for (int source = 0; source < PERIPHERAL_COUNT; ++source) {
         if (peripherals[source].state == PERIPHERAL_DOWN)
             continue;
@@ -303,10 +302,13 @@ static void set_power_level_handler(struct k_work *work) {
         struct zmk_split_transport_central_command *cmd = &buf;
         split_central_esb_send_command(source, *cmd);
     }
+}
 
+static void update_peripheral_status_handler(struct k_work *work) {
+    set_power_level();
     split_central_esb_get_status();
 
-    k_work_reschedule_for_queue(&my_work_q, &set_power_level_work, K_SECONDS(PERIPHERAL_REPORT_INTERVAL));
+    k_work_reschedule_for_queue(&my_work_q, &update_peripheral_status_work, K_SECONDS(PERIPHERAL_REPORT_INTERVAL));
 }
                                                         
 void rx_thread() {
