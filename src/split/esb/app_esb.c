@@ -199,6 +199,7 @@ int esb_tx_app() {
 
     if (!is_esb_active()) {
         LOG_DBG("esb not active");
+        k_yield();
         return -EACCES;
     }
 
