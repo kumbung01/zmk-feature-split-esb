@@ -178,10 +178,10 @@ void tx_thread() {
     {
         k_sem_take(&tx_sem, K_FOREVER);
         LOG_DBG("tx thread awake");
-        for (int i = 0; i < TX_MSGQ_SIZE; ++i) {
+        do {
             if (esb_tx_app() != 0)
                 break;
-        }
+        } while (true);
     }
 }
 
