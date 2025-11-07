@@ -156,6 +156,15 @@ bool is_tx_delayed(void) {
 
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
+static atomic_t power_set_cmd = ATOMIC_INIT(POWER_OK);
+void set_power_cmd(power_set_t cmd) {
+    atomic_set(&power_set_cmd, cmd);
+}
+
+power_set_t get_power_cmd() {
+    return atomic_get(&power_set_cmd);
+}
+
 static void event_handler(struct esb_evt const *event) {
     static int tx_fail_count = 0;
 
@@ -173,7 +182,7 @@ static void event_handler(struct esb_evt const *event) {
                 esb_pop_tx();
             }
             else if (tx_fail_count == 1) {
-                tx_power_change(POWER_UP);
+                set_power_cmd(POWER_UP);
             }
 #endif
             k_work_reschedule(&start_tx_work, K_USEC(SLEEP_DELAY));
@@ -195,6 +204,12 @@ int esb_tx_app() {
     if (!is_esb_active()) {
         LOG_DBG("esb not active");
         return -EACCES;
+    }
+
+    power_set_t cmd = get_power_cmd();
+    if (cmd != POWER_OK) {
+        tx_power_change(cmd);
+        set_power_cmd(POWER_OK);
     }
 
     if (esb_tx_full()) {

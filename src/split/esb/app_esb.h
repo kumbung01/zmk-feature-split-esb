@@ -63,5 +63,6 @@ int esb_tx_app();
 void set_esb_active(bool is_active);
 bool is_esb_active(void);
 power_set_t check_rssi(int rssi);
-int tx_power_change(power_set_t cmd);
+void set_power_cmd(power_set_t cmd);
+power_set_t get_power_cmd();
 #endif
