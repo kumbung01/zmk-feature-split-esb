@@ -59,13 +59,14 @@ static mpsl_timeslot_signal_return_param_t signal_callback_return_param;
 
 // Message queue for requesting MPSL API calls to non-preemptible thread
 K_MSGQ_DEFINE(mpsl_api_msgq, sizeof(enum mpsl_timeslot_call), 10, 4);
-
+static atomic_t is_radio_reset = ATOMIC_INIT(0);
 static void schedule_request(enum mpsl_timeslot_call call) {
     if (call == REQ_OPEN_SESSION) {
         m_sess_open = true;
     }
     else if (call == REQ_CLOSE_SESSION) {
         m_sess_open = false;
+        atomic_set(&is_radio_reset, 0);
     }
 
     int err = k_msgq_put(&mpsl_api_msgq, &call, K_NO_WAIT);
@@ -76,8 +77,12 @@ static void schedule_request(enum mpsl_timeslot_call call) {
 }
 
 static inline void reset_radio() {
-    if (m_sess_open && m_in_timeslot)
+    if (m_sess_open && !atomic_cas(&is_radio_reset, 0, 1)) {
+        LOG_DBG("skip reset radio");
         return;
+    }
+
+    LOG_DBG("reset radio");
 
     // Reset the radio to make sure no configuration remains from BLE
     NVIC_ClearPendingIRQ(RADIO_IRQn);

@@ -288,6 +288,7 @@ esb_initialize(app_esb_mode_t mode)
     }
 #endif
     
+    LOG_DBG("esb init");
     int err = esb_init(&config);
     if (err) {
         return err;
@@ -363,6 +364,7 @@ int zmk_split_esb_set_enable(bool enabled) {
         return 0;
     } else {
         zmk_split_esb_timeslot_close_session();
+        atomic_set(&is_esb_initialized, 0);
         return 0;
     }
 }
