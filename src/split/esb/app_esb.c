@@ -101,15 +101,10 @@ static struct esb_config config = {
 static size_t tx_power_idx = 0;
 struct k_spinlock tx_power_lock;
 int tx_power_change(power_set_t cmd) {
-    if (!is_esb_active()) {
-        return -EBUSY;
-    }
-
     if (cmd == POWER_OK) {
         return 0;
     }
 
-    k_spinlock_key_t key = k_spin_lock(&tx_power_lock);
     size_t new_idx = tx_power_idx;
     switch (cmd) {
     case POWER_UP:
@@ -119,20 +114,16 @@ int tx_power_change(power_set_t cmd) {
         new_idx++;
         break;
     default:
-        k_spin_unlock(&tx_power_lock, key);
         return -EINVAL;
     }
 
     if (new_idx >= ARRAY_SIZE(tx_power)) {
-        k_spin_unlock(&tx_power_lock, key);
         return -ENOTSUP;
     }
 
     tx_power_idx = new_idx;
     int8_t new_tx_output_power = (int8_t)tx_power[tx_power_idx];
     config.tx_output_power = new_tx_output_power;
-
-    k_spin_unlock(&tx_power_lock, key);
 
     LOG_WRN("setting tx power to %d", new_tx_output_power);
 
