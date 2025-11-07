@@ -361,6 +361,9 @@ int zmk_split_esb_set_enable(bool enabled) {
     atomic_set(&m_enabled, enabled ? 1 : 0);
     if (enabled) {
         zmk_split_esb_timeslot_open_session();
+        if (esb_ops->works) {
+            esb_ops->works();
+        }
         return 0;
     } else {
         zmk_split_esb_timeslot_close_session();

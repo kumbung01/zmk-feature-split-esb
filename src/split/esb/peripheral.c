@@ -45,6 +45,22 @@ static void tx_op() {
 static void rx_op() {
     k_work_submit(&rx_work.work);
 }
+
+static void rssi_request_work_handler(struct k_work *work);
+K_WORK_DELAYABLE_DEFINE(rssi_request_work, rssi_request_work_handler);
+static void rssi_request_work_handler(struct k_work *work) {
+    struct zmk_split_transport_peripheral_event evt = {.type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_RSSI_REQUEST};
+    split_peripheral_esb_report_event(&evt);
+    LOG_WRN("rssi request");
+
+    if (zmk_split_esb_get_enable())
+        k_work_reschedule(&rssi_request_work, K_SECONDS(RSSI_REQUEST_INTREVAL));
+}
+
+void works_when_enabled() {
+    k_work_reschedule(&rssi_request_work, K_NO_WAIT);
+}
+
 static struct zmk_split_esb_ops peripheral_ops = {
     .event_handler = peripheral_handler,
     .get_data_size_rx = get_payload_data_size_cmd,
@@ -52,6 +68,7 @@ static struct zmk_split_esb_ops peripheral_ops = {
     .tx_op = tx_op,
     .rx_op = rx_op,
     .packet_make = packet_maker_peripheral,
+    .works = works_when_enabled,
 };
 
 static void rx_work_handler(struct k_work *work) {
@@ -79,17 +96,6 @@ static ssize_t packet_maker_peripheral(struct esb_data_envelope *env, struct pay
 
 static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
-
-static void rssi_request_work_handler(struct k_work *work);
-K_WORK_DELAYABLE_DEFINE(rssi_request_work, rssi_request_work_handler);
-static void rssi_request_work_handler(struct k_work *work) {
-    struct zmk_split_transport_peripheral_event evt = {.type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_RSSI_REQUEST};
-    split_peripheral_esb_report_event(&evt);
-    LOG_WRN("rssi request");
-
-    if (zmk_split_esb_get_enable())
-        k_work_reschedule(&rssi_request_work, K_SECONDS(RSSI_REQUEST_INTREVAL));
-}
 
 static int zmk_split_bt_position_state(uint8_t position, bool is_pressed) {
     WRITE_BIT(position_state[position / 8], position % 8, is_pressed);
