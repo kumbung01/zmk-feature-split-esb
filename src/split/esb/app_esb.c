@@ -283,7 +283,7 @@ esb_initialize(app_esb_mode_t mode)
 {
 #if ESB_ONLY
     if (atomic_cas(&is_esb_initialized, 0, 1)) {
-        return 0;
+        goto start;
     }
 #endif
     
@@ -319,7 +319,7 @@ esb_initialize(app_esb_mode_t mode)
         LOG_ERR("esb_set_rf_channel failed: %d", err);
         return err;
     }
-
+start:
     NVIC_SetPriority(RADIO_IRQn, 0);
 
     if (mode == APP_ESB_MODE_PRX) {
@@ -393,9 +393,8 @@ static int app_esb_suspend(void) {
         esb_disable();
 
         NVIC_ClearPendingIRQ(RADIO_IRQn);
-
-        irq_unlock(irq_key);
 #endif
+        irq_unlock(irq_key);
     }
     else {
         esb_stop_rx();
