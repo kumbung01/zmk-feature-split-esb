@@ -267,6 +267,14 @@ static inline void update_rssi(int source, int rssi) {
     peripherals[source].rssi_avg = (peripherals[source].rssi_avg * (RSSI_SAMPLE_CNT - 1) + rssi) / RSSI_SAMPLE_CNT; //sliding average
 }
 
+static void send_rssi(uint8_t source) {
+    struct zmk_split_transport_buffer buf = {.type = ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_RSSI,
+                                            .rssi = peripherals[source].rssi_avg,};
+    struct zmk_split_transport_central_command *cmd = &buf;
+
+    split_central_esb_send_command(source, *cmd);
+}
+
 static int central_handler(struct esb_data_envelope *env) {
     int source = env->source;
     __ASSERT(0 <= source && source < ARRAY_SIZE(peripherals), "source must within valid range");
@@ -281,9 +289,8 @@ static int central_handler(struct esb_data_envelope *env) {
     switch (env->event.type) {
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT:
         return key_position_handler(env);
-    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_RSSI_ACK:
-        WRITE_BIT(peripherals[source].flag, RSSI_SENT_FLAG, 0);
-        LOG_WRN("RSSI ack");
+    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_RSSI_REQUEST:
+        send_rssi(source);
         break;
     default:
         if (!is_esb_active()) {
@@ -297,30 +304,7 @@ static int central_handler(struct esb_data_envelope *env) {
     return 0;
 }
 
-static void send_rssi(void) {
-    if (esb_tx_full())
-        return;
-
-    for (int source = 0; source < PERIPHERAL_COUNT; ++source) {
-        if (peripherals[source].state == PERIPHERAL_DOWN)
-            continue;
-        
-        if (peripherals[source].flag & BIT(RSSI_SENT_FLAG)) {
-            continue;
-        }
-
-        struct zmk_split_transport_buffer buf = {.type = ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_RSSI,
-                                                 .rssi = peripherals[source].rssi_avg,};
-        enqueue_event(source, &buf);
-        WRITE_BIT(peripherals[source].flag, RSSI_SENT_FLAG, 1);
-    }
-
-    if (get_tx_count() > 0)
-        tx_op();
-}
-
 static void update_peripheral_status_handler(struct k_work *work) {
-    send_rssi();
     split_central_esb_get_status();
 
     k_work_reschedule_for_queue(&my_work_q, &update_peripheral_status_work, K_SECONDS(PERIPHERAL_STATUS_UPDATE_INTERVAL));

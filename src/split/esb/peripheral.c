@@ -30,11 +30,11 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #include "timeslot.h"
 #include "app_esb.h"
 #include "common.h"
+
+#define RSSI_REQUEST_INTREVAL (5)
 static uint8_t position_state[POSITION_STATE_DATA_LEN] = {0, };
 static void rx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
-static void tx_work_handler(struct k_work *work);
-K_WORK_DELAYABLE_DEFINE(tx_work, tx_work_handler);
 static int peripheral_handler(struct esb_data_envelope* env);
 static ssize_t packet_maker_peripheral(struct esb_data_envelope *env, struct payload_buffer *buf);
 static void tx_op() {
@@ -62,9 +62,7 @@ static void rx_work_handler(struct k_work *work) {
 }
 
 
-static void tx_work_handler(struct k_work *work) {
 
-}
 
 static ssize_t packet_maker_peripheral(struct esb_data_envelope *env, struct payload_buffer *buf) {
     ssize_t data_size = 0;
@@ -84,6 +82,17 @@ static ssize_t packet_maker_peripheral(struct esb_data_envelope *env, struct pay
 
 static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
+
+static void rssi_request_work_handler(struct k_work *work);
+K_WORK_DELAYABLE_DEFINE(rssi_request_work, rssi_request_work_handler);
+static void rssi_request_work_handler(struct k_work *work) {
+    struct zmk_split_transport_peripheral_event evt = {.type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_RSSI_REQUEST};
+    split_peripheral_esb_report_event(&evt);
+    LOG_WRN("rssi request");
+
+    if (is_enabled)
+        k_work_reschedule(&rssi_request_work, K_SECONDS(RSSI_REQUEST_INTREVAL));
+}
 
 static int zmk_split_bt_position_state(uint8_t position, bool is_pressed) {
     WRITE_BIT(position_state[position / 8], position % 8, is_pressed);
@@ -106,6 +115,12 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
 
 static int split_peripheral_esb_set_enabled(bool enabled) {
     is_enabled = enabled;
+
+    if (is_enabled)
+        k_work_reschedule(&rssi_request_work, K_SECONDS(RSSI_REQUEST_INTREVAL));
+    else
+        memset(position_state, 0, sizeof(position_state));
+        
     return zmk_split_esb_set_enable(enabled);
 }
 
@@ -155,6 +170,7 @@ static int zmk_split_esb_peripheral_init(void) {
     }
 
     k_work_submit(&notify_status_work);
+    k_work_reschedule(&rssi_request_work, K_NO_WAIT);
     return 0;
 }
 
@@ -187,6 +203,6 @@ void tx_thread() {
     }
 }
 
-K_THREAD_DEFINE(tx_thread_id, 640,
+K_THREAD_DEFINE(tx_thread_id, 752,
         tx_thread, NULL, NULL, NULL,
         -1, 0, 0);
