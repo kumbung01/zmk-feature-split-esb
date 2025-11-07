@@ -26,13 +26,15 @@ const char *ACTIVE_STATE_CHAR[] = {"ACTIVE", "IDLE", "SLEEP"};
 const char *TX_POWER_CHAR[] = {"OK", "UP", "DOWN"};
 #endif
 
-static atomic_t tx_flag = ATOMIC_INIT(0);
+static uint8_t tx_flag = 0;
 void set_tx_flag(int bit) {
-    atomic_set_bit_to(&tx_flag, bit, 1);
+    WRITE_BIT(&tx_flag, bit, 1);
 }
 
-uint32_t get_and_clear_tx_flag() {
-    return atomic_clear(&tx_flag);
+uint8_t get_and_clear_tx_flag() {
+    uint8_t ret = tx_flag;
+    tx_flag = 0;
+    return ret;
 }
 
 struct zmk_split_esb_ops *esb_ops;
@@ -94,10 +96,10 @@ ssize_t get_payload_data_size_evt(enum zmk_split_transport_peripheral_event_type
 }
 
 power_set_t check_rssi(int rssi) {
-    if (rssi < RSSI_BASELINE - 4) {
+    if (rssi < RSSI_BASELINE - 3) {
         return POWER_UP;
     }
-    else if (rssi > RSSI_BASELINE + 4) {
+    else if (rssi > RSSI_BASELINE + 3) {
         return POWER_DOWN;
     }
     else {
@@ -202,7 +204,7 @@ int make_packet(struct esb_payload *payload) {
     }
 
     buf->header.type = env->buf.type;
-    buf->header.flag = get_and_clear_tx_flag() & 0xff;
+    buf->header.flag = get_and_clear_tx_flag();
     ssize_t data_size = esb_ops->packet_make(env, buf);
     if (data_size < 0) {
         tx_free(env);
