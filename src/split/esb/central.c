@@ -281,27 +281,38 @@ static int central_handler(struct esb_data_envelope *env) {
 
     peripherals[source].state = PERIPHERAL_UP;
     peripherals[source].last_reported = k_uptime_get();
-    int rssi = -(env->payload->rssi);
+    int rssi = env->rssi;
     update_rssi(source, rssi);
 
     LOG_DBG("source (%d) rssi-new (%d) rssi-avg (%d)", source, rssi, peripherals[source].rssi_avg);
 
     switch (env->event.type) {
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT:
-        return key_position_handler(env);
+        key_position_handler(env);
+        break;
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_RSSI_REQUEST:
         send_rssi(source);
         LOG_WRN("RSSI_REQ");
         break;
-    default:
+    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT:
+    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT:
+    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT:
         if (!is_esb_active()) {
             LOG_WRN("esb not active");
             k_yield();
         }
 
-        return zmk_split_transport_central_peripheral_event_handler(&esb_central, source, env->event);
+        zmk_split_transport_central_peripheral_event_handler(&esb_central, source, env->event);
+        break;
+    default:
+        break;
     }
     
+    if (env->flag & BIT(RSSI_REQ)) {
+        send_rssi(source);
+        LOG_WRN("RSSI_REQ by flag");
+    }
+
     return 0;
 }
 

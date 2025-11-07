@@ -89,17 +89,23 @@ enum zmk_split_transport_peripheral_event_type_proprietary {
 
 struct esb_data_envelope {
     uint8_t source;
-    struct esb_payload *payload;
     union {
         struct zmk_split_transport_peripheral_event event;
         struct zmk_split_transport_central_command command;
         struct zmk_split_transport_buffer buf;
     };
+    int8_t rssi;
+    uint8_t flag;
 };
 
+#define RSSI_REQ        (0)
 struct payload_header {
     uint8_t type;
+    uint8_t flag;
 } __packed;
+
+void set_tx_flag(int bit);
+uint32_t get_and_clear_tx_flag();
 
 #define HEADER_SIZE sizeof(struct payload_header)
 struct payload_buffer {
