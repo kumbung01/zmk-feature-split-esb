@@ -345,7 +345,7 @@ int zmk_split_esb_init(app_esb_mode_t mode) {
     zmk_split_esb_timeslot_init(on_timeslot_start_stop);
 
     for (int i = 0; i < ARRAY_SIZE(tx_power); ++i) {
-        if (tx_power[i] == TX_POWER_INIT) {
+        if ((int8_t)tx_power[i] == TX_POWER_INIT) {
             tx_power_idx = i;
             break;
         }
