@@ -87,7 +87,7 @@ static void rssi_request_work_handler(struct k_work *work) {
     split_peripheral_esb_report_event(&evt);
     LOG_WRN("rssi request");
 
-    if (is_enabled)
+    if (zmk_split_esb_get_enable())
         k_work_reschedule(&rssi_request_work, K_SECONDS(RSSI_REQUEST_INTREVAL));
 }
 
@@ -178,7 +178,7 @@ static int peripheral_handler(struct esb_data_envelope* env) {
         power_set_t cmd = check_rssi(env->buf.rssi);
         LOG_WRN("rssi: %d, tx power: %s", env->buf.rssi, TX_POWER_CHAR[cmd]);
         tx_power_change(cmd);
-        
+
         return 0;
     }
 
