@@ -75,14 +75,12 @@ static void schedule_request(enum mpsl_timeslot_call call) {
     }
 }
 
-static uint32_t m_channel0 = 0;
-static uint32_t m_channel1 = 0;
-
 static inline void reset_radio() {
+    if (m_sess_open && m_in_timeslot)
+        return;
+
     // Reset the radio to make sure no configuration remains from BLE
     NVIC_ClearPendingIRQ(RADIO_IRQn);
-    m_channel0 = 0;
-    m_channel1 = 0;
     NRF_RADIO->POWER = RADIO_POWER_POWER_Disabled << RADIO_POWER_POWER_Pos;
     NRF_RADIO->POWER = RADIO_POWER_POWER_Enabled << RADIO_POWER_POWER_Pos;
     NVIC_ClearPendingIRQ(RADIO_IRQn);
@@ -103,10 +101,8 @@ static inline void timer0_disable() {
 }
 
 static inline void timer0_cc_update(uint32_t channel0, uint32_t channel1) {
-    m_channel0 += channel0;
-    m_channel1 += channel1;
-    nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL0, m_channel0);
-    nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL1, m_channel1);
+    nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL0, nrf_timer_cc_get(NRF_TIMER0, NRF_TIMER_CC_CHANNEL0) + channel0);
+    nrf_timer_cc_set(NRF_TIMER1, NRF_TIMER_CC_CHANNEL1, nrf_timer_cc_get(NRF_TIMER0, NRF_TIMER_CC_CHANNEL1) + channel1);
 }
 
 static inline void timer0_event_clear(int compare) {
