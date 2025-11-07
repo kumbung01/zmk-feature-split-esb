@@ -29,10 +29,18 @@
 #define PERIPHERAL_COUNT CONFIG_ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS
 #define TX_POWER_INIT (0)
 #define SLEEP_DELAY 0
+#define ENABLED_PIPES GENMASK(PERIPHERAL_COUNT - 1, 0)
+#if CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT == 1
+#define ESB_ONLY 1
+#else
+#define ESB_ONLY 0
+#endif
 #else
 #define TX_POWER_INIT (-4)
 #define PERIPHERAL_ID CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID
 #define SLEEP_DELAY (PERIPHERAL_ID * (RETRANSMIT_DELAY / 2))
+#define ENABLED_PIPES BIT(PERIPHERAL_ID)
+#define ESB_ONLY 1
 #endif
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_BITRATE_2MBPS)
@@ -41,19 +49,16 @@
 #define BITRATE ESB_BITRATE_1MBPS
 #endif
 
+
 #define TIMEOUT_MS CONFIG_ZMK_SPLIT_ESB_KEYBOARD_EVENT_TIMEOUT_MS
 #define SAFE_DIV(x, y) ((x) / (y) > 0 ? (x) / (y) : 1)
-#if IS_CENTRAL
-    #define ENABLED_PIPES GENMASK(PERIPHERAL_COUNT - 1, 0)
-#else
-    #define ENABLED_PIPES BIT(PERIPHERAL_ID)
-#endif
 
 #define PERIPHERAL_SLEEP_TIMEOUT 600000
 
 #define PIPE_TO_SOURCE(pipe)   (pipe)
 #define SOURCE_TO_PIPE(source) (source)
 extern const char *ACTIVE_STATE_CHAR[];
+extern const char *TX_POWER_CHAR[];
 extern struct k_msgq rx_msgq;
 #define POSITION_STATE_DATA_LEN 16
 typedef enum zmk_split_transport_peripheral_event_type zmk_split_transport_buffer_type;

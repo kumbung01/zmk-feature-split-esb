@@ -98,27 +98,44 @@ static struct esb_config config = {
     .tx_output_power = TX_POWER_INIT,
 };
 
-static int tx_power_idx = 3;
+static size_t tx_power_idx = 0;
+struct k_spinlock tx_power_lock;
 int tx_power_change(power_set_t cmd) {
-    int new_idx = tx_power_idx;
+    if (!is_esb_active()) {
+        return -EBUSY;
+    }
+
     if (cmd == POWER_OK) {
         return 0;
     }
 
-    else if (cmd == POWER_UP) {
+    k_spinlock_key_t key = k_spin_lock(&tx_power_lock);
+    size_t new_idx = tx_power_idx;
+    switch (cmd) {
+    case POWER_UP:
         new_idx--;
-    }
-    else if (cmd == POWER_DOWN) {
+        break;
+    case POWER_DOWN:
         new_idx++;
+        break;
+    default:
+        k_spin_unlock(&tx_power_lock, key);
+        return -EINVAL;
     }
 
-    if (new_idx < 0 || new_idx >= ARRAY_SIZE(tx_power))
+    if (new_idx >= ARRAY_SIZE(tx_power)) {
+        k_spin_unlock(&tx_power_lock, key);
         return -ENOTSUP;
+    }
 
     tx_power_idx = new_idx;
     int8_t new_tx_output_power = (int8_t)tx_power[tx_power_idx];
     config.tx_output_power = new_tx_output_power;
+
+    k_spin_unlock(&tx_power_lock, key);
+
     LOG_WRN("setting tx power to %d", new_tx_output_power);
+
     return esb_set_tx_power(new_tx_output_power);
 }
 
@@ -137,18 +154,12 @@ bool is_esb_active(void) {
     return atomic_get(&m_is_active) ? true : false;
 }
 
-static atomic_t m_is_tx_delayed = ATOMIC_INIT(0);
-void set_tx_delayed(bool _is_tx_delayed) {
-    atomic_set(&m_is_tx_delayed, _is_tx_delayed ? 1 : 0);
-}
-
 bool is_tx_delayed(void) {
-    return atomic_get(&m_is_tx_delayed) ? true : false;
+    return k_work_delayable_is_pending(&start_tx_work);
 }
 
 static void start_tx_work_handler(struct k_work *work) {
     LOG_DBG("start_tx_work");
-    set_tx_delayed(false);
     esb_start_tx();
 }
 K_WORK_DELAYABLE_DEFINE(start_tx_work, start_tx_work_handler);
@@ -175,7 +186,6 @@ static void event_handler(struct esb_evt const *event) {
                 tx_power_change(POWER_UP);
             }
 #endif
-            set_tx_delayed(true);
             k_work_reschedule(&start_tx_work, K_USEC(SLEEP_DELAY));
             esb_ops->tx_op();
             break;
@@ -192,16 +202,16 @@ int esb_tx_app() {
     static bool write_payload_failed = false;
     int ret = 0;
 
-    if (esb_tx_full()) {
-        LOG_DBG("esb tx full, wait for next tx event");
-        k_yield();
-        return -ENOMEM;
-    }
-
     if (!is_esb_active()) {
         LOG_DBG("esb not active");
         k_yield();
         return -EACCES;
+    }
+
+    if (esb_tx_full()) {
+        LOG_DBG("esb tx full, wait for next tx event");
+        ret = -ENOMEM;
+        goto START_TX;
     }
 
     if (!write_payload_failed) {
@@ -214,13 +224,13 @@ int esb_tx_app() {
 
     LOG_DBG("sending payload through pipe %d", payload.pipe);
 
-    ret = esb_write_payload(&payload);
-    write_payload_failed = (ret != 0);
-    if (ret != 0) {
-        LOG_WRN("esb_write_payload returned %d", ret);
-        return ret;
+    write_payload_failed = esb_write_payload(&payload);
+    if (write_payload_failed != 0) {
+        LOG_WRN("esb_write_payload returned %d", write_payload_failed);
+        return write_payload_failed;
     }
 
+START_TX:
     if (is_tx_delayed()) {
         LOG_DBG("tx_delayed");
         k_yield();
@@ -229,7 +239,7 @@ int esb_tx_app() {
 
     LOG_DBG("start tx");
     esb_start_tx();
-    return 0;
+    return ret;
 }
 
 
@@ -267,10 +277,16 @@ static int clocks_start(void) {
 }
 
 
-
+static atomic_t is_esb_initialized = ATOMIC_INIT(0);
 static int
 esb_initialize(app_esb_mode_t mode)
 {
+#if ESB_ONLY
+    if (atomic_cas(&is_esb_initialized, 0, 1)) {
+        return 0;
+    }
+#endif
+    
     int err = esb_init(&config);
     if (err) {
         return err;
@@ -326,6 +342,15 @@ int zmk_split_esb_init(app_esb_mode_t mode) {
     }
     LOG_INF("Timeslothandler init");
     zmk_split_esb_timeslot_init(on_timeslot_start_stop);
+
+    for (int i = 0; i < ARRAY_SIZE(tx_power); ++i) {
+        if (tx_power[i] == TX_POWER_INIT) {
+            tx_power_idx = i;
+            break;
+        }
+    }
+
+    LOG_DBG("init power is %d", (int8_t)tx_power[tx_power_idx]);
     
     return 0;
 }
@@ -350,7 +375,9 @@ static int app_esb_suspend(void) {
     set_esb_active(false);
     if(m_mode == APP_ESB_MODE_PTX) {
         uint32_t irq_key = irq_lock();
-
+#if ESB_ONLY
+        esb_suspend();
+#else
         irq_disable(RADIO_IRQn);
         NVIC_DisableIRQ(RADIO_IRQn);
 
@@ -368,6 +395,7 @@ static int app_esb_suspend(void) {
         NVIC_ClearPendingIRQ(RADIO_IRQn);
 
         irq_unlock(irq_key);
+#endif
     }
     else {
         esb_stop_rx();
@@ -378,6 +406,7 @@ static int app_esb_suspend(void) {
     //esb_suspend();
     return 0;
 }
+
 
 static int app_esb_resume(void) {
     int err = esb_initialize(m_mode);

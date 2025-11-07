@@ -161,10 +161,9 @@ static int zmk_split_esb_peripheral_init(void) {
 SYS_INIT(zmk_split_esb_peripheral_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 
 static int peripheral_handler(struct esb_data_envelope* env) {
-    static const char* str[] = {"OK", "UP", "DOWN"};
     if (env->buf.type == ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_RSSI) {
         power_set_t cmd = check_rssi(env->buf.rssi);
-        LOG_WRN("rssi: %d, tx power: %s", env->buf.rssi, str[cmd]);
+        LOG_WRN("rssi: %d, tx power: %s", env->buf.rssi, TX_POWER_CHAR[cmd]);
         tx_power_change(cmd);
 
         return 0;

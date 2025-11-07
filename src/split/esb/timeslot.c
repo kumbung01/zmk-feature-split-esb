@@ -76,7 +76,7 @@ static void schedule_request(enum mpsl_timeslot_call call) {
 }
 
 static uint32_t m_channel0 = 0;
-static uint32_t m_channel1  = 0;
+static uint32_t m_channel1 = 0;
 
 static inline void reset_radio() {
     // Reset the radio to make sure no configuration remains from BLE

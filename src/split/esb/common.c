@@ -21,7 +21,10 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 K_MEM_SLAB_DEFINE_STATIC(tx_slab, sizeof(struct esb_data_envelope), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(tx_msgq, sizeof(void*), TX_MSGQ_SIZE, 4);
+#if CONFIG_LOG
 const char *ACTIVE_STATE_CHAR[] = {"ACTIVE", "IDLE", "SLEEP"};
+const char *TX_POWER_CHAR[] = {"OK", "UP", "DOWN"};
+#endif
 
 struct zmk_split_esb_ops *esb_ops;
 
