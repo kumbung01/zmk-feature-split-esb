@@ -283,6 +283,7 @@ esb_initialize(app_esb_mode_t mode)
 {
 #if ESB_ONLY
     if (!atomic_cas(&is_esb_initialized, 0, 1)) {
+        LOG_WRN("skip init");
         goto start;
     }
 #endif
@@ -319,9 +320,9 @@ esb_initialize(app_esb_mode_t mode)
         LOG_ERR("esb_set_rf_channel failed: %d", err);
         return err;
     }
-start:
-    NVIC_SetPriority(RADIO_IRQn, 0);
 
+    NVIC_SetPriority(RADIO_IRQn, 0);
+start:
     if (mode == APP_ESB_MODE_PRX) {
         esb_start_rx();
     }
@@ -375,12 +376,12 @@ static int app_esb_suspend(void) {
     set_esb_active(false);
     if(m_mode == APP_ESB_MODE_PTX) {
         uint32_t irq_key = irq_lock();
+
+        irq_disable(RADIO_IRQn);
+        NVIC_DisableIRQ(RADIO_IRQn);
 #if ESB_ONLY
         esb_suspend();
 #else
-        irq_disable(RADIO_IRQn);
-        NVIC_DisableIRQ(RADIO_IRQn);
-
         NRF_RADIO->SHORTS = 0;
 
         NRF_RADIO->EVENTS_DISABLED = 0;
@@ -389,11 +390,11 @@ static int app_esb_suspend(void) {
 
         NRF_TIMER2->TASKS_STOP = 1;
         NRF_RADIO->INTENCLR = 0xFFFFFFFF;
-        
-        esb_disable();
 
-        NVIC_ClearPendingIRQ(RADIO_IRQn);
+        esb_disable();
 #endif
+        NVIC_ClearPendingIRQ(RADIO_IRQn);
+
         irq_unlock(irq_key);
     }
     else {
