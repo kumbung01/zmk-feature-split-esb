@@ -49,12 +49,14 @@ static void rx_op() {
 static void rssi_request_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(rssi_request_work, rssi_request_work_handler);
 static void rssi_request_work_handler(struct k_work *work) {
+    if (!zmk_split_esb_get_enable())
+        return;
+
     struct zmk_split_transport_peripheral_event evt = {.type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_RSSI_REQUEST};
     split_peripheral_esb_report_event(&evt);
     LOG_WRN("rssi request");
 
-    if (zmk_split_esb_get_enable())
-        k_work_reschedule(&rssi_request_work, K_SECONDS(RSSI_REQUEST_INTREVAL));
+    k_work_reschedule(&rssi_request_work, K_SECONDS(RSSI_REQUEST_INTREVAL));
 }
 
 void works_when_enabled() {
