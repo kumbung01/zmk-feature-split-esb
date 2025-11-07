@@ -165,7 +165,10 @@ static int peripheral_handler(struct esb_data_envelope* env) {
         power_set_t cmd = check_rssi(env->buf.rssi);
         LOG_WRN("rssi: %d, tx power: %s", env->buf.rssi, TX_POWER_CHAR[cmd]);
         tx_power_change(cmd);
-
+        struct zmk_split_transport_peripheral_event evt = {
+            .type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_RSSI_ACK
+        };
+        split_peripheral_esb_report_event(&evt);
         return 0;
     }
 

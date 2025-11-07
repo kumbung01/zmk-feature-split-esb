@@ -83,7 +83,7 @@ enum zmk_split_transport_central_command_type_proprietary {
 } __packed;
 
 enum zmk_split_transport_peripheral_event_type_proprietary {
-    ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_TX_POWER_CHANGED = 4,
+    ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_RSSI_ACK = 4,
 } __packed;
 
 struct esb_data_envelope {

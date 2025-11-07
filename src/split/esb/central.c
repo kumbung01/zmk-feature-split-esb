@@ -38,6 +38,8 @@ enum peripheral_slot_state {
     PERIPHERAL_UP,
 };
 
+#define RSSI_SENT_FLAG   (0)
+
 // rssi sample count
 #define RSSI_SAMPLE_CNT 4
 #define PERIPHERAL_STATUS_UPDATE_INTERVAL 5
@@ -279,6 +281,10 @@ static int central_handler(struct esb_data_envelope *env) {
     switch (env->event.type) {
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT:
         return key_position_handler(env);
+    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_RSSI_ACK:
+        WRITE_BIT(peripherals[source].flag, RSSI_SENT_FLAG, 0);
+        LOG_WRN("RSSI ack");
+        break;
     default:
         if (!is_esb_active()) {
             LOG_WRN("esb not active");
@@ -298,13 +304,19 @@ static void send_rssi(void) {
     for (int source = 0; source < PERIPHERAL_COUNT; ++source) {
         if (peripherals[source].state == PERIPHERAL_DOWN)
             continue;
+        
+        if (peripherals[source].flag & BIT(RSSI_SENT_FLAG)) {
+            continue;
+        }
 
         struct zmk_split_transport_buffer buf = {.type = ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_RSSI,
                                                  .rssi = peripherals[source].rssi_avg,};
-        
-        struct zmk_split_transport_central_command *cmd = &buf;
-        split_central_esb_send_command(source, *cmd);
+        enqueue_event(source, &buf);
+        WRITE_BIT(peripherals[source].flag, RSSI_SENT_FLAG, 1);
     }
+
+    if (get_tx_count() > 0)
+        tx_op();
 }
 
 static void update_peripheral_status_handler(struct k_work *work) {
