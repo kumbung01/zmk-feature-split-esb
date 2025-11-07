@@ -282,7 +282,7 @@ static int
 esb_initialize(app_esb_mode_t mode)
 {
 #if ESB_ONLY
-    if (atomic_cas(&is_esb_initialized, 0, 1)) {
+    if (!atomic_cas(&is_esb_initialized, 0, 1)) {
         goto start;
     }
 #endif
