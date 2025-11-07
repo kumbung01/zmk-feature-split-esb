@@ -245,7 +245,7 @@ int handle_packet() {
 
     struct esb_data_envelope env = { .buf.type = type, 
                                      .source = PIPE_TO_SOURCE(rx_payload.pipe),
-                                     .rssi = -(env->payload->rssi),
+                                     .rssi = -(rx_payload.rssi),
                                      .flag = buf->header.flag,
                                     };
 
