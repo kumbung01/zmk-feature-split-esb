@@ -61,6 +61,7 @@ static void rssi_request_work_handler(struct k_work *work) {
 
 void works_when_enabled() {
     k_work_reschedule(&rssi_request_work, K_SECONDS(RSSI_REQUEST_INTREVAL));
+    memset(position_state, 0, sizeof(position_state));
 }
 
 static struct zmk_split_esb_ops peripheral_ops = {
@@ -120,11 +121,6 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
 
 static int split_peripheral_esb_set_enabled(bool enabled) {
     is_enabled = enabled;
-
-    if (is_enabled)
-        k_work_reschedule(&rssi_request_work, K_SECONDS(RSSI_REQUEST_INTREVAL));
-    else
-        memset(position_state, 0, sizeof(position_state));
 
     return zmk_split_esb_set_enable(enabled);
 }
