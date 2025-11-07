@@ -291,7 +291,10 @@ static int central_handler(struct esb_data_envelope *env) {
     return 0;
 }
 
-static void set_power_level(void) {
+static void send_rssi(void) {
+    if (esb_tx_full())
+        return;
+
     for (int source = 0; source < PERIPHERAL_COUNT; ++source) {
         if (peripherals[source].state == PERIPHERAL_DOWN)
             continue;
@@ -305,7 +308,7 @@ static void set_power_level(void) {
 }
 
 static void update_peripheral_status_handler(struct k_work *work) {
-    set_power_level();
+    send_rssi();
     split_central_esb_get_status();
 
     k_work_reschedule_for_queue(&my_work_q, &update_peripheral_status_work, K_SECONDS(PERIPHERAL_STATUS_UPDATE_INTERVAL));
