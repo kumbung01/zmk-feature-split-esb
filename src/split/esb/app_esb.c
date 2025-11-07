@@ -194,7 +194,6 @@ int esb_tx_app() {
 
     if (!is_esb_active()) {
         LOG_DBG("esb not active");
-        k_yield();
         return -EACCES;
     }
 
@@ -223,7 +222,6 @@ int esb_tx_app() {
 START_TX:
     if (is_tx_delayed()) {
         LOG_DBG("tx_delayed");
-        k_yield();
         return -EAGAIN;
     }
 
