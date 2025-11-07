@@ -37,6 +37,7 @@ static void rx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
 static int peripheral_handler(struct esb_data_envelope* env);
 static ssize_t packet_maker_peripheral(struct esb_data_envelope *env, struct payload_buffer *buf);
+static int split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event);
 static void tx_op() {
     k_sem_give(&tx_sem);
 }
@@ -53,16 +54,12 @@ static struct zmk_split_esb_ops peripheral_ops = {
     .packet_make = packet_maker_peripheral,
 };
 
-
 static void rx_work_handler(struct k_work *work) {
     do {
         if (handle_packet() != 0)
             return;
     } while(true);
 }
-
-
-
 
 static ssize_t packet_maker_peripheral(struct esb_data_envelope *env, struct payload_buffer *buf) {
     ssize_t data_size = 0;
@@ -120,7 +117,7 @@ static int split_peripheral_esb_set_enabled(bool enabled) {
         k_work_reschedule(&rssi_request_work, K_SECONDS(RSSI_REQUEST_INTREVAL));
     else
         memset(position_state, 0, sizeof(position_state));
-        
+
     return zmk_split_esb_set_enable(enabled);
 }
 
