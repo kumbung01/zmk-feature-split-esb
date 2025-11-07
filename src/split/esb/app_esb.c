@@ -320,9 +320,8 @@ esb_initialize(app_esb_mode_t mode)
         LOG_ERR("esb_set_rf_channel failed: %d", err);
         return err;
     }
-
-    NVIC_SetPriority(RADIO_IRQn, 0);
 start:
+    NVIC_SetPriority(RADIO_IRQn, 0);
     if (mode == APP_ESB_MODE_PRX) {
         esb_start_rx();
     }
