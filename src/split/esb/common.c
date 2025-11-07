@@ -28,7 +28,7 @@ const char *TX_POWER_CHAR[] = {"OK", "UP", "DOWN"};
 
 static uint8_t tx_flag = 0;
 void set_tx_flag(int bit) {
-    WRITE_BIT(&tx_flag, bit, 1);
+    WRITE_BIT(tx_flag, bit, 1);
 }
 
 uint8_t get_and_clear_tx_flag() {
