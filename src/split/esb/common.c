@@ -83,9 +83,6 @@ ssize_t get_payload_data_size_evt(enum zmk_split_transport_peripheral_event_type
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT:
         size = sizeof(((struct zmk_split_transport_peripheral_event*)0)->data.battery_event);
         break;
-    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_RSSI_REQUEST:
-        size = 0;
-        break;
     default:
         size = -ENOTSUP;
         break;
@@ -205,7 +202,7 @@ int make_packet(struct esb_payload *payload) {
     }
 
     buf->header.type = env->buf.type;
-    buf->header.flag = get_and_clear_tx_flag();
+    buf->header.flag = get_and_clear_tx_flag() & 0xff;
     ssize_t data_size = esb_ops->packet_make(env, buf);
     if (data_size < 0) {
         tx_free(env);
