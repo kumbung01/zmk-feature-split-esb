@@ -53,11 +53,11 @@ static void rssi_request_work_handler(struct k_work *work) {
         return;
 
     struct zmk_split_transport_peripheral_event evt = {.type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_RSSI_REQUEST};
-    enqueue_event(&evt);
+    enqueue_event(PERIPHERAL_ID, &evt);
     LOG_WRN("rssi request");
     if (get_tx_count() == 1) {
         evt.type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_RSSI_TAKE;
-        enqueue_event(&evt);
+        enqueue_event(PERIPHERAL_ID, &evt);
         LOG_WRN("rssi take");
     }
     tx_op();
