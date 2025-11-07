@@ -105,7 +105,7 @@ struct payload_header {
 } __packed;
 
 void set_tx_flag(int bit);
-uint32_t get_and_clear_tx_flag();
+uint8_t get_and_clear_tx_flag();
 
 #define HEADER_SIZE sizeof(struct payload_header)
 struct payload_buffer {
