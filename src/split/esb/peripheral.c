@@ -170,7 +170,6 @@ static int zmk_split_esb_peripheral_init(void) {
     }
 
     k_work_submit(&notify_status_work);
-    k_work_reschedule(&rssi_request_work, K_NO_WAIT);
     return 0;
 }
 
