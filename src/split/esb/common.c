@@ -88,10 +88,10 @@ ssize_t get_payload_data_size_evt(enum zmk_split_transport_peripheral_event_type
 }
 
 power_set_t check_rssi(int rssi) {
-    if (rssi < RSSI_BASELINE - 3) {
+    if (rssi < RSSI_BASELINE - 4) {
         return POWER_UP;
     }
-    else if (rssi > RSSI_BASELINE + 3) {
+    else if (rssi > RSSI_BASELINE + 4) {
         return POWER_DOWN;
     }
     else {
