@@ -398,7 +398,11 @@ static int app_esb_suspend(void) {
         irq_unlock(irq_key);
     }
     else {
+#if ESB_ONLY
+        esb_suspend();
+#else
         esb_stop_rx();
+#endif
     }
 
     // Todo: Figure out how to use the esb_suspend() function 
