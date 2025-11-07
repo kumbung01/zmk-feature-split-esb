@@ -422,12 +422,15 @@ static int app_esb_resume(void) {
     return err;
 }
 
+static atomic_t oneshot = ATOMIC_INIT(0);
 /* Callback function signalling that a timeslot is started or stopped */
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) {
     switch (type) {
         case APP_TS_STARTED:
             app_esb_resume();
-            esb_ops->tx_op();
+            if (atomic_cas(&oneshot, 0, 1)) {
+                esb_ops->tx_op();
+            }
             break;
         case APP_TS_STOPPED:
             app_esb_suspend();
@@ -446,6 +449,7 @@ static int on_activity_state(const zmk_event_t *eh) {
     if (m_mode == APP_ESB_MODE_PTX) {
         if (state_ev->state != ZMK_ACTIVITY_ACTIVE && zmk_split_esb_get_enable()) {
             zmk_split_esb_set_enable(false);
+            atomic_clear(oneshot);
         }
         else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !zmk_split_esb_get_enable()) {
             zmk_split_esb_set_enable(true);
