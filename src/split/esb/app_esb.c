@@ -154,15 +154,15 @@ bool is_esb_active(void) {
     return atomic_get(&m_is_active) ? true : false;
 }
 
-bool is_tx_delayed(void) {
-    return k_work_delayable_is_pending(&start_tx_work);
-}
-
 static void start_tx_work_handler(struct k_work *work) {
     LOG_DBG("start_tx_work");
     esb_start_tx();
 }
 K_WORK_DELAYABLE_DEFINE(start_tx_work, start_tx_work_handler);
+
+bool is_tx_delayed(void) {
+    return k_work_delayable_is_pending(&start_tx_work);
+}
 
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
