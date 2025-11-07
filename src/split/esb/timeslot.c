@@ -102,7 +102,7 @@ static inline void timer0_disable() {
 
 static inline void timer0_cc_update(uint32_t channel0, uint32_t channel1) {
     nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL0, nrf_timer_cc_get(NRF_TIMER0, NRF_TIMER_CC_CHANNEL0) + channel0);
-    nrf_timer_cc_set(NRF_TIMER1, NRF_TIMER_CC_CHANNEL1, nrf_timer_cc_get(NRF_TIMER0, NRF_TIMER_CC_CHANNEL1) + channel1);
+    nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL1, nrf_timer_cc_get(NRF_TIMER0, NRF_TIMER_CC_CHANNEL1) + channel1);
 }
 
 static inline void timer0_event_clear(int compare) {
