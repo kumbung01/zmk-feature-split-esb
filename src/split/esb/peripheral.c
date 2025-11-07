@@ -31,7 +31,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #include "app_esb.h"
 #include "common.h"
 
-#define RSSI_REQUEST_INTREVAL (CONFIG_ZMK_IDLE_TIMEOUT / 2)
+#define RSSI_REQUEST_INTREVAL (5)
 static uint8_t position_state[POSITION_STATE_DATA_LEN] = {0, };
 static void rx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
@@ -66,7 +66,7 @@ static void rssi_request_work_handler(struct k_work *work) {
 }
 
 void works_when_enabled() {
-    k_work_reschedule(&rssi_request_work, K_NO_WAIT);
+    k_work_reschedule(&rssi_request_work, K_SECONDS(RSSI_REQUEST_INTREVAL));
 }
 
 static struct zmk_split_esb_ops peripheral_ops = {
