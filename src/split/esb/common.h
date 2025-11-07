@@ -84,6 +84,7 @@ enum zmk_split_transport_central_command_type_proprietary {
 
 enum zmk_split_transport_peripheral_event_type_proprietary {
     ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_RSSI_REQUEST = 4,
+    ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_RSSI_TAKE = 5,
 } __packed;
 
 struct esb_data_envelope {

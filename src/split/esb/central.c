@@ -291,6 +291,10 @@ static int central_handler(struct esb_data_envelope *env) {
         return key_position_handler(env);
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_RSSI_REQUEST:
         send_rssi(source);
+        LOG_WRN("RSSI_REQ");
+        break;
+    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_RSSI_TAKE:
+        LOG_WRN("RSSI_TAKE");
         break;
     default:
         if (!is_esb_active()) {
