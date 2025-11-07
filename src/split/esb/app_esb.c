@@ -99,7 +99,6 @@ static struct esb_config config = {
 };
 
 static size_t tx_power_idx = 0;
-struct k_spinlock tx_power_lock;
 int tx_power_change(power_set_t cmd) {
     if (cmd == POWER_OK) {
         return 0;
