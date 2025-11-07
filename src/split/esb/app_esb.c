@@ -50,7 +50,7 @@ uint8_t esb_addr_prefix[8] = DT_INST_PROP(0, addr_prefix);
 #else
 #error "Need to create a node with compatible of 'zmk,esb-split` with `all `address` property set."
 #endif
-
+static int tx_fail_count = 0;
 static const enum esb_tx_power tx_power[] = {
 #if defined(RADIO_TXPOWER_TXPOWER_Pos4dBm)
 	/** 4 dBm radio transmit power. */
@@ -146,6 +146,9 @@ bool is_esb_active(void) {
 
 static void start_tx_work_handler(struct k_work *work) {
     LOG_DBG("start_tx_work");
+    if (tx_fail_count == 1) {
+        tx_power_change(POWER_UP);
+    }
     esb_start_tx();
 }
 K_WORK_DELAYABLE_DEFINE(start_tx_work, start_tx_work_handler);
@@ -156,18 +159,7 @@ bool is_tx_delayed(void) {
 
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
-static atomic_t power_set_cmd = ATOMIC_INIT(POWER_OK);
-void set_power_cmd(power_set_t cmd) {
-    atomic_set(&power_set_cmd, cmd);
-}
-
-power_set_t get_power_cmd() {
-    return atomic_get(&power_set_cmd);
-}
-
 static void event_handler(struct esb_evt const *event) {
-    static int tx_fail_count = 0;
-
     switch (event->evt_id) {
         case ESB_EVENT_TX_SUCCESS:
             LOG_DBG("TX SUCCESS");
@@ -180,9 +172,6 @@ static void event_handler(struct esb_evt const *event) {
             if (tx_fail_count++ >= 3) {
                 tx_fail_count = 0;
                 esb_pop_tx();
-            }
-            else if (tx_fail_count == 1) {
-                set_power_cmd(POWER_UP);
             }
 #endif
             k_work_reschedule(&start_tx_work, K_USEC(SLEEP_DELAY));
@@ -204,12 +193,6 @@ int esb_tx_app() {
     if (!is_esb_active()) {
         LOG_DBG("esb not active");
         return -EACCES;
-    }
-
-    power_set_t cmd = get_power_cmd();
-    if (cmd != POWER_OK) {
-        tx_power_change(cmd);
-        set_power_cmd(POWER_OK);
     }
 
     if (esb_tx_full()) {

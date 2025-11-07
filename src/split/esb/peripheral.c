@@ -179,7 +179,7 @@ static int peripheral_handler(struct esb_data_envelope* env) {
     if (env->buf.type == ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_RSSI) {
         power_set_t cmd = check_rssi(env->buf.rssi);
         LOG_WRN("rssi: %d, tx power: %s", env->buf.rssi, TX_POWER_CHAR[cmd]);
-        set_power_cmd(cmd);
+        tx_power_change(cmd);
 
         return 0;
     }
