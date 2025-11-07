@@ -249,11 +249,6 @@ static int key_position_handler(struct esb_data_envelope *env) {
                 }
             };
 
-            if (!is_esb_active()) {
-                LOG_WRN("esb not active");
-                k_yield();
-            }
-
             zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
 
             changed &= (changed - 1);
@@ -293,11 +288,6 @@ static int central_handler(struct esb_data_envelope *env) {
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT:
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT:
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT:
-        if (!is_esb_active()) {
-            LOG_WRN("esb not active");
-            k_yield();
-        }
-
         zmk_split_transport_central_peripheral_event_handler(&esb_central, source, env->event);
         break;
     default:
@@ -324,6 +314,10 @@ void rx_thread() {
         k_sem_take(&rx_sem, K_FOREVER);
         LOG_DBG("rx thread awake");
         handle_packet();     
+        if (!is_esb_active()) {
+            LOG_WRN("esb not active");
+            k_yield();
+        }
     }
 }
 
