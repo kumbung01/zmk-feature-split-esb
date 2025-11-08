@@ -211,7 +211,7 @@ static void start_tx_work_handler(struct k_work *work) {
 }
 K_WORK_DELAYABLE_DEFINE(start_tx_work, start_tx_work_handler);
 
-static void delayed_tx(timeout_t timeout) {
+static void delayed_tx(k_timeout_t timeout) {
     set_tx_delayed(true);
     k_work_reschedule(&start_tx_work, timeout);
 }
