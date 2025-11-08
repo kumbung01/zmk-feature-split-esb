@@ -393,7 +393,7 @@ int zmk_split_esb_set_enable(bool enabled) {
         return 0;
     } else {
         zmk_split_esb_timeslot_close_session();
-        clear_flags(BIT(ESB_ENABLED)|BIT(TX_ONESHOT));
+        clear_flags(BIT(ESB_ENABLED)|BIT(TX_ONESHOT)|BIT(ESB_INIT));
         return 0;
     }
 }
