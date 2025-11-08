@@ -190,15 +190,9 @@ int esb_tx_app() {
     static bool write_payload_failed = false;
     int ret = 0;
 
-    if (!is_esb_active()) {
-        LOG_DBG("esb not active");
-        return -EACCES;
-    }
-
     if (esb_tx_full()) {
         LOG_DBG("esb tx full, wait for next tx event");
-        ret = -ENOMEM;
-        goto START_TX;
+        return -ENOMEM;
     }
 
     if (!write_payload_failed) {
@@ -217,7 +211,6 @@ int esb_tx_app() {
         return write_payload_failed;
     }
 
-START_TX:
     if (is_tx_delayed()) {
         LOG_DBG("tx_delayed");
         return -EAGAIN;
@@ -225,7 +218,8 @@ START_TX:
 
     LOG_DBG("start tx");
     esb_start_tx();
-    return ret;
+    
+    return 0;
 }
 
 
