@@ -49,7 +49,7 @@ static void rx_op() {
 static void rssi_request_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(rssi_request_work, rssi_request_work_handler);
 static void rssi_request_work_handler(struct k_work *work) {
-    if (!zmk_split_esb_get_enable())
+    if (!is_esb_enabled())
         return;
 
     set_tx_flag(RSSI_REQ);
