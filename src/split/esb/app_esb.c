@@ -50,6 +50,50 @@ uint8_t esb_addr_prefix[8] = DT_INST_PROP(0, addr_prefix);
 #else
 #error "Need to create a node with compatible of 'zmk,esb-split` with `all `address` property set."
 #endif
+
+#define ESB_ACTIVE      (0)
+#define ESB_ENABLED     (1)
+#define ESB_INIT        (2)
+#define TX_ONESHOT      (3)
+
+static atomic_t flags = ATOMIC_INIT(0);
+
+static void set_flag(int bit, bool value) {
+    atomic_set_bit_to(&flags, bit, value);
+}
+
+static bool get_flag(bit) {
+    return atomic_test_bit(&flags, bit);
+}
+
+static bool get_and_set_flag(bit) {
+    return atomic_test_and_set_bit(&flags, bit);
+}
+
+static void clear_all_flags() {
+    atomic_clear(&flags);
+}
+
+static void clear_flags(uint32_t _flags) {
+    atomic_and(&flags, ~_flags);
+}
+
+void set_esb_active(bool is_active) {
+    set_flag(ESB_ACTIVE, is_active);
+}
+
+bool is_esb_active(void) {
+    return get_flag(ESB_ACTIVE);
+}
+
+bool is_esb_initialized() {
+    return get_and_set_flag(ESB_INIT);
+}
+
+bool is_tx_oneshot_set() {
+    return get_and_set_flag(TX_ONESHOT);
+}
+
 static int tx_fail_count = 0;
 static const enum esb_tx_power tx_power[] = {
 #if defined(RADIO_TXPOWER_TXPOWER_Pos4dBm)
@@ -139,15 +183,6 @@ K_SEM_DEFINE(tx_sem, 0, 1);
 K_SEM_DEFINE(rx_sem, 0, RX_FIFO_SIZE);
 
 static app_esb_mode_t m_mode;
-
-static atomic_t m_is_active = ATOMIC_INIT(0);
-void set_esb_active(bool is_active) {
-    atomic_set(&m_is_active, is_active ? 1 : 0);
-}
-
-bool is_esb_active(void) {
-    return atomic_get(&m_is_active) ? true : false;
-}
 
 static void start_tx_work_handler(struct k_work *work) {
     LOG_DBG("start_tx_work");
@@ -268,12 +303,12 @@ static int clocks_start(void) {
 }
 
 
-static atomic_t is_esb_initialized = ATOMIC_INIT(0);
+
 static int
 esb_initialize(app_esb_mode_t mode)
 {
 #if ESB_ONLY
-    if (!atomic_cas(&is_esb_initialized, 0, 1)) {
+    if (is_esb_initialized()) {
         LOG_WRN("skip init");
         goto start;
     }
@@ -352,9 +387,13 @@ int zmk_split_esb_set_enable(bool enabled) {
     atomic_set(&m_enabled, enabled ? 1 : 0);
     if (enabled) {
         zmk_split_esb_timeslot_open_session();
+        if (esb_ops->works) {
+            esb_ops->works();
+        }
         return 0;
     } else {
         zmk_split_esb_timeslot_close_session();
+        clear_flags(BIT(ESB_ENABLED)|BIT(TX_ONESHOT));
         return 0;
     }
 }
@@ -409,13 +448,13 @@ static int app_esb_resume(void) {
     return err;
 }
 
-static atomic_t oneshot = ATOMIC_INIT(0);
+
 /* Callback function signalling that a timeslot is started or stopped */
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) {
     switch (type) {
         case APP_TS_STARTED:
             app_esb_resume();
-            if (atomic_cas(&oneshot, 0, 1)) {
+            if (!is_tx_oneshot_set()) {
                 esb_ops->tx_op();
             }
             break;
@@ -436,14 +475,10 @@ static int on_activity_state(const zmk_event_t *eh) {
     if (m_mode == APP_ESB_MODE_PTX) {
         if (state_ev->state != ZMK_ACTIVITY_ACTIVE && zmk_split_esb_get_enable()) {
             zmk_split_esb_set_enable(false);
-            atomic_clear(&oneshot);
-            atomic_clear(&is_esb_initialized);
         }
         else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !zmk_split_esb_get_enable()) {
             zmk_split_esb_set_enable(true);
-            if (esb_ops->works) {
-                esb_ops->works();
-            }
+
         }
     }
 
