@@ -434,7 +434,7 @@ static int on_activity_state(const zmk_event_t *eh) {
     if (m_mode == APP_ESB_MODE_PTX) {
         if (state_ev->state != ZMK_ACTIVITY_ACTIVE && zmk_split_esb_get_enable()) {
             zmk_split_esb_set_enable(false);
-            atomic_clear(oneshot);
+            atomic_clear(&oneshot);
         }
         else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !zmk_split_esb_get_enable()) {
             zmk_split_esb_set_enable(true);
