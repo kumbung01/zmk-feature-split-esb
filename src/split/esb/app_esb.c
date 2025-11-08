@@ -195,6 +195,10 @@ int esb_tx_app() {
     static bool write_payload_failed = false;
     int ret = 0;
 
+    if (!is_esb_active()) {
+        return -EACCES;
+    }
+
     if (esb_tx_full()) {
         LOG_DBG("esb tx full, wait for next tx event");
         ret = -ENOMEM;
