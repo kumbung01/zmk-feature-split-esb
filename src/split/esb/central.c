@@ -313,7 +313,7 @@ void rx_thread() {
     {
         k_sem_take(&rx_sem, K_FOREVER);
         LOG_DBG("rx thread awake");
-        if (handle_packet() != 0 || !is_in_timeslot()) {
+        if (handle_packet() != 0) {
             k_yield();
         }
     }
@@ -321,4 +321,4 @@ void rx_thread() {
 
 K_THREAD_DEFINE(rx_thread_id, 2304,
         rx_thread, NULL, NULL, NULL,
-        -2, 0, 0);
+        -1, 0, 0);
