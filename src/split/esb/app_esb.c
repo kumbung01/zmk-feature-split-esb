@@ -197,7 +197,8 @@ int esb_tx_app() {
 
     if (esb_tx_full()) {
         LOG_DBG("esb tx full, wait for next tx event");
-        return -ENOMEM;
+        ret = -ENOMEM;
+        goto start_tx;
     }
 
     if (!write_payload_failed) {
@@ -216,6 +217,7 @@ int esb_tx_app() {
         return write_payload_failed;
     }
 
+start_tx:
     if (is_tx_delayed()) {
         LOG_DBG("tx_delayed");
         return -EAGAIN;
@@ -224,7 +226,7 @@ int esb_tx_app() {
     LOG_DBG("start tx");
     esb_start_tx();
     
-    return 0;
+    return ret;
 }
 
 
@@ -346,13 +348,9 @@ int zmk_split_esb_set_enable(bool enabled) {
     atomic_set(&m_enabled, enabled ? 1 : 0);
     if (enabled) {
         zmk_split_esb_timeslot_open_session();
-        if (esb_ops->works) {
-            esb_ops->works();
-        }
         return 0;
     } else {
         zmk_split_esb_timeslot_close_session();
-        atomic_set(&is_esb_initialized, 0);
         return 0;
     }
 }
@@ -435,9 +433,13 @@ static int on_activity_state(const zmk_event_t *eh) {
         if (state_ev->state != ZMK_ACTIVITY_ACTIVE && zmk_split_esb_get_enable()) {
             zmk_split_esb_set_enable(false);
             atomic_clear(&oneshot);
+            atomic_clear(&is_esb_initialized);
         }
         else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !zmk_split_esb_get_enable()) {
             zmk_split_esb_set_enable(true);
+            if (esb_ops->works) {
+                esb_ops->works();
+            }
         }
     }
 
