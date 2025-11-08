@@ -194,8 +194,11 @@ void tx_thread() {
         LOG_DBG("tx thread awake");
         do {
             if (esb_tx_app() != 0) {
-                k_yield();
                 break;
+            }
+
+            if (!is_esb_active()) {
+                k_yield();
             }
         } while (true);
     }
