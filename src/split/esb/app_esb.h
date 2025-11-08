@@ -62,6 +62,12 @@ int pull_packet_from_tx_msgq(void);
 int esb_tx_app();
 void set_esb_active(bool is_active);
 bool is_esb_active(void);
+bool is_esb_initialized(void);
+bool is_tx_oneshot_set(void);
+void set_tx_delayed(bool set);
+bool is_tx_delayed(void);
+void set_esb_enabled(bool enabled);
+bool is_esb_enabled();
 power_set_t check_rssi(int rssi);
 int tx_power_change(power_set_t cmd);
 #endif

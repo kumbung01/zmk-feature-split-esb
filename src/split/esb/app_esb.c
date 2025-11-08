@@ -55,6 +55,7 @@ uint8_t esb_addr_prefix[8] = DT_INST_PROP(0, addr_prefix);
 #define ESB_ENABLED     (1)
 #define ESB_INIT        (2)
 #define TX_ONESHOT      (3)
+#define TX_DELAYED      (4)
 
 static atomic_t flags = ATOMIC_INIT(0);
 
@@ -62,11 +63,11 @@ static void set_flag(int bit, bool value) {
     atomic_set_bit_to(&flags, bit, value);
 }
 
-static bool get_flag(bit) {
+static bool get_flag(int bit) {
     return atomic_test_bit(&flags, bit);
 }
 
-static bool get_and_set_flag(bit) {
+static bool get_and_set_flag(int bit) {
     return atomic_test_and_set_bit(&flags, bit);
 }
 
@@ -74,7 +75,7 @@ static void clear_all_flags() {
     atomic_clear(&flags);
 }
 
-static void clear_flags(uint32_t _flags) {
+static void clear_flags(atomic_val_t _flags) {
     atomic_and(&flags, ~_flags);
 }
 
@@ -86,12 +87,28 @@ bool is_esb_active(void) {
     return get_flag(ESB_ACTIVE);
 }
 
-bool is_esb_initialized() {
+bool is_esb_initialized(void) {
     return get_and_set_flag(ESB_INIT);
 }
 
-bool is_tx_oneshot_set() {
+bool is_tx_oneshot_set(void) {
     return get_and_set_flag(TX_ONESHOT);
+}
+
+void set_tx_delayed(bool set) {
+    set_flag(TX_DELAYED, set);
+}
+
+bool is_tx_delayed(void) {
+    return get_flag(TX_DELAYED);
+}
+
+void set_esb_enabled(bool enabled) {
+    set_flag(ESB_ENABLED, enabled);
+}
+
+bool is_esb_enabled() {
+    return get_flag(ESB_ENABLED);
 }
 
 static int tx_fail_count = 0;
@@ -190,11 +207,13 @@ static void start_tx_work_handler(struct k_work *work) {
         tx_power_change(POWER_UP);
     }
     esb_start_tx();
+    set_tx_delayed(false);
 }
 K_WORK_DELAYABLE_DEFINE(start_tx_work, start_tx_work_handler);
 
-bool is_tx_delayed(void) {
-    return k_work_delayable_is_pending(&start_tx_work);
+static void delayed_tx(timeout_t timeout) {
+    set_tx_delayed(true);
+    k_work_reschedule(&start_tx_work, timeout);
 }
 
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
@@ -214,7 +233,7 @@ static void event_handler(struct esb_evt const *event) {
                 esb_pop_tx();
             }
 #endif
-            k_work_reschedule(&start_tx_work, K_USEC(SLEEP_DELAY));
+            delayed_tx(K_USEC(SLEEP_DELAY));
             esb_ops->tx_op();
             break;
         case ESB_EVENT_RX_RECEIVED:
@@ -382,9 +401,8 @@ int zmk_split_esb_init(app_esb_mode_t mode) {
     return 0;
 }
 
-static atomic_t m_enabled = ATOMIC_INIT(0);
 int zmk_split_esb_set_enable(bool enabled) {
-    atomic_set(&m_enabled, enabled ? 1 : 0);
+    set_esb_enabled(enabled);
     if (enabled) {
         zmk_split_esb_timeslot_open_session();
         if (esb_ops->works) {
@@ -398,9 +416,7 @@ int zmk_split_esb_set_enable(bool enabled) {
     }
 }
 
-bool zmk_split_esb_get_enable() {
-    return atomic_get(&m_enabled) ? true : false;
-}
+
 
 static int app_esb_suspend(void) {
     set_esb_active(false);
@@ -473,12 +489,15 @@ static int on_activity_state(const zmk_event_t *eh) {
     LOG_DBG("activity state changed: %s", ACTIVE_STATE_CHAR[state_ev->state]);
 
     if (m_mode == APP_ESB_MODE_PTX) {
-        if (state_ev->state != ZMK_ACTIVITY_ACTIVE && zmk_split_esb_get_enable()) {
-            zmk_split_esb_set_enable(false);
+        if (is_esb_enabled()) {
+            if (state_ev->state != ZMK_ACTIVITY_ACTIVE) {
+                zmk_split_esb_set_enable(false);
+            }
         }
-        else if (state_ev->state == ZMK_ACTIVITY_ACTIVE && !zmk_split_esb_get_enable()) {
-            zmk_split_esb_set_enable(true);
-
+        else {
+            if (state_ev->state == ZMK_ACTIVITY_ACTIVE) {
+                zmk_split_esb_set_enable(true);
+            }
         }
     }
 
