@@ -93,8 +93,6 @@ static inline void reset_radio() {
     NVIC_ClearPendingIRQ(RADIO_IRQn);
 }
 
-static volatile uint32_t m_channel0 = 0;
-static volatile uint32_t m_channel1 = 0;
 static inline void timer0_init() {
 #if ESB_ONLY
     if (m_sess_open && !atomic_cas(&is_radio_reset, 0, 1)) {
@@ -102,9 +100,7 @@ static inline void timer0_init() {
         return;
     }
 #endif
-    m_channel0 = 0;
-    m_channel1 = 0;
-    nrf_timer_task_trigger(NRF_TIMER0, NRF_TIMER_TASK_CLEAR);
+
     nrf_timer_bit_width_set(NRF_TIMER0, NRF_TIMER_BIT_WIDTH_32);
 }
 
@@ -120,10 +116,8 @@ static inline void timer0_disable() {
 
 
 static inline void timer0_cc_update(uint32_t channel0, uint32_t channel1) {
-    m_channel0 += channel0;
-    m_channel1 += channel1;
-    nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL0, m_channel0);
-    nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL1, m_channel1);
+    nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL0, nrf_timer_cc_get(NRF_TIMER0, NRF_TIMER_CC_CHANNEL0) + channel0);
+    nrf_timer_cc_set(NRF_TIMER0, NRF_TIMER_CC_CHANNEL1, nrf_timer_cc_get(NRF_TIMER0, NRF_TIMER_CC_CHANNEL1) + channel1);
 }
 
 static inline void timer0_event_clear(int compare) {
