@@ -193,12 +193,9 @@ void tx_thread() {
         k_sem_take(&tx_sem, K_FOREVER);
         LOG_DBG("tx thread awake");
         do {
-            if (esb_tx_app() != 0) {
-                break;
-            }
-
-            if (!is_esb_active()) {
+            if (esb_tx_app() != 0 || !is_esb_active()) {
                 k_yield();
+                break;
             }
         } while (true);
     }
