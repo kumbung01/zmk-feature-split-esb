@@ -313,9 +313,11 @@ void rx_thread() {
     {
         k_sem_take(&rx_sem, K_FOREVER);
         LOG_DBG("rx thread awake");
-        if (handle_packet() != 0 || !is_esb_active()) {
+        if (!is_esb_active()) {
             k_yield();
         }
+        
+        handle_packet();
     }
 }
 
