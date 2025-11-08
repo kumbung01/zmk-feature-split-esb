@@ -105,7 +105,7 @@ int tx_power_change(power_set_t cmd) {
         return 0;
     }
 
-    k_spinlock_key_t key = k_spin_trylock(&tx_power_lock);
+    k_spinlock_key_t key = k_spin_lock(&tx_power_lock);
     size_t new_idx = tx_power_idx;
     switch (cmd) {
     case POWER_UP:
