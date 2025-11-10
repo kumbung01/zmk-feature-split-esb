@@ -250,7 +250,6 @@ int esb_tx_app() {
     int ret = 0;
 
     if (!is_esb_active()) {
-        k_yield();
         return -EACCES;
     }
 

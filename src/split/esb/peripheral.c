@@ -202,4 +202,4 @@ void tx_thread() {
 
 K_THREAD_DEFINE(tx_thread_id, 752,
         tx_thread, NULL, NULL, NULL,
-        -1, 0, 0);
+        0, 0, 0);
