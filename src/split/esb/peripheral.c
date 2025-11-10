@@ -39,7 +39,8 @@ static int peripheral_handler(struct esb_data_envelope* env);
 static ssize_t packet_maker_peripheral(struct esb_data_envelope *env, struct payload_buffer *buf);
 static int split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event);
 static void tx_op() {
-    k_sem_give(&tx_sem);
+    if (is_esb_active())
+        k_sem_give(&tx_sem);
 }
 
 static void rx_op() {
