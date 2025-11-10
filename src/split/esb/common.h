@@ -133,7 +133,7 @@ struct zmk_split_esb_ops {
     packet_maker packet_make;
     zmk_split_transport_handler event_handler;
 
-    esb_works works;
+    esb_works on_enabled;
 };
 
 extern struct zmk_split_esb_ops *esb_ops;

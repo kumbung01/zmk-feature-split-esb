@@ -398,8 +398,8 @@ int zmk_split_esb_set_enable(bool enabled) {
     set_esb_enabled(enabled);
     if (enabled) {
         zmk_split_esb_timeslot_open_session();
-        if (esb_ops->works) {
-            esb_ops->works();
+        if (esb_ops->on_enabled) {
+            esb_ops->on_enabled();
         }
         return 0;
     } else {
