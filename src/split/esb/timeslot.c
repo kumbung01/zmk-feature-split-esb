@@ -66,7 +66,6 @@ static void schedule_request(enum mpsl_timeslot_call call) {
     }
     else if (call == REQ_CLOSE_SESSION) {
         m_sess_open = false;
-        atomic_set(&is_radio_reset, 0);
     }
 
     int err = k_msgq_put(&mpsl_api_msgq, &call, K_NO_WAIT);
