@@ -75,10 +75,7 @@ static struct zmk_split_esb_ops peripheral_ops = {
 };
 
 static void rx_work_handler(struct k_work *work) {
-    do {
-        if (handle_packet() != 0)
-            return;
-    } while(true);
+    handle_packet();
 }
 
 static ssize_t packet_maker_peripheral(struct esb_data_envelope *env, struct payload_buffer *buf) {
