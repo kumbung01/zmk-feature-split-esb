@@ -469,6 +469,7 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) 
         case APP_TS_STARTED:
             app_esb_resume();
             if (!is_tx_oneshot_set()) {
+                LOG_WRN("tx oneshot");
                 esb_ops->tx_op();
             }
             break;
