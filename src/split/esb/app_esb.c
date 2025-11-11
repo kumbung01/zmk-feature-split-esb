@@ -203,9 +203,6 @@ static app_esb_mode_t m_mode;
 
 static void start_tx_work_handler(struct k_work *work) {
     LOG_DBG("start_tx_work");
-    if (tx_fail_count == 1) {
-        tx_power_change(POWER_UP);
-    }
     esb_start_tx();
     set_tx_delayed(false);
 }
@@ -271,7 +268,7 @@ int esb_tx_app() {
 start_tx:
     if (is_tx_delayed()) {
         LOG_DBG("tx_delayed");
-        return -EAGAIN;
+        return ret;
     }
 
     LOG_DBG("start tx");
