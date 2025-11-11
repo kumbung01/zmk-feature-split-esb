@@ -73,7 +73,7 @@ static void rx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
 static void update_peripheral_status_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(update_peripheral_status_work, update_peripheral_status_handler);
-K_THREAD_STACK_DEFINE(my_work_q_stack, 640);
+K_THREAD_STACK_DEFINE(my_work_q_stack, 1024);
 struct k_work_q my_work_q;
 
 static void tx_op() {
