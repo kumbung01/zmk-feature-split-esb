@@ -471,7 +471,7 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) 
 #if IS_PERIPHERAL
             if (!is_tx_oneshot_set()) {
                 LOG_WRN("tx oneshot");
-                esb_start_tx();
+                esb_ops->tx_op();
             }
 #endif
             break;
