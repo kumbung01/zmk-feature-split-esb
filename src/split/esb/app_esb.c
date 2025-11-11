@@ -203,9 +203,6 @@ static app_esb_mode_t m_mode;
 
 static void start_tx_work_handler(struct k_work *work) {
     LOG_DBG("start_tx_work");
-    if (tx_fail_count == 1) {
-        tx_power_change(POWER_UP);
-    }
     esb_start_tx();
     set_tx_delayed(false);
 }
@@ -231,6 +228,9 @@ static void event_handler(struct esb_evt const *event) {
             if (tx_fail_count++ >= 3) {
                 tx_fail_count = 0;
                 esb_pop_tx();
+            }
+            else if (tx_fail_count == 1) {
+                tx_power_change(POWER_UP);
             }
 #endif
             delayed_tx(K_USEC(SLEEP_DELAY));
@@ -472,6 +472,9 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) 
             if (!is_tx_oneshot_set()) {
                 LOG_WRN("tx oneshot");
                 esb_ops->tx_op();
+            }
+            else {
+                esb_start_tx();
             }
 #endif
             break;
