@@ -77,7 +77,8 @@ K_THREAD_STACK_DEFINE(my_work_q_stack, 640);
 struct k_work_q my_work_q;
 
 static void tx_op() {
-    k_work_submit_to_queue(&my_work_q, &tx_work);
+    if (is_esb_active())
+        k_work_submit_to_queue(&my_work_q, &tx_work);
 }
 
 static void rx_op() {
