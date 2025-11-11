@@ -249,9 +249,9 @@ static int key_position_handler(struct esb_data_envelope *env) {
                     }
                 }
             };
-
+            k_sched_lock();
             zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
-
+            k_sched_unlock();
             changed &= (changed - 1);
         }
     }
@@ -289,7 +289,9 @@ static int central_handler(struct esb_data_envelope *env) {
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT:
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT:
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT:
+        k_sched_lock();
         zmk_split_transport_central_peripheral_event_handler(&esb_central, source, env->event);
+        k_sched_unlock();
         break;
     default:
         break;
