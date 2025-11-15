@@ -21,7 +21,7 @@ LOG_MODULE_REGISTER(app_esb, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 #define DT_DRV_COMPAT zmk_esb_split
 #if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
-#define MPSL_THREAD_PRIO             CONFIG_MPSL_THREAD_COOP_PRIO
+#define MPSL_THREAD_PRIO CONFIG_MPSL_THREAD_COOP_PRIO
 
 #define HAS_BASE_ADDR_0 (DT_INST_NODE_HAS_PROP(0, base_addr_0))
 #define HAS_BASE_ADDR_1 (DT_INST_NODE_HAS_PROP(0, base_addr_1))
@@ -51,95 +51,69 @@ uint8_t esb_addr_prefix[8] = DT_INST_PROP(0, addr_prefix);
 #error "Need to create a node with compatible of 'zmk,esb-split` with `all `address` property set."
 #endif
 
-#define ESB_ACTIVE      (0)
-#define ESB_ENABLED     (1)
-#define ESB_INIT        (2)
-#define TX_ONESHOT      (3)
-#define TX_DELAYED      (4)
+#define ESB_ACTIVE (0)
+#define ESB_ENABLED (1)
+#define ESB_INIT (2)
+#define TX_ONESHOT (3)
+#define TX_DELAYED (4)
 
 static atomic_t flags = ATOMIC_INIT(0);
 
-static void set_flag(int bit, bool value) {
-    atomic_set_bit_to(&flags, bit, value);
-}
+static void set_flag(int bit, bool value) { atomic_set_bit_to(&flags, bit, value); }
 
-static bool get_flag(int bit) {
-    return atomic_test_bit(&flags, bit);
-}
+static bool get_flag(int bit) { return atomic_test_bit(&flags, bit); }
 
-static bool get_and_set_flag(int bit) {
-    return atomic_test_and_set_bit(&flags, bit);
-}
+static bool get_and_set_flag(int bit) { return atomic_test_and_set_bit(&flags, bit); }
 
-static void clear_all_flags() {
-    atomic_clear(&flags);
-}
+static void clear_all_flags() { atomic_clear(&flags); }
 
-static void clear_flags(atomic_val_t _flags) {
-    atomic_and(&flags, ~_flags);
-}
+static void clear_flags(atomic_val_t _flags) { atomic_and(&flags, ~_flags); }
 
-void set_esb_active(bool is_active) {
-    set_flag(ESB_ACTIVE, is_active);
-}
+void set_esb_active(bool is_active) { set_flag(ESB_ACTIVE, is_active); }
 
-bool is_esb_active(void) {
-    return get_flag(ESB_ACTIVE);
-}
+bool is_esb_active(void) { return get_flag(ESB_ACTIVE); }
 
-bool is_esb_initialized(void) {
-    return get_and_set_flag(ESB_INIT);
-}
+bool is_esb_initialized(void) { return get_and_set_flag(ESB_INIT); }
 
-bool is_tx_oneshot_set(void) {
-    return get_and_set_flag(TX_ONESHOT);
-}
+bool is_tx_oneshot_set(void) { return get_and_set_flag(TX_ONESHOT); }
 
-void set_tx_delayed(bool set) {
-    set_flag(TX_DELAYED, set);
-}
+void set_tx_delayed(bool set) { set_flag(TX_DELAYED, set); }
 
-bool is_tx_delayed(void) {
-    return get_flag(TX_DELAYED);
-}
+bool is_tx_delayed(void) { return get_flag(TX_DELAYED); }
 
-void set_esb_enabled(bool enabled) {
-    set_flag(ESB_ENABLED, enabled);
-}
+void set_esb_enabled(bool enabled) { set_flag(ESB_ENABLED, enabled); }
 
-bool is_esb_enabled() {
-    return get_flag(ESB_ENABLED);
-}
+bool is_esb_enabled() { return get_flag(ESB_ENABLED); }
 
 static int tx_fail_count = 0;
 static const enum esb_tx_power tx_power[] = {
 #if defined(RADIO_TXPOWER_TXPOWER_Pos4dBm)
-	/** 4 dBm radio transmit power. */
-	ESB_TX_POWER_4DBM,
+    /** 4 dBm radio transmit power. */
+    ESB_TX_POWER_4DBM,
 #endif /* defined(RADIO_TXPOWER_TXPOWER_Pos4dBm) */
 
 #if defined(RADIO_TXPOWER_TXPOWER_Pos3dBm)
-	/** 3 dBm radio transmit power. */
-	ESB_TX_POWER_3DBM,
+    /** 3 dBm radio transmit power. */
+    ESB_TX_POWER_3DBM,
 #endif /* defined(RADIO_TXPOWER_TXPOWER_Pos3dBm) */
 
-	/** 0 dBm radio transmit power. */
-	ESB_TX_POWER_0DBM,
-	/** -4 dBm radio transmit power. */
-	ESB_TX_POWER_NEG4DBM,
-	/** -8 dBm radio transmit power. */
-	ESB_TX_POWER_NEG8DBM,
-	/** -12 dBm radio transmit power. */
-	ESB_TX_POWER_NEG12DBM,
-	/** -16 dBm radio transmit power. */
-	ESB_TX_POWER_NEG16DBM,
-	/** -20 dBm radio transmit power. */
-	ESB_TX_POWER_NEG20DBM,
-	/** -30 dBm radio transmit power. */
-	ESB_TX_POWER_NEG30DBM,
-	/** -40 dBm radio transmit power. */
+    /** 0 dBm radio transmit power. */
+    ESB_TX_POWER_0DBM,
+    /** -4 dBm radio transmit power. */
+    ESB_TX_POWER_NEG4DBM,
+    /** -8 dBm radio transmit power. */
+    ESB_TX_POWER_NEG8DBM,
+    /** -12 dBm radio transmit power. */
+    ESB_TX_POWER_NEG12DBM,
+    /** -16 dBm radio transmit power. */
+    ESB_TX_POWER_NEG16DBM,
+    /** -20 dBm radio transmit power. */
+    ESB_TX_POWER_NEG20DBM,
+    /** -30 dBm radio transmit power. */
+    ESB_TX_POWER_NEG30DBM,
+/** -40 dBm radio transmit power. */
 #if defined(RADIO_TXPOWER_TXPOWER_Neg40dBm)
-	ESB_TX_POWER_NEG40DBM,
+    ESB_TX_POWER_NEG40DBM,
 #endif /* defined(RADIO_TXPOWER_TXPOWER_Neg40dBm) */
 };
 
@@ -195,7 +169,6 @@ int tx_power_change(power_set_t cmd) {
     return esb_set_tx_power(new_tx_output_power);
 }
 
-
 K_SEM_DEFINE(tx_sem, 0, 1);
 K_SEM_DEFINE(rx_sem, 0, RX_FIFO_SIZE);
 
@@ -203,6 +176,9 @@ static app_esb_mode_t m_mode;
 
 static void start_tx_work_handler(struct k_work *work) {
     LOG_DBG("start_tx_work");
+    if (tx_fail_count == 1) {
+        tx_power_change(POWER_UP);
+    }
     esb_start_tx();
     set_tx_delayed(false);
 }
@@ -217,36 +193,37 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
 static void event_handler(struct esb_evt const *event) {
     switch (event->evt_id) {
-        case ESB_EVENT_TX_SUCCESS:
-            LOG_DBG("TX SUCCESS");
-            tx_fail_count = 0;
-            esb_ops->tx_op();
-            break;
-        case ESB_EVENT_TX_FAILED:
-            LOG_WRN("ESB_EVENT_TX_FAILED");            
+    case ESB_EVENT_TX_SUCCESS:
+        LOG_DBG("TX SUCCESS");
+        tx_fail_count = 0;
+        esb_ops->tx_op();
+        break;
+    case ESB_EVENT_TX_FAILED:
+        LOG_WRN("ESB_EVENT_TX_FAILED");
 #if IS_PERIPHERAL
-            if (tx_fail_count++ >= 3) {
-                tx_fail_count = 0;
-                esb_pop_tx();
-            }
-            else if (tx_fail_count == 1) {
-                tx_power_change(POWER_UP);
-            }
+        if (tx_fail_count++ >= 3) {
+            tx_fail_count = 0;
+            esb_pop_tx();
+        }
 #endif
-            delayed_tx(K_USEC(SLEEP_DELAY));
-            esb_ops->tx_op();
-            break;
-        case ESB_EVENT_RX_RECEIVED:
-            LOG_DBG("RX SUCCESS");
-            esb_ops->rx_op();
-            break;
+        delayed_tx(K_USEC(SLEEP_DELAY));
+        esb_ops->tx_op();
+        break;
+    case ESB_EVENT_RX_RECEIVED:
+        LOG_DBG("RX SUCCESS");
+        esb_ops->rx_op();
+        break;
     }
 }
-
 
 int esb_tx_app() {
     struct esb_payload payload;
     int ret = 0;
+
+    if (!is_esb_active()) {
+        k_yield();
+        return -EAGAIN;
+    }
 
     if (esb_tx_full()) {
         LOG_DBG("esb tx full, wait for next tx event");
@@ -276,10 +253,9 @@ start_tx:
 
     LOG_DBG("start tx");
     esb_start_tx();
-    
+
     return ret;
 }
-
 
 static int clocks_start(void) {
     int err;
@@ -310,22 +286,18 @@ static int clocks_start(void) {
     } while (err);
 
     LOG_DBG("HF clock started");
-    
+
     return 0;
 }
 
-
-
-static int
-esb_initialize(app_esb_mode_t mode)
-{
+static int esb_initialize(app_esb_mode_t mode) {
 #if ESB_ONLY
     if (is_esb_initialized()) {
         LOG_WRN("skip init");
         goto start;
     }
 #endif
-    
+
     LOG_DBG("esb init");
     int err = esb_init(&config);
     if (err) {
@@ -368,8 +340,8 @@ start:
     return 0;
 }
 
-#define ESB_TX_FIFO_REQUE_MAX (CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS \
-                               * CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT)
+#define ESB_TX_FIFO_REQUE_MAX                                                                      \
+    (CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS * CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT)
 
 int zmk_split_esb_init(app_esb_mode_t mode) {
     int ret;
@@ -390,7 +362,7 @@ int zmk_split_esb_init(app_esb_mode_t mode) {
     }
 
     LOG_DBG("init power is %d", (int8_t)tx_power[tx_power_idx]);
-    
+
     return 0;
 }
 
@@ -404,21 +376,18 @@ int zmk_split_esb_set_enable(bool enabled) {
         return 0;
     } else {
         zmk_split_esb_timeslot_close_session();
-        clear_flags(BIT(ESB_ENABLED) 
-                  | BIT(TX_ONESHOT) 
+        clear_flags(BIT(ESB_ENABLED) | BIT(TX_ONESHOT)
 #if !ESB_ONLY
-                  | BIT(ESB_INIT)
+                    | BIT(ESB_INIT)
 #endif
-                   );
+        );
         return 0;
     }
 }
 
-
-
 static int app_esb_suspend(void) {
     set_esb_active(false);
-    if(m_mode == APP_ESB_MODE_PTX) {
+    if (m_mode == APP_ESB_MODE_PTX) {
         uint32_t irq_key = irq_lock();
 
         irq_disable(RADIO_IRQn);
@@ -430,7 +399,8 @@ static int app_esb_suspend(void) {
 
         NRF_RADIO->EVENTS_DISABLED = 0;
         NRF_RADIO->TASKS_DISABLE = 1;
-        while(NRF_RADIO->EVENTS_DISABLED == 0);
+        while (NRF_RADIO->EVENTS_DISABLED == 0)
+            ;
 
         NRF_TIMER2->TASKS_STOP = 1;
         NRF_RADIO->INTENCLR = 0xFFFFFFFF;
@@ -440,8 +410,7 @@ static int app_esb_suspend(void) {
         NVIC_ClearPendingIRQ(RADIO_IRQn);
 
         irq_unlock(irq_key);
-    }
-    else {
+    } else {
 #if ESB_ONLY
         esb_suspend();
 #else
@@ -449,12 +418,11 @@ static int app_esb_suspend(void) {
 #endif
     }
 
-    // Todo: Figure out how to use the esb_suspend() function 
+    // Todo: Figure out how to use the esb_suspend() function
     // rather than having to disable at the end of every timeslot
-    //esb_suspend();
+    // esb_suspend();
     return 0;
 }
-
 
 static int app_esb_resume(void) {
     int err = esb_initialize(m_mode);
@@ -462,25 +430,23 @@ static int app_esb_resume(void) {
     return err;
 }
 
-
 /* Callback function signalling that a timeslot is started or stopped */
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) {
     switch (type) {
-        case APP_TS_STARTED:
-            app_esb_resume();
+    case APP_TS_STARTED:
+        app_esb_resume();
 #if IS_PERIPHERAL
-            if (!is_tx_oneshot_set()) {
-                LOG_WRN("tx oneshot");
-                esb_ops->tx_op();
-            }
-            else {
-                esb_start_tx();
-            }
+        if (!is_tx_oneshot_set()) {
+            LOG_WRN("tx oneshot");
+            esb_ops->tx_op();
+        } else {
+            esb_start_tx();
+        }
 #endif
-            break;
-        case APP_TS_STOPPED:
-            app_esb_suspend();
-            break;
+        break;
+    case APP_TS_STOPPED:
+        app_esb_suspend();
+        break;
     }
 }
 
@@ -497,8 +463,7 @@ static int on_activity_state(const zmk_event_t *eh) {
             if (state_ev->state != ZMK_ACTIVITY_ACTIVE) {
                 zmk_split_esb_set_enable(false);
             }
-        }
-        else {
+        } else {
             if (state_ev->state == ZMK_ACTIVITY_ACTIVE) {
                 zmk_split_esb_set_enable(true);
             }
@@ -507,8 +472,6 @@ static int on_activity_state(const zmk_event_t *eh) {
 
     return 0;
 }
-
-
 
 ZMK_LISTENER(zmk_split_esb_idle_sleeper, on_activity_state);
 ZMK_SUBSCRIPTION(zmk_split_esb_idle_sleeper, zmk_activity_state_changed);

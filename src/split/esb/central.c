@@ -29,16 +29,15 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #include "timeslot.h"
 #include <esb.h>
 
-#define MPSL_THREAD_PRIO             CONFIG_MPSL_THREAD_COOP_PRIO
-#define STACKSIZE                    CONFIG_MAIN_STACK_SIZE
-
+#define MPSL_THREAD_PRIO CONFIG_MPSL_THREAD_COOP_PRIO
+#define STACKSIZE CONFIG_MAIN_STACK_SIZE
 
 enum peripheral_slot_state {
     PERIPHERAL_DOWN,
     PERIPHERAL_UP,
 };
 
-#define RSSI_SENT_FLAG   (0)
+#define RSSI_SENT_FLAG (0)
 
 // rssi sample count
 #define RSSI_SAMPLE_CNT 4
@@ -70,7 +69,7 @@ static int central_handler(struct esb_data_envelope *env);
 static void tx_work_handler(struct k_work *work);
 K_WORK_DEFINE(tx_work, tx_work_handler);
 static void rx_work_handler(struct k_work *work);
-K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
+K_WORK_DEFINE(rx_work, rx_work_handler);
 static void update_peripheral_status_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(update_peripheral_status_work, update_peripheral_status_handler);
 K_THREAD_STACK_DEFINE(my_work_q_stack, 1024);
@@ -81,9 +80,7 @@ static void tx_op() {
         k_work_submit_to_queue(&my_work_q, &tx_work);
 }
 
-static void rx_op() {
-    k_sem_give(&rx_sem);
-}
+static void rx_op() { k_work_submit(&rx_work); }
 
 static struct zmk_split_esb_ops central_ops = {
     .event_handler = central_handler,
@@ -94,12 +91,11 @@ static struct zmk_split_esb_ops central_ops = {
     .packet_make = packet_maker_central,
 };
 
-static void tx_work_handler(struct k_work *work) {
-    esb_tx_app();
-}
+static void tx_work_handler(struct k_work *work) { esb_tx_app(); }
 
 static void rx_work_handler(struct k_work *work) {
-    handle_packet();
+    if (handle_packet() == 0)
+        k_work_submit(&rx_work);
 }
 
 static ssize_t packet_maker_central(struct esb_data_envelope *env, struct payload_buffer *buf) {
@@ -114,17 +110,16 @@ static ssize_t packet_maker_central(struct esb_data_envelope *env, struct payloa
 
 static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd) {
-    
+
     int err = enqueue_event(source, &cmd);
     if (err) {
         return err;
     }
-    
-    tx_op(NO_WAIT);
+
+    tx_op();
 
     return 0;
 }
-
 
 static int split_central_esb_get_available_source_ids(uint8_t *sources) {
     int count = 0;
@@ -138,7 +133,6 @@ static int split_central_esb_get_available_source_ids(uint8_t *sources) {
 
     return count;
 }
-
 
 static int split_central_esb_set_enabled(bool enabled) {
     is_enabled = enabled;
@@ -165,7 +159,7 @@ static struct zmk_split_transport_status split_central_esb_get_status() {
         peripherals_connected++;
     }
 
-    switch(peripherals_connected) {
+    switch (peripherals_connected) {
     case 0:
         conn = ZMK_SPLIT_TRANSPORT_CONNECTIONS_STATUS_DISCONNECTED;
         break;
@@ -209,9 +203,8 @@ static int zmk_split_esb_central_init(void) {
     print_reset_reason();
     peripheral_init();
 
-    k_work_queue_start(&my_work_q, my_work_q_stack,
-                       K_THREAD_STACK_SIZEOF(my_work_q_stack),
-                       5, NULL);
+    k_work_queue_start(&my_work_q, my_work_q_stack, K_THREAD_STACK_SIZEOF(my_work_q_stack), 5,
+                       NULL);
 
     int ret = zmk_split_esb_init(APP_ESB_MODE_PRX);
     if (ret) {
@@ -220,7 +213,8 @@ static int zmk_split_esb_central_init(void) {
     }
 
     k_work_submit(&notify_status_work);
-    k_work_reschedule_for_queue(&my_work_q, &update_peripheral_status_work, K_SECONDS(PERIPHERAL_STATUS_UPDATE_INTERVAL));
+    k_work_reschedule_for_queue(&my_work_q, &update_peripheral_status_work,
+                                K_SECONDS(PERIPHERAL_STATUS_UPDATE_INTERVAL));
     return 0;
 }
 
@@ -242,16 +236,8 @@ static int key_position_handler(struct esb_data_envelope *env) {
             bool pressed = slot->position_state[i] & BIT(j);
             struct zmk_split_transport_peripheral_event evt = {
                 .type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT,
-                .data = {
-                    .key_position_event = {
-                        .position = position,
-                        .pressed = pressed
-                    }
-                }
-            };
-            k_sched_lock();
+                .data = {.key_position_event = {.position = position, .pressed = pressed}}};
             zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
-            k_sched_unlock();
             changed &= (changed - 1);
         }
     }
@@ -260,12 +246,15 @@ static int key_position_handler(struct esb_data_envelope *env) {
 }
 
 static inline void update_rssi(int source, int rssi) {
-    peripherals[source].rssi_avg = (peripherals[source].rssi_avg * (RSSI_SAMPLE_CNT - 1) + rssi) / RSSI_SAMPLE_CNT; //sliding average
+    peripherals[source].rssi_avg = (peripherals[source].rssi_avg * (RSSI_SAMPLE_CNT - 1) + rssi) /
+                                   RSSI_SAMPLE_CNT; // sliding average
 }
 
 static void send_rssi(uint8_t source) {
-    struct zmk_split_transport_buffer buf = {.type = ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_RSSI,
-                                            .rssi = peripherals[source].rssi_avg,};
+    struct zmk_split_transport_buffer buf = {
+        .type = ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_RSSI,
+        .rssi = peripherals[source].rssi_avg,
+    };
     struct zmk_split_transport_central_command *cmd = &buf;
 
     split_central_esb_send_command(source, *cmd);
@@ -289,14 +278,12 @@ static int central_handler(struct esb_data_envelope *env) {
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT:
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT:
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT:
-        k_sched_lock();
         zmk_split_transport_central_peripheral_event_handler(&esb_central, source, env->event);
-        k_sched_unlock();
         break;
     default:
         break;
     }
-    
+
     if (env->flag & BIT(RSSI_REQ)) {
         send_rssi(source);
         LOG_WRN("RSSI_REQ by flag");
@@ -308,18 +295,6 @@ static int central_handler(struct esb_data_envelope *env) {
 static void update_peripheral_status_handler(struct k_work *work) {
     split_central_esb_get_status();
 
-    k_work_reschedule_for_queue(&my_work_q, &update_peripheral_status_work, K_SECONDS(PERIPHERAL_STATUS_UPDATE_INTERVAL));
+    k_work_reschedule_for_queue(&my_work_q, &update_peripheral_status_work,
+                                K_SECONDS(PERIPHERAL_STATUS_UPDATE_INTERVAL));
 }
-                                                        
-void rx_thread() {
-    while (true)
-    {
-        k_sem_take(&rx_sem, K_FOREVER);
-        LOG_DBG("rx thread awake");
-        handle_packet();
-    }
-}
-
-K_THREAD_DEFINE(rx_thread_id, 2304,
-        rx_thread, NULL, NULL, NULL,
-        0, 0, 0);
