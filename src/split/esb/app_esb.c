@@ -85,6 +85,13 @@ void set_esb_enabled(bool enabled) { set_flag(ESB_ENABLED, enabled); }
 
 bool is_esb_enabled() { return get_flag(ESB_ENABLED); }
 
+static inline bool can_transmit(void) {
+    atomic_val_t f = atomic_get(&flags);
+    bool is_active = (f & BIT(ESB_ACTIVE)) != 0;
+    bool not_delayed = (f & BIT(TX_DELAYED)) == 0;
+    return is_active && not_delayed;
+}
+
 static int tx_fail_count = 0;
 static const enum esb_tx_power tx_power[] = {
 #if defined(RADIO_TXPOWER_TXPOWER_Pos4dBm)
@@ -209,8 +216,8 @@ static void event_handler(struct esb_evt const *event) {
             esb_pop_tx();
             tx_power_change(POWER_UP);
         }
-#endif
         delayed_tx();
+#endif
         esb_ops->tx_op();
         break;
     case ESB_EVENT_RX_RECEIVED:
@@ -218,15 +225,6 @@ static void event_handler(struct esb_evt const *event) {
         esb_ops->rx_op();
         break;
     }
-}
-
-static bool can_transmit() {
-    static struct k_spinlock tx_state_lock;
-    k_spinlock_key_t key = k_spin_lock(&tx_state_lock);
-    bool can_tx = is_esb_active() && !is_tx_delayed();
-    k_spin_unlock(&tx_state_lock, key);
-
-    return can_tx;
 }
 
 int esb_tx_app() {
@@ -346,9 +344,6 @@ start:
 
     return 0;
 }
-
-#define ESB_TX_FIFO_REQUE_MAX                                                                      \
-    (CONFIG_ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS * CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT)
 
 int zmk_split_esb_init(app_esb_mode_t mode) {
     int ret;
