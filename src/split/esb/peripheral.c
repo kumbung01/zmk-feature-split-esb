@@ -9,8 +9,6 @@
 
 #include <zephyr/settings/settings.h>
 #include <zephyr/sys/crc.h>
-#include <zephyr/sys/ring_buffer.h>
-
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
@@ -185,11 +183,16 @@ void tx_thread() {
         k_sem_take(&tx_sem, K_FOREVER);
         LOG_DBG("tx thread awake");
         do {
-            if (esb_tx_app() != 0) {
-                break;
+            int err = esb_tx_app();
+            if (err == 0) {
+                continue;
+            } else if (err == -EAGAIN) {
+                k_yield();
             }
+
+            break;
         } while (true);
     }
 }
 
-K_THREAD_DEFINE(tx_thread_id, 752, tx_thread, NULL, NULL, NULL, -1, 0, 100);
+K_THREAD_DEFINE(tx_thread_id, 752, tx_thread, NULL, NULL, NULL, -1, 0, 0);

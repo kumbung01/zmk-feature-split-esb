@@ -18,18 +18,15 @@
 #include <zephyr/drivers/hwinfo.h>
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
-
 K_MEM_SLAB_DEFINE_STATIC(tx_slab, sizeof(struct esb_data_envelope), TX_MSGQ_SIZE, 4);
-K_MSGQ_DEFINE(tx_msgq, sizeof(void*), TX_MSGQ_SIZE, 4);
+K_MSGQ_DEFINE(tx_msgq, sizeof(void *), TX_MSGQ_SIZE, 4);
 #if CONFIG_LOG
 const char *ACTIVE_STATE_CHAR[] = {"ACTIVE", "IDLE", "SLEEP"};
 const char *TX_POWER_CHAR[] = {"OK", "UP", "DOWN"};
 #endif
 
 static uint8_t tx_flag = 0;
-void set_tx_flag(int bit) {
-    WRITE_BIT(tx_flag, bit, 1);
-}
+void set_tx_flag(int bit) { WRITE_BIT(tx_flag, bit, 1); }
 
 uint8_t get_and_clear_tx_flag() {
     uint8_t ret = tx_flag;
@@ -47,13 +44,13 @@ ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type 
         size = 0;
         break;
     case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_INVOKE_BEHAVIOR:
-        size = sizeof(((struct zmk_split_transport_central_command*)0)->data.invoke_behavior);
+        size = sizeof(((struct zmk_split_transport_central_command *)0)->data.invoke_behavior);
         break;
     case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_PHYSICAL_LAYOUT:
-        size = sizeof(((struct zmk_split_transport_central_command*)0)->data.set_physical_layout);
+        size = sizeof(((struct zmk_split_transport_central_command *)0)->data.set_physical_layout);
         break;
     case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_SET_HID_INDICATORS:
-        size = sizeof(((struct zmk_split_transport_central_command*)0)->data.set_hid_indicators);
+        size = sizeof(((struct zmk_split_transport_central_command *)0)->data.set_hid_indicators);
         break;
     case ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_RSSI:
         size = 1;
@@ -68,22 +65,21 @@ ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type 
     return size;
 }
 
-
 ssize_t get_payload_data_size_evt(enum zmk_split_transport_peripheral_event_type _type) {
     ssize_t size = -1;
 
     switch (_type) {
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT:
-        size = sizeof(((struct zmk_split_transport_peripheral_event*)0)->data.input_event);
+        size = sizeof(((struct zmk_split_transport_peripheral_event *)0)->data.input_event);
         break;
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT:
         size = POSITION_STATE_DATA_LEN;
         break;
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT:
-        size = sizeof(((struct zmk_split_transport_peripheral_event*)0)->data.sensor_event);
+        size = sizeof(((struct zmk_split_transport_peripheral_event *)0)->data.sensor_event);
         break;
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT:
-        size = sizeof(((struct zmk_split_transport_peripheral_event*)0)->data.battery_event);
+        size = sizeof(((struct zmk_split_transport_peripheral_event *)0)->data.battery_event);
         break;
     default:
         size = -ENOTSUP;
@@ -98,17 +94,14 @@ ssize_t get_payload_data_size_evt(enum zmk_split_transport_peripheral_event_type
 power_set_t check_rssi(int rssi) {
     if (rssi < RSSI_BASELINE - 3) {
         return POWER_UP;
-    }
-    else if (rssi > RSSI_BASELINE + 3) {
+    } else if (rssi > RSSI_BASELINE + 3) {
         return POWER_DOWN;
-    }
-    else {
+    } else {
         return POWER_OK;
     }
 }
 
 // static size_t tx_fail_count = 0;
-
 
 #if 0
 // encrption
@@ -168,7 +161,6 @@ int enqueue_event(uint8_t source, struct zmk_split_transport_buffer *buf) {
 
     env->buf = *buf;
     env->source = source;
-    // env->timestamp = k_uptime_get();
 
     ret = put_tx_data(env);
     if (ret < 0) {
@@ -196,9 +188,10 @@ ssize_t make_packet_default(struct esb_data_envelope *env, struct payload_buffer
 int make_packet(struct esb_payload *payload) {
     struct payload_buffer *buf = (struct payload_buffer *)payload->data;
     const size_t body_size = sizeof(buf->body);
+    struct esb_data_envelope *env = NULL;
     payload->noack = !CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK;
 
-    struct esb_data_envelope *env = get_next_tx_data();
+    env = get_next_tx_data();
     if (env == NULL) {
         return -ENODATA;
     }
@@ -231,7 +224,7 @@ int handle_packet() {
 
     LOG_DBG("rx_payload pipe %d", rx_payload.pipe);
 
-    struct payload_buffer *buf = (struct payload_buffer*)(rx_payload.data);
+    struct payload_buffer *buf = (struct payload_buffer *)(rx_payload.data);
     uint8_t *data = buf->body;
     int type = buf->header.type;
     size_t length = rx_payload.length - HEADER_SIZE;
@@ -242,11 +235,12 @@ int handle_packet() {
         return -ENOTSUP;
     }
 
-    struct esb_data_envelope env = { .buf.type = type, 
-                                     .source = PIPE_TO_SOURCE(rx_payload.pipe),
-                                     .rssi = -(rx_payload.rssi),
-                                     .flag = buf->header.flag,
-                                    };
+    struct esb_data_envelope env = {
+        .buf.type = type,
+        .source = PIPE_TO_SOURCE(rx_payload.pipe),
+        .rssi = -(rx_payload.rssi),
+        .flag = buf->header.flag,
+    };
 
     memcpy(env.buf.data, data, data_size);
 
@@ -273,20 +267,13 @@ int put_tx_data(void *ptr) {
     return k_msgq_put(&tx_msgq, &ptr, K_NO_WAIT);
 }
 
-int tx_alloc(void **ptr) {
-    return k_mem_slab_alloc(&tx_slab, ptr, K_NO_WAIT);
-}
+int tx_alloc(void **ptr) { return k_mem_slab_alloc(&tx_slab, ptr, K_NO_WAIT); }
 
-void tx_free(void *ptr) {
-    k_mem_slab_free(&tx_slab, ptr);
-}
+void tx_free(void *ptr) { k_mem_slab_free(&tx_slab, ptr); }
 
-size_t get_tx_count() {
-    return k_mem_slab_num_used_get(&tx_slab);
-}
+size_t get_tx_count() { return k_mem_slab_num_used_get(&tx_slab); }
 
-void check_stack_usage(struct k_thread *thread, const char *name, int64_t *before, int duration)
-{
+void check_stack_usage(struct k_thread *thread, const char *name, int64_t *before, int duration) {
     size_t unused_stack;
     int64_t now = k_uptime_get();
     if (now - *before < duration) {
@@ -297,22 +284,18 @@ void check_stack_usage(struct k_thread *thread, const char *name, int64_t *befor
 
     int ret = k_thread_stack_space_get(thread, &unused_stack);
     if (ret == 0) {
-        size_t total_size = thread->stack_info.size; 
+        size_t total_size = thread->stack_info.size;
         size_t used_stack = total_size - unused_stack;
 
-        LOG_WRN("\"%s\": Max Used %zu bytes / Total %zu bytes (%u%%)",
-               name, 
-               used_stack, 
-               total_size,
-               (uint32_t)(used_stack * 100.0 / total_size));
+        LOG_WRN("\"%s\": Max Used %zu bytes / Total %zu bytes (%u%%)", name, used_stack, total_size,
+                (uint32_t)(used_stack * 100.0 / total_size));
 
     } else {
         LOG_WRN("Error: Failed to get stack space for %s (ret: %d)", name, ret);
     }
 }
 
-void print_reset_reason(void)
-{
+void print_reset_reason(void) {
     uint32_t cause = 0;
     int ret = hwinfo_get_reset_cause(&cause);
 
@@ -340,12 +323,4 @@ void print_reset_reason(void)
     }
 
     hwinfo_clear_reset_cause();
-}
-
-inline int get_bit_count(uint8_t x) {
-    x = x - ((x >> 1) & 0x55);
-    x = (x & 0x33) + ((x >> 2) & 0x33);
-    x = (x + (x >> 4)) & 0x0F;
-    
-    return x;
 }

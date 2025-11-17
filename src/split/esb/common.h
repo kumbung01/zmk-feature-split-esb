@@ -49,29 +49,29 @@
 #define BITRATE ESB_BITRATE_1MBPS
 #endif
 
-
 #define TIMEOUT_MS CONFIG_ZMK_SPLIT_ESB_KEYBOARD_EVENT_TIMEOUT_MS
 #define SAFE_DIV(x, y) ((x) / (y) > 0 ? (x) / (y) : 1)
 
 #define PERIPHERAL_SLEEP_TIMEOUT 600000
 
-#define PIPE_TO_SOURCE(pipe)   (pipe)
+#define PIPE_TO_SOURCE(pipe) (pipe)
 #define SOURCE_TO_PIPE(source) (source)
 extern const char *ACTIVE_STATE_CHAR[];
 extern const char *TX_POWER_CHAR[];
 extern struct k_msgq rx_msgq;
 #define POSITION_STATE_DATA_LEN 16
 typedef enum zmk_split_transport_peripheral_event_type zmk_split_transport_buffer_type;
-#define ZMK_DATA_SIZE (size_t)(sizeof(struct zmk_split_transport_peripheral_event) > sizeof(struct zmk_split_transport_central_command) ? \
-                               sizeof(struct zmk_split_transport_peripheral_event) : \
-                               sizeof(struct zmk_split_transport_central_command))
-
+#define ZMK_DATA_SIZE                                                                              \
+    (size_t)(sizeof(struct zmk_split_transport_peripheral_event) >                                 \
+                     sizeof(struct zmk_split_transport_central_command)                            \
+                 ? sizeof(struct zmk_split_transport_peripheral_event)                             \
+                 : sizeof(struct zmk_split_transport_central_command))
 
 struct zmk_split_transport_buffer {
     zmk_split_transport_buffer_type type;
     union {
         uint8_t data[ZMK_DATA_SIZE - sizeof(zmk_split_transport_buffer_type)];
-        int8_t rssi; 
+        int8_t rssi;
     };
 };
 
@@ -84,7 +84,6 @@ enum zmk_split_transport_central_command_type_proprietary {
 
 enum zmk_split_transport_peripheral_event_type_proprietary {
     ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_RSSI_REQUEST = 4,
-    ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_RSSI_TAKE = 5,
 } __packed;
 
 struct esb_data_envelope {
@@ -96,9 +95,10 @@ struct esb_data_envelope {
     };
     int8_t rssi;
     uint8_t flag;
+    int64_t timestamp;
 };
 
-#define RSSI_REQ        (0)
+#define RSSI_REQ (0)
 struct payload_header {
     uint8_t type;
     uint8_t flag;
@@ -116,7 +116,7 @@ struct payload_buffer {
 _Static_assert(sizeof(struct payload_buffer) == CONFIG_ESB_MAX_PAYLOAD_LENGTH,
                "zmk_split_transport_buffer size mismatch");
 
-typedef int (*zmk_split_transport_handler)(struct esb_data_envelope*);
+typedef int (*zmk_split_transport_handler)(struct esb_data_envelope *);
 typedef void (*esb_op)(void);
 typedef ssize_t (*get_data_size)(int type);
 typedef ssize_t (*packet_maker)(struct esb_data_envelope *env, struct payload_buffer *buf);
@@ -143,11 +143,10 @@ ssize_t get_payload_data_size_cmd(enum zmk_split_transport_central_command_type 
 
 int enqueue_event(uint8_t source, struct zmk_split_transport_buffer *event);
 
-
 int service_init();
 
 uint32_t get_nonce();
-int process_payload(char* data, size_t length, uint32_t nonce);
+int process_payload(char *data, size_t length, uint32_t nonce);
 
 int make_packet(struct esb_payload *payload);
 int handle_packet();

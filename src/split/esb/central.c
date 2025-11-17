@@ -40,8 +40,7 @@ enum peripheral_slot_state {
 #define RSSI_SENT_FLAG (0)
 
 // rssi sample count
-#define RSSI_SAMPLE_CNT 4
-#define PERIPHERAL_STATUS_UPDATE_INTERVAL 5
+#define RSSI_SAMPLE_CNT 5
 struct peripheral_slot {
     enum peripheral_slot_state state;
     uint8_t position_state[POSITION_STATE_DATA_LEN];
@@ -70,15 +69,8 @@ static void tx_work_handler(struct k_work *work);
 K_WORK_DEFINE(tx_work, tx_work_handler);
 static void rx_work_handler(struct k_work *work);
 K_WORK_DEFINE(rx_work, rx_work_handler);
-static void update_peripheral_status_handler(struct k_work *work);
-K_WORK_DELAYABLE_DEFINE(update_peripheral_status_work, update_peripheral_status_handler);
-K_THREAD_STACK_DEFINE(my_work_q_stack, 1024);
-struct k_work_q my_work_q;
 
-static void tx_op() {
-    if (is_esb_active())
-        k_work_submit_to_queue(&my_work_q, &tx_work);
-}
+static void tx_op() { k_work_submit(&tx_work); }
 
 static void rx_op() { k_work_submit(&rx_work); }
 
@@ -94,8 +86,11 @@ static struct zmk_split_esb_ops central_ops = {
 static void tx_work_handler(struct k_work *work) { esb_tx_app(); }
 
 static void rx_work_handler(struct k_work *work) {
-    if (handle_packet() == 0)
+    int err = handle_packet();
+
+    if (err != -ENODATA) {
         k_work_submit(&rx_work);
+    }
 }
 
 static ssize_t packet_maker_central(struct esb_data_envelope *env, struct payload_buffer *buf) {
@@ -203,9 +198,6 @@ static int zmk_split_esb_central_init(void) {
     print_reset_reason();
     peripheral_init();
 
-    k_work_queue_start(&my_work_q, my_work_q_stack, K_THREAD_STACK_SIZEOF(my_work_q_stack), 5,
-                       NULL);
-
     int ret = zmk_split_esb_init(APP_ESB_MODE_PRX);
     if (ret) {
         LOG_ERR("zmk_split_esb_init failed (err %d)", ret);
@@ -213,8 +205,7 @@ static int zmk_split_esb_central_init(void) {
     }
 
     k_work_submit(&notify_status_work);
-    k_work_reschedule_for_queue(&my_work_q, &update_peripheral_status_work,
-                                K_SECONDS(PERIPHERAL_STATUS_UPDATE_INTERVAL));
+
     return 0;
 }
 
@@ -290,11 +281,4 @@ static int central_handler(struct esb_data_envelope *env) {
     }
 
     return 0;
-}
-
-static void update_peripheral_status_handler(struct k_work *work) {
-    split_central_esb_get_status();
-
-    k_work_reschedule_for_queue(&my_work_q, &update_peripheral_status_work,
-                                K_SECONDS(PERIPHERAL_STATUS_UPDATE_INTERVAL));
 }

@@ -176,17 +176,20 @@ static app_esb_mode_t m_mode;
 
 static void start_tx_work_handler(struct k_work *work) {
     LOG_DBG("start_tx_work");
-    if (tx_fail_count == 1) {
-        tx_power_change(POWER_UP);
-    }
     esb_start_tx();
     set_tx_delayed(false);
 }
 K_WORK_DELAYABLE_DEFINE(start_tx_work, start_tx_work_handler);
 
-static void delayed_tx(k_timeout_t timeout) {
+static void delayed_tx() {
     set_tx_delayed(true);
-    k_work_reschedule(&start_tx_work, timeout);
+
+    uint32_t backoff_factor = 1U << MIN(tx_fail_count, 4);
+    uint32_t max_delay = RETRANSMIT_DELAY * backoff_factor;
+
+    uint32_t random_delay = k_uptime_ticks() % max_delay;
+
+    k_work_reschedule(&start_tx_work, K_USEC(random_delay));
 }
 
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
@@ -204,9 +207,10 @@ static void event_handler(struct esb_evt const *event) {
         if (tx_fail_count++ >= 3) {
             tx_fail_count = 0;
             esb_pop_tx();
+            tx_power_change(POWER_UP);
         }
 #endif
-        delayed_tx(K_USEC(SLEEP_DELAY));
+        delayed_tx();
         esb_ops->tx_op();
         break;
     case ESB_EVENT_RX_RECEIVED:
@@ -216,12 +220,20 @@ static void event_handler(struct esb_evt const *event) {
     }
 }
 
+static bool can_transmit() {
+    static struct k_spinlock tx_state_lock;
+    k_spinlock_key_t key = k_spin_lock(&tx_state_lock);
+    bool can_tx = is_esb_active() && !is_tx_delayed();
+    k_spin_unlock(&tx_state_lock, key);
+
+    return can_tx;
+}
+
 int esb_tx_app() {
     struct esb_payload payload;
     int ret = 0;
 
-    if (!is_esb_active()) {
-        k_yield();
+    if (!can_transmit()) {
         return -EAGAIN;
     }
 
@@ -246,11 +258,6 @@ int esb_tx_app() {
     }
 
 start_tx:
-    if (is_tx_delayed()) {
-        LOG_DBG("tx_delayed");
-        return ret;
-    }
-
     LOG_DBG("start tx");
     esb_start_tx();
 
@@ -439,8 +446,6 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) 
         if (!is_tx_oneshot_set()) {
             LOG_WRN("tx oneshot");
             esb_ops->tx_op();
-        } else {
-            esb_start_tx();
         }
 #endif
         break;
