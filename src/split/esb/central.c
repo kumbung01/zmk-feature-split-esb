@@ -72,7 +72,7 @@ K_WORK_DEFINE(rx_work, rx_work_handler);
 
 static void tx_op() { k_work_submit(&tx_work); }
 
-static void rx_op() { k_work_submit(&rx_work); }
+static void rx_op() { k_sem_give(&rx_sem); }
 
 static struct zmk_split_esb_ops central_ops = {
     .event_handler = central_handler,
@@ -229,6 +229,7 @@ static int key_position_handler(struct esb_data_envelope *env) {
                 .type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT,
                 .data = {.key_position_event = {.position = position, .pressed = pressed}}};
             zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
+            k_yield();
             changed &= (changed - 1);
         }
     }
@@ -270,6 +271,7 @@ static int central_handler(struct esb_data_envelope *env) {
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT:
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT:
         zmk_split_transport_central_peripheral_event_handler(&esb_central, source, env->event);
+        k_yield();
         break;
     default:
         break;
@@ -282,3 +284,13 @@ static int central_handler(struct esb_data_envelope *env) {
 
     return 0;
 }
+
+void rx_thread() {
+    while (true) {
+        k_sem_take(&rx_sem, K_FOREVER);
+        LOG_DBG("rx thread awake");
+        handle_packet();
+    }
+}
+
+K_THREAD_DEFINE(rx_thread_id, 3000, rx_thread, NULL, NULL, NULL, -1, 0, 0);

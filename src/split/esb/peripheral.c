@@ -35,12 +35,13 @@ static uint8_t position_state[POSITION_STATE_DATA_LEN] = {
 };
 static void rx_work_handler(struct k_work *work);
 K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
+static void tx_work_handler(struct k_work *work);
+K_WORK_DEFINE(tx_work, tx_work_handler);
 static int peripheral_handler(struct esb_data_envelope *env);
 static ssize_t packet_maker_peripheral(struct esb_data_envelope *env, struct payload_buffer *buf);
 static int
 split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event);
 static void tx_op() { k_sem_give(&tx_sem); }
-
 static void rx_op() { k_work_submit(&rx_work.work); }
 
 static void rssi_request_work_handler(struct k_work *work);
@@ -71,6 +72,11 @@ static struct zmk_split_esb_ops peripheral_ops = {
 };
 
 static void rx_work_handler(struct k_work *work) { handle_packet(); }
+static void tx_work_handler(struct k_work *work) {
+    if (esb_tx_app() != -ENODATA) {
+        k_work_submit(&tx_work);
+    }
+}
 
 static ssize_t packet_maker_peripheral(struct esb_data_envelope *env, struct payload_buffer *buf) {
     ssize_t data_size = 0;
@@ -182,17 +188,12 @@ void tx_thread() {
     while (true) {
         k_sem_take(&tx_sem, K_FOREVER);
         LOG_DBG("tx thread awake");
+        int err = 0;
         do {
-            int err = esb_tx_app();
-            if (err == 0) {
-                continue;
-            } else if (err == -EAGAIN) {
-                k_yield();
-            }
-
-            break;
-        } while (true);
+            err = esb_tx_app();
+            k_yield();
+        } while (err == 0);
     }
 }
 
-K_THREAD_DEFINE(tx_thread_id, 752, tx_thread, NULL, NULL, NULL, -1, 0, 0);
+K_THREAD_DEFINE(tx_thread_id, 1024, tx_thread, NULL, NULL, NULL, -1, 0, 0);

@@ -32,10 +32,6 @@ config ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_COUNT
     int "The number of retransmission attempts before transmission fail"
     default 3
 
-config ZMK_SPLIT_ESB_PROTO_MSGQ_ITEMS
-    int "Number of message queue size to buffer ESB payload for TX in between multi-protocol service timeslots (CONFIG_MPSL_TIMESLOT_SESSION_COUNT)"
-    default 16
-
 config ZMK_SPLIT_ESB_EVENT_BUFFER_ITEMS
     int "Number of peripheral events to buffer for TX/RX"
     default 16
@@ -48,17 +44,11 @@ config ZMK_SPLIT_ESB_BITRATE_2MBPS
     bool "Set ESB bitrate to 2Mbps"
     default n
 
-config ZMK_SPLIT_ESB_KEYBOARD_EVENT_TIMEOUT_MS
-    int "keyboard event timeout in ms"
-    default 50
+config ZMK_SPLIT_ESB_RF_CHANNEL
+    int "ESB channel to use (0-100)"
+    default 12
+    range 0 100
 
-config ZMK_SPLIT_ESB_ENCRYPTION_KEY
-    string "10+byte encryption key in string"
-    default "hello world!!!"
-
-config ZMK_SPLIT_ESB_SINGLE_PACKET
-    bool "Use single packet mode"
-    default n
 
 module = ZMK_SPLIT_ESB
 module-str = ZMK_SPLIT_ESB

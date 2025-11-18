@@ -190,11 +190,7 @@ K_WORK_DELAYABLE_DEFINE(start_tx_work, start_tx_work_handler);
 
 static void delayed_tx() {
     set_tx_delayed(true);
-
-    uint32_t backoff_factor = 1U << MIN(tx_fail_count, 4);
-    uint32_t max_delay = RETRANSMIT_DELAY * backoff_factor;
-
-    uint32_t random_delay = k_uptime_ticks() % max_delay;
+    uint32_t random_delay = k_uptime_ticks() % RETRANSMIT_DELAY;
 
     k_work_reschedule(&start_tx_work, K_USEC(random_delay));
 }
@@ -257,7 +253,9 @@ int esb_tx_app() {
 
 start_tx:
     LOG_DBG("start tx");
+#if IS_PERIPHERAL
     esb_start_tx();
+#endif
 
     return ret;
 }
@@ -329,7 +327,7 @@ static int esb_initialize(app_esb_mode_t mode) {
         return err;
     }
 
-    const uint32_t channel = 12;
+    const uint32_t channel = RF_CHANNEL;
     LOG_DBG("setting rf channel to %d", channel);
     err = esb_set_rf_channel(channel);
     if (err < 0) {
@@ -413,11 +411,7 @@ static int app_esb_suspend(void) {
 
         irq_unlock(irq_key);
     } else {
-#if ESB_ONLY
-        esb_suspend();
-#else
         esb_stop_rx();
-#endif
     }
 
     // Todo: Figure out how to use the esb_suspend() function

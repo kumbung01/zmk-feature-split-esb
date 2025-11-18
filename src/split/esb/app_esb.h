@@ -13,37 +13,24 @@
 extern struct k_sem tx_sem;
 extern struct k_sem rx_sem;
 
+#define RF_CHANNEL CONFIG_ZMK_SPLIT_ESB_RF_CHANNEL
+
 #define RSSI_BASELINE (-60)
-typedef enum{
-    POWER_OK,
-    POWER_UP,
-    POWER_DOWN
-} power_set_t;
+typedef enum { POWER_OK, POWER_UP, POWER_DOWN } power_set_t;
 
-typedef enum {
-    NO_WAIT = -1
-} timeout_t;
+typedef enum { NO_WAIT = -1 } timeout_t;
 
-typedef enum {
-    APP_ESB_EVT_TX_SUCCESS,
-    APP_ESB_EVT_TX_FAIL,
-    APP_ESB_EVT_RX
-} app_esb_event_type_t;
+typedef enum { APP_ESB_EVT_TX_SUCCESS, APP_ESB_EVT_TX_FAIL, APP_ESB_EVT_RX } app_esb_event_type_t;
 
-typedef enum {
-    APP_ESB_MODE_PTX,
-    APP_ESB_MODE_PRX
-} app_esb_mode_t;
+typedef enum { APP_ESB_MODE_PTX, APP_ESB_MODE_PRX } app_esb_mode_t;
 
 typedef struct {
     app_esb_event_type_t evt_type;
 } app_esb_event_t;
 
-
 typedef struct {
     app_esb_mode_t mode;
 } app_esb_config_t;
-
 
 typedef void (*app_esb_callback_t)(app_esb_event_t *event);
 
