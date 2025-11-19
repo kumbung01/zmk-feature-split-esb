@@ -227,9 +227,10 @@ int esb_tx_app() {
     struct esb_payload payload;
     int ret = 0;
 
-    if (!can_transmit()) {
-        return -EAGAIN;
-    }
+    // if (!is_esb_active()) {
+    //     LOG_DBG("esb not active, skip tx");
+    //     return -EAGAIN;
+    // }
 
     if (esb_tx_full()) {
         LOG_DBG("esb tx full, wait for next tx event");
@@ -252,8 +253,12 @@ int esb_tx_app() {
     }
 
 start_tx:
-    LOG_DBG("start tx");
 #if IS_PERIPHERAL
+    if (is_tx_delayed()) {
+        return -EAGAIN;
+    }
+
+    LOG_DBG("start tx");
     esb_start_tx();
 #endif
 
@@ -381,6 +386,9 @@ int zmk_split_esb_set_enable(bool enabled) {
                     | BIT(ESB_INIT)
 #endif
         );
+        if (esb_ops->on_disabled) {
+            esb_ops->on_disabled();
+        }
         return 0;
     }
 }
@@ -431,14 +439,19 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) 
     switch (type) {
     case APP_TS_STARTED:
         app_esb_resume();
-#if IS_PERIPHERAL
-        if (!is_tx_oneshot_set()) {
-            LOG_WRN("tx oneshot");
-            esb_ops->tx_op();
+
+        if (esb_ops->on_active) {
+            esb_ops->on_active();
         }
-#endif
         break;
     case APP_TS_STOPPED:
+#if IS_PERIPHERAL
+        k_work_cancel_delayable(&start_tx_work);
+        set_tx_delayed(false);
+#endif
+        if (esb_ops->on_suspend) {
+            esb_ops->on_suspend();
+        }
         app_esb_suspend();
         break;
     }

@@ -56,10 +56,10 @@ static void rssi_request_work_handler(struct k_work *work) {
     k_work_reschedule(&rssi_request_work, K_SECONDS(RSSI_REQUEST_INTREVAL));
 }
 
-void on_enabled() {
-    k_work_reschedule(&rssi_request_work, K_SECONDS(RSSI_REQUEST_INTREVAL));
-    memset(position_state, 0, sizeof(position_state));
-}
+static void on_enabled();
+static void on_disabled();
+static void on_active();
+static void on_suspend();
 
 static struct zmk_split_esb_ops peripheral_ops = {
     .event_handler = peripheral_handler,
@@ -69,6 +69,9 @@ static struct zmk_split_esb_ops peripheral_ops = {
     .rx_op = rx_op,
     .packet_make = packet_maker_peripheral,
     .on_enabled = on_enabled,
+    .on_disabled = on_disabled,
+    .on_active = on_active,
+    .on_suspend = on_suspend,
 };
 
 static void rx_work_handler(struct k_work *work) { handle_packet(); }
@@ -184,16 +187,49 @@ static int peripheral_handler(struct esb_data_envelope *env) {
     return zmk_split_transport_peripheral_command_handler(&esb_peripheral, env->command);
 }
 
+static K_SEM_DEFINE(thread_sem, 0, 1);
 void tx_thread() {
     while (true) {
-        k_sem_take(&tx_sem, K_FOREVER);
-        LOG_DBG("tx thread awake");
-        int err = 0;
-        do {
-            err = esb_tx_app();
-            k_yield();
-        } while (err == 0);
+        k_sem_take(&thread_sem, K_FOREVER);
+        while (is_esb_active()) {
+            k_sem_take(&tx_sem, K_FOREVER);
+            if (!is_esb_active()) {
+                break;
+            }
+
+            LOG_DBG("tx thread awake");
+            while (get_tx_count() > 0) {
+                if (esb_tx_app() < 0) {
+                    break;
+                }
+
+                k_yield();
+            }
+        }
+
+        // LOG_WRN("esb not active, tx thread going to sleep");
     }
 }
 
 K_THREAD_DEFINE(tx_thread_id, 1024, tx_thread, NULL, NULL, NULL, -1, 0, 0);
+
+static void on_enabled() {
+    // LOG_WRN("on_enabled called");
+    k_work_reschedule(&rssi_request_work, K_SECONDS(RSSI_REQUEST_INTREVAL));
+    memset(position_state, 0, sizeof(position_state));
+}
+
+static void on_disabled() {
+    // LOG_WRN("on_disabled called");
+    k_work_cancel_delayable(&rssi_request_work);
+}
+
+static void on_active() {
+    // LOG_WRN("on_active called");
+    k_sem_give(&thread_sem);
+}
+
+static void on_suspend() {
+    // LOG_WRN("on_suspend called");
+    k_sem_give(&tx_sem); // guarantee tx thread can exit tx loop
+}

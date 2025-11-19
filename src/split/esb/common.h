@@ -134,6 +134,10 @@ struct zmk_split_esb_ops {
     zmk_split_transport_handler event_handler;
 
     esb_works on_enabled;
+    esb_works on_disabled;
+
+    esb_works on_active;
+    esb_works on_suspend;
 };
 
 extern struct zmk_split_esb_ops *esb_ops;
