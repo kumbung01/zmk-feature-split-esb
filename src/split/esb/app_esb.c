@@ -227,10 +227,10 @@ int esb_tx_app() {
     struct esb_payload payload;
     int ret = 0;
 
-    // if (!is_esb_active()) {
-    //     LOG_DBG("esb not active, skip tx");
-    //     return -EAGAIN;
-    // }
+    if (!is_esb_active()) {
+        LOG_DBG("esb not active, skip tx");
+        return -EAGAIN;
+    }
 
     if (esb_tx_full()) {
         LOG_DBG("esb tx full, wait for next tx event");
