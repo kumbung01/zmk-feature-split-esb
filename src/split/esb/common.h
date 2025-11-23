@@ -10,7 +10,7 @@
 #include <zephyr/device.h>
 #include "app_esb.h"
 #include <zmk/split/transport/types.h>
-
+#include <zephyr/drivers/counter.h>
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 #define TX_MSGQ_SIZE CONFIG_ZMK_SPLIT_ESB_CMD_BUFFER_ITEMS
 #else
@@ -169,3 +169,10 @@ power_set_t check_rssi(int rssi);
 void print_reset_reason(void);
 ssize_t make_packet_default(struct esb_data_envelope *env, struct payload_buffer *buf);
 int get_bit_count(uint8_t x);
+
+void tdma_timer_init(counter_top_callback_t callback);
+void tdma_timer_set(uint32_t period_us);
+void tdma_timer_start();
+void tdma_timer_stop(void);
+void tdma_timer_update(uint32_t period_us);
+void tdma_timer_restart(void);

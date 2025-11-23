@@ -49,6 +49,9 @@ config ZMK_SPLIT_ESB_RF_CHANNEL
     default 12
     range 0 100
 
+config ZMK_SPLIT_ESB_TIMESLOTS_PER_CHANNEL
+    int "timeslots per channel"
+    default 3
 
 module = ZMK_SPLIT_ESB
 module-str = ZMK_SPLIT_ESB

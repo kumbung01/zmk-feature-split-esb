@@ -60,6 +60,8 @@ static void on_enabled();
 static void on_disabled();
 static void on_active();
 static void on_suspend();
+static void alarm_callback(const struct device *dev, uint8_t chan_id, uint32_t ticks,
+                           void *user_data);
 
 static struct zmk_split_esb_ops peripheral_ops = {
     .event_handler = peripheral_handler,
@@ -181,6 +183,9 @@ static int zmk_split_esb_peripheral_init(void) {
         return ret;
     }
 
+    tdma_timer_init(alarm_callback);
+    tdma_timer_set(RETRANSMIT_DELAY);
+
     k_work_submit(&notify_status_work);
     return 0;
 }
@@ -203,6 +208,7 @@ static K_SEM_DEFINE(thread_sem, 0, 1);
 void tx_thread() {
     while (true) {
         k_sem_take(&thread_sem, K_FOREVER);
+        tdma_timer_start();
         while (is_esb_active()) {
             k_sem_take(&tx_sem, K_FOREVER);
             if (!is_esb_active()) {
@@ -210,15 +216,15 @@ void tx_thread() {
             }
 
             LOG_DBG("tx thread awake");
-            while (get_tx_count() > 0) {
+            do {
                 if (esb_tx_app() < 0) {
                     break;
                 }
 
                 k_yield();
-            }
+            } while (true);
         }
-
+        tdma_timer_stop();
         // LOG_WRN("esb not active, tx thread going to sleep");
     }
 }
@@ -244,4 +250,9 @@ static void on_active() {
 static void on_suspend() {
     // LOG_WRN("on_suspend called");
     k_sem_give(&tx_sem); // guarantee tx thread can exit tx loop
+}
+
+static void alarm_callback(const struct device *dev, uint8_t chan_id, uint32_t ticks,
+                           void *user_data) {
+    esb_start_tx();
 }

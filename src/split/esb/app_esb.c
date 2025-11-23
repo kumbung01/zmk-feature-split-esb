@@ -51,6 +51,14 @@ uint8_t esb_addr_prefix[8] = DT_INST_PROP(0, addr_prefix);
 #error "Need to create a node with compatible of 'zmk,esb-split` with `all `address` property set."
 #endif
 
+#define CHANNELS_DEFINED (DT_INST_NODE_HAS_PROP(0, channels))
+#if CHANNELS_DEFINED
+static uint8_t rf_channels[] = DT_INST_PROP(0, channels);
+#else
+static uint8_t rf_channels[] = {4, 26, 89};
+#endif
+#define CHANNEL_COUNT ARRAY_SIZE(rf_channels)
+
 #define ESB_ACTIVE (0)
 #define ESB_ENABLED (1)
 #define ESB_INIT (2)
@@ -77,22 +85,21 @@ bool is_esb_initialized(void) { return get_and_set_flag(ESB_INIT); }
 
 bool is_tx_oneshot_set(void) { return get_and_set_flag(TX_ONESHOT); }
 
-void set_tx_delayed(bool set) { set_flag(TX_DELAYED, set); }
-
-bool is_tx_delayed(void) { return get_flag(TX_DELAYED); }
-
 void set_esb_enabled(bool enabled) { set_flag(ESB_ENABLED, enabled); }
 
 bool is_esb_enabled() { return get_flag(ESB_ENABLED); }
 
-static inline bool can_transmit(void) {
-    atomic_val_t f = atomic_get(&flags);
-    bool is_active = (f & BIT(ESB_ACTIVE)) != 0;
-    bool not_delayed = (f & BIT(TX_DELAYED)) == 0;
-    return is_active && not_delayed;
-}
+bool is_tx_delayed() { return get_flag(TX_DELAYED); }
 
-static int tx_fail_count = 0;
+void set_tx_delayed(bool set) { set_flag(TX_DELAYED, set); }
+
+const uint32_t sync_lifetime_limit = 1000;
+static atomic_t sync_lifetime = ATOMIC_INIT(sync_lifetime_limit);
+void sync_lifetime_init() { atomic_set(&sync_lifetime, sync_lifetime_limit); }
+void sync_lifetime_reset() { atomic_clear(&sync_lifetime); }
+void sync_lifetime_increment() { atomic_inc(&sync_lifetime); }
+bool is_tx_on_sync() { return atomic_get(&sync_lifetime) < sync_lifetime_limit; }
+
 static const enum esb_tx_power tx_power[] = {
 #if defined(RADIO_TXPOWER_TXPOWER_Pos4dBm)
     /** 4 dBm radio transmit power. */
@@ -124,6 +131,20 @@ static const enum esb_tx_power tx_power[] = {
 #endif /* defined(RADIO_TXPOWER_TXPOWER_Neg40dBm) */
 };
 
+static void jitter_tx() {
+    set_tx_delayed(true);
+
+    uint32_t min_delay = RETRANSMIT_DELAY / 2;
+    uint32_t jitter = k_uptime_ticks() % RETRANSMIT_DELAY;
+
+    tdma_timer_update(min_delay + jitter);
+}
+
+static void reset_tx() {
+    set_tx_delayed(false);
+    tdma_timer_update(RETRANSMIT_DELAY);
+}
+
 static void event_handler(struct esb_evt const *event);
 static struct esb_config config = {
     .protocol = ESB_PROTOCOL_ESB_DPL,
@@ -131,7 +152,7 @@ static struct esb_config config = {
     .bitrate = BITRATE,
     .crc = ESB_CRC_16BIT,
     .retransmit_delay = RETRANSMIT_DELAY,
-    .retransmit_count = RETRANSMIT_COUNT,
+    .retransmit_count = 0,
     .tx_mode = ESB_TXMODE_MANUAL_START,
     .payload_length = CONFIG_ESB_MAX_PAYLOAD_LENGTH,
     .selective_auto_ack = true,
@@ -181,44 +202,37 @@ K_SEM_DEFINE(rx_sem, 0, RX_FIFO_SIZE);
 
 static app_esb_mode_t m_mode;
 
-static void start_tx_work_handler(struct k_work *work) {
-    LOG_DBG("start_tx_work");
-    esb_start_tx();
-    set_tx_delayed(false);
-}
-K_WORK_DELAYABLE_DEFINE(start_tx_work, start_tx_work_handler);
-
-static void delayed_tx() {
-    set_tx_delayed(true);
-    uint32_t random_delay = k_uptime_ticks() % RETRANSMIT_DELAY;
-
-    k_work_reschedule(&start_tx_work, K_USEC(random_delay));
-}
-
 static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
-
+static uint8_t tx_fail_count = 0;
 static void event_handler(struct esb_evt const *event) {
     switch (event->evt_id) {
     case ESB_EVENT_TX_SUCCESS:
-        LOG_DBG("TX SUCCESS");
-        tx_fail_count = 0;
-        esb_ops->tx_op();
-        break;
-    case ESB_EVENT_TX_FAILED:
-        LOG_WRN("ESB_EVENT_TX_FAILED");
 #if IS_PERIPHERAL
-        if (tx_fail_count++ >= 3) {
-            tx_fail_count = 0;
-            esb_pop_tx();
-            tx_power_change(POWER_UP);
+        tx_fail_count = 0;
+        esb_suspend();
+        if (is_tx_delayed()) {
+            reset_tx();
         }
-        delayed_tx();
 #endif
         esb_ops->tx_op();
+        LOG_DBG("TX SUCCESS");
+        break;
+    case ESB_EVENT_TX_FAILED:
+#if IS_PERIPHERAL
+        esb_suspend();
+        if (tx_fail_count++ >= RETRANSMIT_COUNT) {
+            tx_fail_count = 0;
+            tx_power_change(POWER_UP);
+            esb_pop_tx();
+        }
+        jitter_tx();
+#endif
+        esb_ops->tx_op();
+        LOG_WRN("ESB_EVENT_TX_FAILED");
         break;
     case ESB_EVENT_RX_RECEIVED:
-        LOG_DBG("RX SUCCESS");
         esb_ops->rx_op();
+        LOG_DBG("RX SUCCESS");
         break;
     }
 }
@@ -227,15 +241,9 @@ int esb_tx_app() {
     struct esb_payload payload;
     int ret = 0;
 
-    if (!is_esb_active()) {
-        LOG_DBG("esb not active, skip tx");
-        return -EAGAIN;
-    }
-
     if (esb_tx_full()) {
         LOG_DBG("esb tx full, wait for next tx event");
-        ret = -ENOMEM;
-        goto start_tx;
+        return -ENOMEM;
     }
 
     ret = make_packet(&payload);
@@ -251,16 +259,6 @@ int esb_tx_app() {
         LOG_WRN("esb_write_payload returned %d", ret);
         return ret;
     }
-
-start_tx:
-#if IS_PERIPHERAL
-    if (is_tx_delayed()) {
-        return -EAGAIN;
-    }
-
-    LOG_DBG("start tx");
-    esb_start_tx();
-#endif
 
     return ret;
 }
@@ -301,7 +299,7 @@ static int clocks_start(void) {
 static int esb_initialize(app_esb_mode_t mode) {
 #if ESB_ONLY
     if (is_esb_initialized()) {
-        LOG_WRN("skip init");
+        // LOG_WRN("skip init");
         goto start;
     }
 #endif
@@ -332,9 +330,7 @@ static int esb_initialize(app_esb_mode_t mode) {
         return err;
     }
 
-    const uint32_t channel = RF_CHANNEL;
-    LOG_DBG("setting rf channel to %d", channel);
-    err = esb_set_rf_channel(channel);
+    err = esb_set_rf_channel(CONFIG_ZMK_SPLIT_ESB_RF_CHANNEL);
     if (err < 0) {
         LOG_ERR("esb_set_rf_channel failed: %d", err);
         return err;
@@ -445,10 +441,6 @@ static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) 
         }
         break;
     case APP_TS_STOPPED:
-#if IS_PERIPHERAL
-        k_work_cancel_delayable(&start_tx_work);
-        set_tx_delayed(false);
-#endif
         if (esb_ops->on_suspend) {
             esb_ops->on_suspend();
         }

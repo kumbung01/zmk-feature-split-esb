@@ -10,6 +10,7 @@ config ZMK_SPLIT_ESB
     select DYNAMIC_INTERRUPTS
     select DYNAMIC_DIRECT_INTERRUPTS
     select RING_BUFFER
+    select COUNTER_NRFX_TIMER1
     help
         Enables Enhanced ShockBurst protocol for ZMK split keyboards.
         If you enable this, you *must* also ensure that

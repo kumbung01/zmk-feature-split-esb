@@ -16,6 +16,7 @@
 #endif
 #include <esb.h>
 #include <zephyr/drivers/hwinfo.h>
+
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
 K_MEM_SLAB_DEFINE_STATIC(tx_slab, sizeof(struct esb_data_envelope), TX_MSGQ_SIZE, 4);
@@ -323,4 +324,69 @@ void print_reset_reason(void) {
     }
 
     hwinfo_clear_reset_cause();
+}
+
+static const struct device *tdma_timer_dev;
+static struct counter_top_cfg tdma_timer_cfg;
+
+void tdma_timer_init(counter_top_callback_t callback) {
+    tdma_timer_dev = DEVICE_DT_GET(DT_NODELABEL(timer1));
+    if (!device_is_ready(tdma_timer_dev)) {
+        LOG_ERR("TDMA timer device not ready");
+    }
+
+    tdma_timer_cfg.callback = callback;
+
+    LOG_WRN("TDMA timer initialized");
+}
+
+void tdma_timer_set(uint32_t period_us) {
+    if (!device_is_ready(tdma_timer_dev)) {
+        return;
+    }
+
+    tdma_timer_cfg.ticks = counter_us_to_ticks(tdma_timer_dev, period_us);
+    counter_set_top_value(tdma_timer_dev, &tdma_timer_cfg);
+    LOG_WRN("TDMA timer set to period %u us", period_us);
+}
+
+void tdma_timer_start(void) {
+    if (!device_is_ready(tdma_timer_dev)) {
+        return;
+    }
+
+    counter_start(tdma_timer_dev);
+    LOG_WRN("TDMA timer started");
+}
+
+void tdma_timer_stop(void) {
+    if (!device_is_ready(tdma_timer_dev)) {
+        return;
+    }
+
+    counter_stop(tdma_timer_dev);
+    LOG_WRN("TDMA timer stopped");
+}
+
+void tdma_timer_update(uint32_t period_us) {
+    if (!device_is_ready(tdma_timer_dev)) {
+        return;
+    }
+
+    counter_stop(tdma_timer_dev);
+    tdma_timer_cfg.ticks = counter_us_to_ticks(tdma_timer_dev, period_us);
+    counter_set_top_value(tdma_timer_dev, &tdma_timer_cfg);
+    counter_start(tdma_timer_dev);
+
+    LOG_WRN("TDMA timer updated with period %u us", period_us);
+}
+
+void tdma_timer_restart(void) {
+    if (!device_is_ready(tdma_timer_dev)) {
+        return;
+    }
+
+    counter_stop(tdma_timer_dev);
+    counter_start(tdma_timer_dev);
+    LOG_WRN("TDMA timer restarted");
 }

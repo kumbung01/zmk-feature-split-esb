@@ -24,6 +24,15 @@ typedef enum { APP_ESB_EVT_TX_SUCCESS, APP_ESB_EVT_TX_FAIL, APP_ESB_EVT_RX } app
 
 typedef enum { APP_ESB_MODE_PTX, APP_ESB_MODE_PRX } app_esb_mode_t;
 
+/* Radio Tx ramp-up time in microseconds. */
+#define TX_RAMP_UP_TIME_US 129
+
+/* Radio Rx fast ramp-up time in microseconds. */
+#define TX_FAST_RAMP_UP_TIME_US 40
+
+/* Radio Rx ramp-up time in microseconds. */
+#define RX_RAMP_UP_TIME_US 124
+
 typedef struct {
     app_esb_event_type_t evt_type;
 } app_esb_event_t;
@@ -51,10 +60,10 @@ void set_esb_active(bool is_active);
 bool is_esb_active(void);
 bool is_esb_initialized(void);
 bool is_tx_oneshot_set(void);
-void set_tx_delayed(bool set);
-bool is_tx_delayed(void);
 void set_esb_enabled(bool enabled);
 bool is_esb_enabled();
 power_set_t check_rssi(int rssi);
 int tx_power_change(power_set_t cmd);
+bool is_tx_delayed();
+void set_tx_delayed(bool set);
 #endif
