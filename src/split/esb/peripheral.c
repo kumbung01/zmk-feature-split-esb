@@ -29,7 +29,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #include "app_esb.h"
 #include "common.h"
 
-#define RSSI_REQUEST_INTREVAL (5)
+#define RSSI_REQUEST_INTREVAL (1)
 static uint8_t position_state[POSITION_STATE_DATA_LEN] = {
     0,
 };
@@ -50,8 +50,8 @@ static void rssi_request_work_handler(struct k_work *work) {
     if (!is_esb_enabled())
         return;
 
-    set_tx_flag(RSSI_REQ);
-    LOG_WRN("rssi request by flag");
+    // set_tx_flag(RSSI_REQ);
+    // LOG_WRN("rssi request by flag");
 
     k_work_reschedule(&rssi_request_work, K_SECONDS(RSSI_REQUEST_INTREVAL));
 }
@@ -90,7 +90,7 @@ static ssize_t packet_maker_peripheral(struct esb_data_envelope *env, struct pay
 
     switch (env->buf.type) {
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT:
-        unsigned int key = irq_lock();
+        uint32_t key = irq_lock();
         memcpy(buf->body, position_state, sizeof(position_state));
         data_size = sizeof(position_state);
         atomic_clear(&is_kb_event_pending);
@@ -108,9 +108,7 @@ static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
 
 static int zmk_split_bt_position_state(uint8_t position, bool is_pressed) {
-    unsigned int key = irq_lock();
     WRITE_BIT(position_state[position / 8], position % 8, is_pressed);
-    irq_unlock(key);
     return 0;
 }
 
@@ -121,7 +119,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
                                     event->data.key_position_event.pressed);
 
         if (!atomic_cas(&is_kb_event_pending, 0, 1)) {
-            goto TX_OP;
+            return 0;
         }
     }
 
@@ -184,7 +182,7 @@ static int zmk_split_esb_peripheral_init(void) {
     }
 
     tdma_timer_init(alarm_callback);
-    tdma_timer_set(RETRANSMIT_DELAY);
+    tdma_timer_set(TX_PERIOD);
 
     k_work_submit(&notify_status_work);
     return 0;
@@ -204,11 +202,12 @@ static int peripheral_handler(struct esb_data_envelope *env) {
     return zmk_split_transport_peripheral_command_handler(&esb_peripheral, env->command);
 }
 
+static atomic_t timer_start = ATOMIC_INIT(0);
 static K_SEM_DEFINE(thread_sem, 0, 1);
 void tx_thread() {
     while (true) {
         k_sem_take(&thread_sem, K_FOREVER);
-        tdma_timer_start();
+
         while (is_esb_active()) {
             k_sem_take(&tx_sem, K_FOREVER);
             if (!is_esb_active()) {
@@ -220,11 +219,10 @@ void tx_thread() {
                 if (esb_tx_app() < 0) {
                     break;
                 }
-
                 k_yield();
             } while (true);
         }
-        tdma_timer_stop();
+
         // LOG_WRN("esb not active, tx thread going to sleep");
     }
 }
@@ -240,11 +238,16 @@ static void on_enabled() {
 static void on_disabled() {
     // LOG_WRN("on_disabled called");
     k_work_cancel_delayable(&rssi_request_work);
+    atomic_clear(&timer_start);
+    tdma_timer_stop();
 }
 
 static void on_active() {
     // LOG_WRN("on_active called");
     k_sem_give(&thread_sem);
+    if (atomic_cas(&timer_start, 0, 1)) {
+        tdma_timer_start();
+    }
 }
 
 static void on_suspend() {

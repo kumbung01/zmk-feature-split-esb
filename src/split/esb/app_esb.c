@@ -51,9 +51,9 @@ uint8_t esb_addr_prefix[8] = DT_INST_PROP(0, addr_prefix);
 #error "Need to create a node with compatible of 'zmk,esb-split` with `all `address` property set."
 #endif
 
-#define CHANNELS_DEFINED (DT_INST_NODE_HAS_PROP(0, channels))
+#define CHANNELS_DEFINED (DT_INST_NODE_HAS_PROP(0, rf - channels))
 #if CHANNELS_DEFINED
-static uint8_t rf_channels[] = DT_INST_PROP(0, channels);
+static uint8_t rf_channels[] = DT_INST_PROP(0, rf - channels);
 #else
 static uint8_t rf_channels[] = {4, 26, 89};
 #endif
@@ -93,12 +93,12 @@ bool is_tx_delayed() { return get_flag(TX_DELAYED); }
 
 void set_tx_delayed(bool set) { set_flag(TX_DELAYED, set); }
 
-const uint32_t sync_lifetime_limit = 1000;
-static atomic_t sync_lifetime = ATOMIC_INIT(sync_lifetime_limit);
-void sync_lifetime_init() { atomic_set(&sync_lifetime, sync_lifetime_limit); }
-void sync_lifetime_reset() { atomic_clear(&sync_lifetime); }
-void sync_lifetime_increment() { atomic_inc(&sync_lifetime); }
-bool is_tx_on_sync() { return atomic_get(&sync_lifetime) < sync_lifetime_limit; }
+const uint32_t sync_lifetime_limit = (CONFIG_ZMK_SPLIT_ESB_SYNC_LIFETIME * 1000 / TX_PERIOD);
+static volatile uint32_t sync_lifetime = sync_lifetime_limit;
+void set_tx_out_of_sync() { sync_lifetime = sync_lifetime_limit; }
+void sync_lifetime_reset() { sync_lifetime = 0; }
+void sync_lifetime_increment() { sync_lifetime++; }
+bool is_tx_on_sync() { return sync_lifetime < sync_lifetime_limit; }
 
 static const enum esb_tx_power tx_power[] = {
 #if defined(RADIO_TXPOWER_TXPOWER_Pos4dBm)
@@ -131,18 +131,71 @@ static const enum esb_tx_power tx_power[] = {
 #endif /* defined(RADIO_TXPOWER_TXPOWER_Neg40dBm) */
 };
 
+void change_channel() {
+    static volatile uint8_t channel_idx = 0;
+
+    if (!is_esb_active()) {
+        return;
+    }
+
+    channel_idx = (channel_idx + 1) % CHANNEL_COUNT;
+#if IS_CENTRAL
+    if (esb_stop_rx() != 0) {
+        LOG_WRN("esb_stop_rx failed.");
+    }
+#endif
+
+    if (esb_is_idle()) {
+        if (esb_set_rf_channel(rf_channels[channel_idx])) {
+            LOG_WRN("esb_set_rf_channel failed.");
+        }
+    }
+
+#if IS_CENTRAL
+    esb_start_rx();
+#endif
+}
+
+static volatile uint32_t tx_fail_count_per_channel = 0;
+static volatile uint32_t timeslot_idx = 0;
+const uint8_t timeslots_per_channel = TIMESLOTS_PER_CHANNEL;
+const uint8_t timeslots_per_channel_out_of_sync = (TIMESLOTS_PER_CHANNEL * CHANNEL_COUNT);
+void timeslot_counter() {
+    sync_lifetime_increment();
+
+    uint8_t timeslots_per_channel_now =
+        is_tx_on_sync() ? timeslots_per_channel : timeslots_per_channel_out_of_sync;
+
+    if (++timeslot_idx >= timeslots_per_channel_now) {
+        timeslot_idx = 0;
+        change_channel();
+    }
+
+    if (esb_is_idle())
+        esb_start_tx();
+}
+
+static void tx_fail_count_per_channel_inc() {
+    if (++tx_fail_count_per_channel >= 3 && is_tx_on_sync()) {
+        LOG_WRN("setting out of sync forcefully");
+        set_tx_out_of_sync();
+    }
+}
+
+static void restart_timeslot_counter() { timeslot_idx = 0; }
+
 static void jitter_tx() {
     set_tx_delayed(true);
 
-    uint32_t min_delay = RETRANSMIT_DELAY / 2;
-    uint32_t jitter = k_uptime_ticks() % RETRANSMIT_DELAY;
+    uint32_t min_delay = TX_PERIOD;
+    uint32_t jitter = k_uptime_ticks() % TX_PERIOD;
 
     tdma_timer_update(min_delay + jitter);
 }
 
 static void reset_tx() {
     set_tx_delayed(false);
-    tdma_timer_update(RETRANSMIT_DELAY);
+    tdma_timer_update(TX_PERIOD);
 }
 
 static void event_handler(struct esb_evt const *event);
@@ -151,7 +204,7 @@ static struct esb_config config = {
     .mode = ESB_MODE_PTX,
     .bitrate = BITRATE,
     .crc = ESB_CRC_16BIT,
-    .retransmit_delay = RETRANSMIT_DELAY,
+    .retransmit_delay = 435,
     .retransmit_count = 0,
     .tx_mode = ESB_TXMODE_MANUAL_START,
     .payload_length = CONFIG_ESB_MAX_PAYLOAD_LENGTH,
@@ -161,14 +214,12 @@ static struct esb_config config = {
     .tx_output_power = TX_POWER_INIT,
 };
 
-static size_t tx_power_idx = 0;
-static struct k_spinlock tx_power_lock;
+static volatile size_t tx_power_idx = 0;
 int tx_power_change(power_set_t cmd) {
     if (cmd == POWER_OK) {
         return 0;
     }
 
-    k_spinlock_key_t key = k_spin_lock(&tx_power_lock);
     size_t new_idx = tx_power_idx;
     switch (cmd) {
     case POWER_UP:
@@ -178,19 +229,16 @@ int tx_power_change(power_set_t cmd) {
         new_idx++;
         break;
     default:
-        k_spin_unlock(&tx_power_lock, key);
         return -EINVAL;
     }
 
     if (new_idx >= ARRAY_SIZE(tx_power)) {
-        k_spin_unlock(&tx_power_lock, key);
         return -ENOTSUP;
     }
 
     tx_power_idx = new_idx;
     int8_t new_tx_output_power = (int8_t)tx_power[tx_power_idx];
     config.tx_output_power = new_tx_output_power;
-    k_spin_unlock(&tx_power_lock, key);
 
     LOG_WRN("setting tx power to %d", new_tx_output_power);
 
@@ -198,7 +246,7 @@ int tx_power_change(power_set_t cmd) {
 }
 
 K_SEM_DEFINE(tx_sem, 0, 1);
-K_SEM_DEFINE(rx_sem, 0, RX_FIFO_SIZE);
+K_SEM_DEFINE(rx_sem, 0, 1);
 
 static app_esb_mode_t m_mode;
 
@@ -209,25 +257,23 @@ static void event_handler(struct esb_evt const *event) {
     case ESB_EVENT_TX_SUCCESS:
 #if IS_PERIPHERAL
         tx_fail_count = 0;
-        esb_suspend();
-        if (is_tx_delayed()) {
+        if (is_tx_delayed())
             reset_tx();
-        }
 #endif
         esb_ops->tx_op();
         LOG_DBG("TX SUCCESS");
         break;
     case ESB_EVENT_TX_FAILED:
 #if IS_PERIPHERAL
-        esb_suspend();
-        if (tx_fail_count++ >= RETRANSMIT_COUNT) {
-            tx_fail_count = 0;
-            tx_power_change(POWER_UP);
-            esb_pop_tx();
-        }
         jitter_tx();
+        if (++tx_fail_count == RETRANSMIT_COUNT - 1) {
+            tx_power_change(POWER_UP);
+        } else if (tx_fail_count == RETRANSMIT_COUNT) {
+            tx_fail_count = 0;
+            esb_pop_tx();
+            esb_ops->tx_op();
+        }
 #endif
-        esb_ops->tx_op();
         LOG_WRN("ESB_EVENT_TX_FAILED");
         break;
     case ESB_EVENT_RX_RECEIVED:
@@ -374,6 +420,7 @@ int zmk_split_esb_set_enable(bool enabled) {
         if (esb_ops->on_enabled) {
             esb_ops->on_enabled();
         }
+        tx_fail_count = 0;
         return 0;
     } else {
         zmk_split_esb_timeslot_close_session();

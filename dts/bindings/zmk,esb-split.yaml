@@ -22,3 +22,7 @@ properties:
     type: array
     required: true
     description: "base address 0"
+  rf-channels:
+    type: array
+    required: false
+    description: "array of channels that keyboard will hop"

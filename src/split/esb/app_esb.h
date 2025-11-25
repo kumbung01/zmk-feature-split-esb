@@ -14,6 +14,9 @@ extern struct k_sem tx_sem;
 extern struct k_sem rx_sem;
 
 #define RF_CHANNEL CONFIG_ZMK_SPLIT_ESB_RF_CHANNEL
+#define TIMESLOTS_PER_CHANNEL 2
+#define TX_PERIOD CONFIG_ZMK_SPLIT_ESB_PROTO_TX_RETRANSMIT_DELAY
+#define RX_PERIOD (TIMESLOTS_PER_CHANNEL * TX_PERIOD)
 
 #define RSSI_BASELINE (-60)
 typedef enum { POWER_OK, POWER_UP, POWER_DOWN } power_set_t;
@@ -66,4 +69,6 @@ power_set_t check_rssi(int rssi);
 int tx_power_change(power_set_t cmd);
 bool is_tx_delayed();
 void set_tx_delayed(bool set);
+void timeslot_counter();
+void change_channel();
 #endif

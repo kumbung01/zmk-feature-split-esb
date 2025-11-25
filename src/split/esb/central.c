@@ -75,7 +75,12 @@ static struct k_work_q misc_work_q;
 
 static void tx_op() { k_work_submit_to_queue(&misc_work_q, &tx_work); }
 
-static void rx_op() { k_work_submit(&rx_work); }
+static void rx_op() { k_sem_give(&rx_sem); }
+
+static void on_enabled();
+static void on_disabled();
+static void on_active();
+static void on_suspend();
 
 static struct zmk_split_esb_ops central_ops = {
     .event_handler = central_handler,
@@ -84,6 +89,10 @@ static struct zmk_split_esb_ops central_ops = {
     .tx_op = tx_op,
     .rx_op = rx_op,
     .packet_make = packet_maker_central,
+    .on_active = on_active,
+    .on_suspend = on_suspend,
+    .on_disabled = on_disabled,
+    .on_enabled = on_enabled,
 };
 
 static void tx_work_handler(struct k_work *work) { esb_tx_app(); }
@@ -196,6 +205,11 @@ static void notify_status_work_cb(struct k_work *_work) { notify_transport_statu
 
 static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
+static void alarm_callback(const struct device *dev, uint8_t chan_id, uint32_t ticks,
+                           void *user_data) {
+    change_channel();
+}
+
 static int zmk_split_esb_central_init(void) {
     esb_ops = &central_ops;
     print_reset_reason();
@@ -236,6 +250,7 @@ static int key_position_handler(struct esb_data_envelope *env) {
                 .type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT,
                 .data = {.key_position_event = {.position = position, .pressed = pressed}}};
             zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt);
+            k_yield();
             changed &= (changed - 1);
         }
     }
@@ -277,6 +292,7 @@ static int central_handler(struct esb_data_envelope *env) {
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT:
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT:
         zmk_split_transport_central_peripheral_event_handler(&esb_central, source, env->event);
+        k_yield();
         break;
     default:
         break;
@@ -288,4 +304,42 @@ static int central_handler(struct esb_data_envelope *env) {
     }
 
     return 0;
+}
+
+static atomic_t timer_start = ATOMIC_INIT(0);
+static K_SEM_DEFINE(thread_sem, 0, 1);
+void rx_thread() {
+    while (true) {
+        k_sem_take(&thread_sem, K_FOREVER);
+        LOG_DBG("rx thread awake");
+        while (is_esb_active()) {
+            k_sem_take(&rx_sem, K_FOREVER);
+            if (!is_esb_active()) {
+                break;
+            }
+            do {
+                if (handle_packet() == -ENODATA) {
+                    break;
+                }
+            } while (true);
+        }
+
+        // LOG_WRN("esb not active, tx thread going to sleep");
+    }
+}
+
+K_THREAD_DEFINE(tx_thread_id, 3048, rx_thread, NULL, NULL, NULL, -1, 0, 0);
+
+static void on_enabled() { LOG_WRN("on_enabled called"); }
+
+static void on_disabled() { LOG_WRN("on_disabled called"); }
+
+static void on_active() {
+    LOG_WRN("on_active called");
+    k_sem_give(&thread_sem);
+}
+
+static void on_suspend() {
+    LOG_WRN("on_suspend called");
+    k_sem_give(&rx_sem); // guarantee tx thread can exit tx loop
 }

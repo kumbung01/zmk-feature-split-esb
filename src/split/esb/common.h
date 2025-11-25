@@ -121,7 +121,7 @@ typedef void (*esb_op)(void);
 typedef ssize_t (*get_data_size)(int type);
 typedef ssize_t (*packet_maker)(struct esb_data_envelope *env, struct payload_buffer *buf);
 typedef void (*esb_works)(void);
-
+typedef void (*timer_callback_t)(void);
 typedef void (*zmk_split_esb_process_tx_callback_t)(void);
 struct zmk_split_esb_ops {
     esb_op rx_op;
