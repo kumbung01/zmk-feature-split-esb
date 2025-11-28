@@ -87,13 +87,11 @@ static ssize_t packet_maker_peripheral(struct esb_data_envelope *env, struct pay
     ssize_t data_size = 0;
 
     switch (env->buf.type) {
-    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT:
-        unsigned int key = irq_lock();
-        memcpy(buf->body, position_state, sizeof(position_state));
-        data_size = sizeof(position_state);
-        atomic_clear(&is_kb_event_pending);
-        irq_unlock(key);
-        break;
+    // case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT:
+    //     memcpy(buf->body, position_state, sizeof(position_state));
+    //     data_size = sizeof(position_state);
+    //     atomic_clear(&is_kb_event_pending);
+    //     break;
     default:
         data_size = make_packet_default(env, buf);
         break;
@@ -106,9 +104,7 @@ static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
 
 static int zmk_split_bt_position_state(uint8_t position, bool is_pressed) {
-    unsigned int key = irq_lock();
     WRITE_BIT(position_state[position / 8], position % 8, is_pressed);
-    irq_unlock(key);
     return 0;
 }
 
@@ -118,9 +114,7 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
         zmk_split_bt_position_state(event->data.key_position_event.position,
                                     event->data.key_position_event.pressed);
 
-        if (!atomic_cas(&is_kb_event_pending, 0, 1)) {
-            goto TX_OP;
-        }
+        memcpy(&event->data, position_state, sizeof(position_state));
     }
 
     enqueue_event(PERIPHERAL_ID, event);
