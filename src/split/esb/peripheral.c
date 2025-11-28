@@ -87,11 +87,11 @@ static ssize_t packet_maker_peripheral(struct esb_data_envelope *env, struct pay
     ssize_t data_size = 0;
 
     switch (env->buf.type) {
-    // case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT:
-    //     memcpy(buf->body, position_state, sizeof(position_state));
-    //     data_size = sizeof(position_state);
-    //     atomic_clear(&is_kb_event_pending);
-    //     break;
+    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT:
+        memcpy(buf->body, position_state, sizeof(position_state));
+        data_size = sizeof(position_state);
+        atomic_clear(&is_kb_event_pending);
+        break;
     default:
         data_size = make_packet_default(env, buf);
         break;
@@ -114,10 +114,10 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
         zmk_split_bt_position_state(event->data.key_position_event.position,
                                     event->data.key_position_event.pressed);
 
-        memcpy(&event->data, position_state, sizeof(position_state));
+        enqueue_event(PERIPHERAL_ID, event, position_state);
+    } else {
+        enqueue_event(PERIPHERAL_ID, event, NULL);
     }
-
-    enqueue_event(PERIPHERAL_ID, event);
 
 TX_OP:
     tx_op();

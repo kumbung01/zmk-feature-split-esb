@@ -109,7 +109,7 @@ static ssize_t packet_maker_central(struct esb_data_envelope *env, struct payloa
 static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd) {
 
-    int err = enqueue_event(source, &cmd);
+    int err = enqueue_event(source, &cmd, NULL);
     if (err) {
         return err;
     }

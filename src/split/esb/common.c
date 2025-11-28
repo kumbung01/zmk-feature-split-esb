@@ -18,14 +18,14 @@
 #include <zephyr/drivers/hwinfo.h>
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 
-K_MEM_SLAB_DEFINE_STATIC(tx_slab, sizeof(struct esb_data_envelope), TX_MSGQ_SIZE, 4);
+K_MEM_SLAB_DEFINE_STATIC(tx_slab, sizeof(struct esb_payload), TX_MSGQ_SIZE, 4);
 K_MSGQ_DEFINE(tx_msgq, sizeof(void *), TX_MSGQ_SIZE, 4);
 #if CONFIG_LOG
 const char *ACTIVE_STATE_CHAR[] = {"ACTIVE", "IDLE", "SLEEP"};
 const char *TX_POWER_CHAR[] = {"OK", "UP", "DOWN"};
 #endif
 
-static uint8_t tx_flag = 0;
+static volatile uint8_t tx_flag = 0;
 void set_tx_flag(int bit) { WRITE_BIT(tx_flag, bit, 1); }
 
 uint8_t get_and_clear_tx_flag() {
@@ -149,23 +149,42 @@ void reset_buffers() {
 }
 #endif
 
-int enqueue_event(uint8_t source, struct zmk_split_transport_buffer *buf) {
+int enqueue_event(uint8_t source, struct zmk_split_transport_buffer *buf, void *additional_data) {
     LOG_DBG("sending packet type (%d)", buf->type);
 
-    struct esb_data_envelope *env;
-    int ret = tx_alloc(&env);
+    struct esb_payload *payload;
+    int ret = tx_alloc(&payload);
     if (ret < 0) {
         LOG_WRN("k_mem_slab_alloc failed (err %d)", ret);
         return -ENOMEM;
     }
 
-    env->buf = *buf;
-    env->source = source;
+    struct payload_buffer *data = (struct payload_buffer *)payload->data;
+    const size_t body_size = sizeof(data->body);
+    payload->noack = !CONFIG_ZMK_SPLIT_ESB_PROTO_TX_ACK;
 
-    ret = put_tx_data(env);
+    data->header.type = buf->type;
+    data->header.flag = get_and_clear_tx_flag();
+    ssize_t data_size = esb_ops->get_data_size_tx(buf->type);
+    if (data_size < 0) {
+        return data_size;
+    }
+
+    LOG_DBG("adding type %u size %u to packet", buf->type, data_size);
+
+    void *src = additional_data != NULL ? additional_data : buf->data;
+
+    memcpy(data->body, src, data_size);
+
+    payload->pipe = SOURCE_TO_PIPE(source); // use the source as the ESB pipe number
+
+    // write header and length
+    payload->length = data_size + HEADER_SIZE;
+
+    ret = put_tx_data(payload);
     if (ret < 0) {
         LOG_WRN("k_msgq_put failed (err %d)", ret);
-        tx_free(env);
+        tx_free(payload);
         return ret;
     }
 

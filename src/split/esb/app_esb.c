@@ -230,7 +230,6 @@ static void event_handler(struct esb_evt const *event) {
 }
 
 int esb_tx_app() {
-    struct esb_payload payload;
     int ret = 0;
 
     if (!is_esb_active()) {
@@ -244,15 +243,17 @@ int esb_tx_app() {
         goto start_tx;
     }
 
-    ret = make_packet(&payload);
-    if (ret != 0) {
-        LOG_DBG("no packet to send");
+    struct esb_payload *payload = get_next_tx_data();
+    if (payload == NULL) {
+        LOG_DBG("no data.");
+
         return -ENODATA;
     }
 
-    LOG_DBG("sending payload through pipe %d", payload.pipe);
+    ret = esb_write_payload(payload);
 
-    ret = esb_write_payload(&payload);
+    tx_free(payload);
+
     if (ret != 0) {
         LOG_WRN("esb_write_payload returned %d", ret);
         return ret;
