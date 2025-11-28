@@ -83,7 +83,6 @@ static struct zmk_split_esb_ops central_ops = {
     .get_data_size_tx = get_payload_data_size_cmd,
     .tx_op = tx_op,
     .rx_op = rx_op,
-    .packet_make = packet_maker_central,
 };
 
 static void tx_work_handler(struct k_work *work) { esb_tx_app(); }
@@ -96,20 +95,12 @@ static void rx_work_handler(struct k_work *work) {
     }
 }
 
-static ssize_t packet_maker_central(struct esb_data_envelope *env, struct payload_buffer *buf) {
-    switch (env->buf.type) {
-    default:
-        return make_packet_default(env, buf);
-        break;
-    }
-
-    return 0;
-}
-
 static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd) {
 
-    int err = enqueue_event(source, &cmd, NULL);
+    void *additional_data = NULL;
+
+    int err = enqueue_event(source, &cmd, additional_data);
     if (err) {
         return err;
     }

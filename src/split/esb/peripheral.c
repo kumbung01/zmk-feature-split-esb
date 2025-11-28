@@ -38,7 +38,6 @@ K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
 static void tx_work_handler(struct k_work *work);
 K_WORK_DEFINE(tx_work, tx_work_handler);
 static int peripheral_handler(struct esb_data_envelope *env);
-static ssize_t packet_maker_peripheral(struct esb_data_envelope *env, struct payload_buffer *buf);
 static int
 split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event);
 static void tx_op() { k_sem_give(&tx_sem); }
@@ -67,7 +66,6 @@ static struct zmk_split_esb_ops peripheral_ops = {
     .get_data_size_tx = get_payload_data_size_evt,
     .tx_op = tx_op,
     .rx_op = rx_op,
-    .packet_make = packet_maker_peripheral,
     .on_enabled = on_enabled,
     .on_disabled = on_disabled,
     .on_active = on_active,
@@ -81,25 +79,6 @@ static void tx_work_handler(struct k_work *work) {
     }
 }
 
-static atomic_t is_kb_event_pending = ATOMIC_INIT(0);
-
-static ssize_t packet_maker_peripheral(struct esb_data_envelope *env, struct payload_buffer *buf) {
-    ssize_t data_size = 0;
-
-    switch (env->buf.type) {
-    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT:
-        memcpy(buf->body, position_state, sizeof(position_state));
-        data_size = sizeof(position_state);
-        atomic_clear(&is_kb_event_pending);
-        break;
-    default:
-        data_size = make_packet_default(env, buf);
-        break;
-    }
-
-    return data_size;
-}
-
 static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
 
@@ -110,16 +89,17 @@ static int zmk_split_bt_position_state(uint8_t position, bool is_pressed) {
 
 static int
 split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event) {
+    void *additional_data = NULL;
+
     if (event->type == ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT) {
         zmk_split_bt_position_state(event->data.key_position_event.position,
                                     event->data.key_position_event.pressed);
 
-        enqueue_event(PERIPHERAL_ID, event, position_state);
-    } else {
-        enqueue_event(PERIPHERAL_ID, event, NULL);
+        additional_data = position_state;
     }
 
-TX_OP:
+    enqueue_event(PERIPHERAL_ID, event, additional_data);
+
     tx_op();
 
     return 0;
@@ -204,7 +184,7 @@ void tx_thread() {
             }
 
             LOG_DBG("tx thread awake");
-            while (get_tx_count() > 0) {
+            while (true) {
                 if (esb_tx_app() < 0) {
                     break;
                 }
