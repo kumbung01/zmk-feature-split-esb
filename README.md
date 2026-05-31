@@ -77,6 +77,9 @@ CONFIG_ZMK_SPLIT_WIRED=n
 # Enable ESB split transport
 CONFIG_ZMK_SPLIT_ESB=y
 
+# set this on central dongle
+CONFIG_ZMK_SPLIT_ROLE_CENTRAL=y
+
 # Peripheral ID (assign a unique integer to each peripheral, must start from 0)
 CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID=0
 ```
