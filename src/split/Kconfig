@@ -6,10 +6,6 @@ if ZMK_SPLIT
 config ZMK_SPLIT_ESB
     bool "Enable ZMK Split ESB"
     select ESB
-    select ESB_DYNAMIC_INTERRUPTS
-    select DYNAMIC_INTERRUPTS
-    select DYNAMIC_DIRECT_INTERRUPTS
-    select RING_BUFFER
     help
         Enables Enhanced ShockBurst protocol for ZMK split keyboards.
         If you enable this, you *must* also ensure that

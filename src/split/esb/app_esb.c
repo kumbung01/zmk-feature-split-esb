@@ -6,10 +6,10 @@
 
 #include "app_esb.h"
 #include "common.h"
-#include "timeslot.h"
 #include <zephyr/drivers/clock_control.h>
 #include <zephyr/drivers/clock_control/nrf_clock_control.h>
 #include <esb.h>
+#include <zmk/events/endpoint_changed.h>
 
 // for backoff logic
 #include <zephyr/kernel.h>
@@ -18,10 +18,30 @@
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(app_esb, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
-
 #define DT_DRV_COMPAT zmk_esb_split
 #if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
-#define MPSL_THREAD_PRIO CONFIG_MPSL_THREAD_COOP_PRIO
+
+#define IS_CENTRAL IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+#define IS_PERIPHERAL !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+
+#if IS_CENTRAL
+#define TX_POWER_INIT (4)
+#define ENABLED_PIPES GENMASK(PERIPHERAL_COUNT - 1, 0)
+#else
+#define TX_POWER_INIT (-4)
+#define ENABLED_PIPES BIT(PERIPHERAL_ID)
+#endif
+
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ESB_BITRATE_2MBPS)
+#define BITRATE ESB_BITRATE_2MBPS
+#else
+#define BITRATE ESB_BITRATE_1MBPS
+#endif
+
+#if CONFIG_LOG
+const char *ACTIVE_STATE_CHAR[] = {"ACTIVE", "IDLE", "SLEEP"};
+const char *TX_POWER_CHAR[] = {"OK", "UP", "DOWN"};
+#endif
 
 #define HAS_BASE_ADDR_0 (DT_INST_NODE_HAS_PROP(0, base_addr_0))
 #define HAS_BASE_ADDR_1 (DT_INST_NODE_HAS_PROP(0, base_addr_1))
@@ -51,78 +71,7 @@ uint8_t esb_addr_prefix[8] = DT_INST_PROP(0, addr_prefix);
 #error "Need to create a node with compatible of 'zmk,esb-split` with `all `address` property set."
 #endif
 
-#define ESB_ACTIVE (0)
-#define ESB_ENABLED (1)
-#define ESB_INIT (2)
-#define TX_ONESHOT (3)
-#define TX_DELAYED (4)
-
-static atomic_t flags = ATOMIC_INIT(0);
-
-static void set_flag(int bit, bool value) { atomic_set_bit_to(&flags, bit, value); }
-
-static bool get_flag(int bit) { return atomic_test_bit(&flags, bit); }
-
-static bool get_and_set_flag(int bit) { return atomic_test_and_set_bit(&flags, bit); }
-
-static void clear_all_flags() { atomic_clear(&flags); }
-
-static void clear_flags(atomic_val_t _flags) { atomic_and(&flags, ~_flags); }
-
-void set_esb_active(bool is_active) { set_flag(ESB_ACTIVE, is_active); }
-
-bool is_esb_active(void) { return get_flag(ESB_ACTIVE); }
-
-bool is_esb_initialized(void) { return get_and_set_flag(ESB_INIT); }
-
-bool is_tx_oneshot_set(void) { return get_and_set_flag(TX_ONESHOT); }
-
-void set_tx_delayed(bool set) { set_flag(TX_DELAYED, set); }
-
-bool is_tx_delayed(void) { return get_flag(TX_DELAYED); }
-
-void set_esb_enabled(bool enabled) { set_flag(ESB_ENABLED, enabled); }
-
-bool is_esb_enabled() { return get_flag(ESB_ENABLED); }
-
-static inline bool can_transmit(void) {
-    atomic_val_t f = atomic_get(&flags);
-    bool is_active = (f & BIT(ESB_ACTIVE)) != 0;
-    bool not_delayed = (f & BIT(TX_DELAYED)) == 0;
-    return is_active && not_delayed;
-}
-
-static int tx_fail_count = 0;
-static const enum esb_tx_power tx_power[] = {
-#if defined(RADIO_TXPOWER_TXPOWER_Pos4dBm)
-    /** 4 dBm radio transmit power. */
-    ESB_TX_POWER_4DBM,
-#endif /* defined(RADIO_TXPOWER_TXPOWER_Pos4dBm) */
-
-#if defined(RADIO_TXPOWER_TXPOWER_Pos3dBm)
-    /** 3 dBm radio transmit power. */
-    ESB_TX_POWER_3DBM,
-#endif /* defined(RADIO_TXPOWER_TXPOWER_Pos3dBm) */
-
-    /** 0 dBm radio transmit power. */
-    ESB_TX_POWER_0DBM,
-    /** -4 dBm radio transmit power. */
-    ESB_TX_POWER_NEG4DBM,
-    /** -8 dBm radio transmit power. */
-    ESB_TX_POWER_NEG8DBM,
-    /** -12 dBm radio transmit power. */
-    ESB_TX_POWER_NEG12DBM,
-    /** -16 dBm radio transmit power. */
-    ESB_TX_POWER_NEG16DBM,
-    /** -20 dBm radio transmit power. */
-    ESB_TX_POWER_NEG20DBM,
-    /** -30 dBm radio transmit power. */
-    ESB_TX_POWER_NEG30DBM,
-/** -40 dBm radio transmit power. */
-#if defined(RADIO_TXPOWER_TXPOWER_Neg40dBm)
-    ESB_TX_POWER_NEG40DBM,
-#endif /* defined(RADIO_TXPOWER_TXPOWER_Neg40dBm) */
-};
+struct esb_context *esb_ctx;
 
 static void event_handler(struct esb_evt const *event);
 static struct esb_config config = {
@@ -130,139 +79,32 @@ static struct esb_config config = {
     .mode = ESB_MODE_PTX,
     .bitrate = BITRATE,
     .crc = ESB_CRC_16BIT,
-    .retransmit_delay = RETRANSMIT_DELAY,
-    .retransmit_count = RETRANSMIT_COUNT,
-    .tx_mode = ESB_TXMODE_MANUAL_START,
+    .tx_mode = ESB_TXMODE_AUTO,
     .payload_length = CONFIG_ESB_MAX_PAYLOAD_LENGTH,
-    .selective_auto_ack = true,
     .use_fast_ramp_up = true,
     .event_handler = event_handler,
     .tx_output_power = TX_POWER_INIT,
+#if IS_PERIPHERAL
+    .pipe = SOURCE_TO_PIPE(CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID),
+#endif
 };
-
-static size_t tx_power_idx = 0;
-static struct k_spinlock tx_power_lock;
-int tx_power_change(power_set_t cmd) {
-    if (cmd == POWER_OK) {
-        return 0;
-    }
-
-    k_spinlock_key_t key = k_spin_lock(&tx_power_lock);
-    size_t new_idx = tx_power_idx;
-    switch (cmd) {
-    case POWER_UP:
-        new_idx--;
-        break;
-    case POWER_DOWN:
-        new_idx++;
-        break;
-    default:
-        k_spin_unlock(&tx_power_lock, key);
-        return -EINVAL;
-    }
-
-    if (new_idx >= ARRAY_SIZE(tx_power)) {
-        k_spin_unlock(&tx_power_lock, key);
-        return -ENOTSUP;
-    }
-
-    tx_power_idx = new_idx;
-    int8_t new_tx_output_power = (int8_t)tx_power[tx_power_idx];
-    config.tx_output_power = new_tx_output_power;
-    k_spin_unlock(&tx_power_lock, key);
-
-    LOG_WRN("setting tx power to %d", new_tx_output_power);
-
-    return esb_set_tx_power(new_tx_output_power);
-}
-
-K_SEM_DEFINE(tx_sem, 0, 1);
-K_SEM_DEFINE(rx_sem, 0, RX_FIFO_SIZE);
-
-static app_esb_mode_t m_mode;
-
-static void start_tx_work_handler(struct k_work *work) {
-    LOG_DBG("start_tx_work");
-    esb_start_tx();
-    set_tx_delayed(false);
-}
-K_WORK_DELAYABLE_DEFINE(start_tx_work, start_tx_work_handler);
-
-static void delayed_tx() {
-    set_tx_delayed(true);
-    uint32_t random_delay = k_uptime_ticks() % RETRANSMIT_DELAY;
-
-    k_work_reschedule(&start_tx_work, K_USEC(random_delay));
-}
-
-static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type);
 
 static void event_handler(struct esb_evt const *event) {
     switch (event->evt_id) {
     case ESB_EVENT_TX_SUCCESS:
-        LOG_DBG("TX SUCCESS");
-        tx_fail_count = 0;
-        esb_ops->tx_op();
+        LOG_DBG("TX SUCCESS: TRY %u", event->tx.tx_attempts);
+        if (esb_ctx->tx_op)
+            esb_ctx->tx_op();
         break;
     case ESB_EVENT_TX_FAILED:
         LOG_WRN("ESB_EVENT_TX_FAILED");
-#if IS_PERIPHERAL
-        if (tx_fail_count++ >= 3) {
-            tx_fail_count = 0;
-            esb_pop_tx();
-            tx_power_change(POWER_UP);
-        }
-        delayed_tx();
-#endif
-        esb_ops->tx_op();
         break;
     case ESB_EVENT_RX_RECEIVED:
         LOG_DBG("RX SUCCESS");
-        esb_ops->rx_op();
+        if (esb_ctx->rx_op)
+            esb_ctx->rx_op();
         break;
     }
-}
-
-int esb_tx_app() {
-    struct esb_payload payload;
-    int ret = 0;
-
-    if (!is_esb_active()) {
-        LOG_DBG("esb not active, skip tx");
-        return -EAGAIN;
-    }
-
-    if (esb_tx_full()) {
-        LOG_DBG("esb tx full, wait for next tx event");
-        ret = -ENOMEM;
-        goto start_tx;
-    }
-
-    ret = make_packet(&payload);
-    if (ret != 0) {
-        LOG_DBG("no packet to send");
-        return -ENODATA;
-    }
-
-    LOG_DBG("sending payload through pipe %d", payload.pipe);
-
-    ret = esb_write_payload(&payload);
-    if (ret != 0) {
-        LOG_WRN("esb_write_payload returned %d", ret);
-        return ret;
-    }
-
-start_tx:
-#if IS_PERIPHERAL
-    if (is_tx_delayed()) {
-        return -EAGAIN;
-    }
-
-    LOG_DBG("start tx");
-    esb_start_tx();
-#endif
-
-    return ret;
 }
 
 static int clocks_start(void) {
@@ -298,15 +140,9 @@ static int clocks_start(void) {
     return 0;
 }
 
-static int esb_initialize(app_esb_mode_t mode) {
-#if ESB_ONLY
-    if (is_esb_initialized()) {
-        LOG_WRN("skip init");
-        goto start;
-    }
-#endif
-
+static int esb_initialize(void) {
     LOG_DBG("esb init");
+
     int err = esb_init(&config);
     if (err) {
         return err;
@@ -332,153 +168,201 @@ static int esb_initialize(app_esb_mode_t mode) {
         return err;
     }
 
-    const uint32_t channel = RF_CHANNEL;
-    LOG_DBG("setting rf channel to %d", channel);
-    err = esb_set_rf_channel(channel);
-    if (err < 0) {
-        LOG_ERR("esb_set_rf_channel failed: %d", err);
-        return err;
-    }
-start:
-    NVIC_SetPriority(RADIO_IRQn, 0);
-    if (mode == APP_ESB_MODE_PRX) {
-        esb_start_rx();
-    }
+    // NVIC_SetPriority(RADIO_IRQn, 0);
+
+    LOG_DBG("esb init done");
 
     return 0;
 }
 
-int zmk_split_esb_init(app_esb_mode_t mode) {
+int zmk_split_esb_init(void) {
     int ret;
-    m_mode = mode;
-    config.mode = mode == APP_ESB_MODE_PTX ? ESB_MODE_PTX : ESB_MODE_PRX;
+    config.mode = IS_PERIPHERAL ? ESB_MODE_PTX : ESB_MODE_PRX;
     ret = clocks_start();
     if (ret < 0) {
         return ret;
     }
-    LOG_INF("Timeslothandler init");
-    zmk_split_esb_timeslot_init(on_timeslot_start_stop);
 
-    for (int i = 0; i < ARRAY_SIZE(tx_power); ++i) {
-        if ((int8_t)tx_power[i] == TX_POWER_INIT) {
-            tx_power_idx = i;
+    esb_initialize();
+#if IS_PERIPHERAL
+    esb_tdma_start();
+#endif
+    return 0;
+}
+
+static bool is_valid_source(const uint8_t source) {
+    return BIT(SOURCE_TO_PIPE(source)) & ENABLED_PIPES;
+}
+
+int send_data(uint8_t source, uint8_t type, void *data) {
+    if (!is_valid_source(source)) {
+        LOG_WRN("invalid source(%d)", source);
+
+        return -EINVAL;
+    }
+
+    ssize_t data_size = esb_ctx->tx_size(type);
+    if (data_size < 0) {
+        LOG_WRN("invalid type(%d)", type);
+
+        return -EINVAL;
+    }
+
+    struct esb_payload payload = {.pipe = SOURCE_TO_PIPE(source)};
+
+    int idx = 0;
+#if CONFIG_ESB_TX_RINGBUF
+    payload.length = data_size + 2;
+    payload.data[idx++] = HEADER;
+#else
+    payload.length = data_size + 1;
+#endif
+    payload.data[idx++] = type;
+    memcpy(&payload.data[idx], data, data_size);
+
+    int err = esb_write_payload(&payload);
+    if (err) {
+        LOG_DBG("esb_write_payload error(%d).", err);
+
+        return err;
+    }
+
+    return 0;
+}
+
+#define RXBUF_SIZE (CONFIG_ESB_MAX_PAYLOAD_LENGTH * 2)
+static struct rx_buffer {
+    uint8_t length;
+    uint8_t data[RXBUF_SIZE];
+} rxbuf[PERIPHERAL_COUNT];
+
+static struct rx_buffer *get_buffer(int source) {
+#if IS_CENTRAL
+    return &rxbuf[SOURCE_TO_PIPE(source)];
+#else
+    return &rxbuf[0];
+#endif
+}
+
+static int handle_data_dr(void) {
+    struct esb_payload payload;
+    int ret = esb_read_rx_payload(&payload);
+    if (ret != 0) {
+        LOG_DBG("esb_read_rx_payload returned err(%d)", ret);
+
+        return -ENODATA;
+    }
+
+    int source = PIPE_TO_SOURCE(payload.pipe);
+    if (!is_valid_source(source)) {
+        LOG_WRN("invalid source(%d)", source);
+
+        return -EINVAL;
+    }
+
+    LOG_HEXDUMP_DBG(payload.data, payload.length, "rx ");
+
+    esb_ctx->rx_handler(source, payload.data, payload.length);
+}
+
+static int handle_data_rb(void) {
+    struct esb_payload payload;
+    int ret = esb_read_rx_payload(&payload);
+    if (ret != 0) {
+        LOG_DBG("esb_read_rx_payload returned err(%d)", ret);
+
+        return -ENODATA;
+    }
+
+    LOG_DBG("pipe %d len %d", payload.pipe, payload.length);
+
+    int source = PIPE_TO_SOURCE(payload.pipe);
+    if (!is_valid_source(source)) {
+        LOG_WRN("invalid source(%d)", source);
+
+        return -EINVAL;
+    }
+
+    struct rx_buffer *buffer = get_buffer(source);
+
+    uint8_t len = buffer->length;
+    uint8_t *buf = buffer->data;
+
+    __ASSERT(payload.length + len <= RXBUF_SIZE, "payload + buf(%u) > RXBUF_SIZE(%u)",
+             payload.length + len, RXBUF_SIZE);
+
+    memcpy(&buf[len], payload.data, payload.length);
+    len += payload.length;
+
+    // LOG_WRN("payload: source %d, len %u, total: %u", source, payload.length, len);
+
+    int used = 0;
+    while (used < len) {
+        uint8_t header = buf[used];
+        if (header != HEADER) {
+            used++;
+            continue;
+        }
+
+        uint8_t consumed = esb_ctx->rx_handler(source, &buf[used + 1], len - used - 1);
+        if (consumed == 0) {
             break;
         }
+
+        used += consumed + 1;
+        // LOG_WRN("used: %d", used);
     }
 
-    LOG_DBG("init power is %d", (int8_t)tx_power[tx_power_idx]);
+    int left = len - used;
+    // LOG_WRN("used: %d, left: %d", used, left);
+
+    memmove(buf, &buf[used], left);
+    buffer->length = left;
 
     return 0;
 }
 
-int zmk_split_esb_set_enable(bool enabled) {
-    set_esb_enabled(enabled);
-    if (enabled) {
-        zmk_split_esb_timeslot_open_session();
-        if (esb_ops->on_enabled) {
-            esb_ops->on_enabled();
-        }
-        return 0;
-    } else {
-        zmk_split_esb_timeslot_close_session();
-        clear_flags(BIT(ESB_ENABLED) | BIT(TX_ONESHOT)
-#if !ESB_ONLY
-                    | BIT(ESB_INIT)
-#endif
-        );
-        if (esb_ops->on_disabled) {
-            esb_ops->on_disabled();
-        }
-        return 0;
-    }
-}
-
-static int app_esb_suspend(void) {
-    set_esb_active(false);
-    if (m_mode == APP_ESB_MODE_PTX) {
-        uint32_t irq_key = irq_lock();
-
-        irq_disable(RADIO_IRQn);
-        NVIC_DisableIRQ(RADIO_IRQn);
-#if ESB_ONLY
-        esb_suspend();
+int handle_data(void) {
+#if CONFIG_ESB_TX_RINGBUF
+    return handle_data_rb();
 #else
-        NRF_RADIO->SHORTS = 0;
-
-        NRF_RADIO->EVENTS_DISABLED = 0;
-        NRF_RADIO->TASKS_DISABLE = 1;
-        while (NRF_RADIO->EVENTS_DISABLED == 0)
-            ;
-
-        NRF_TIMER2->TASKS_STOP = 1;
-        NRF_RADIO->INTENCLR = 0xFFFFFFFF;
-
-        esb_disable();
+    return handle_data_dr();
 #endif
-        NVIC_ClearPendingIRQ(RADIO_IRQn);
-
-        irq_unlock(irq_key);
-    } else {
-        esb_stop_rx();
-    }
-
-    // Todo: Figure out how to use the esb_suspend() function
-    // rather than having to disable at the end of every timeslot
-    // esb_suspend();
-    return 0;
-}
-
-static int app_esb_resume(void) {
-    int err = esb_initialize(m_mode);
-    set_esb_active(true);
-    return err;
-}
-
-/* Callback function signalling that a timeslot is started or stopped */
-static void on_timeslot_start_stop(zmk_split_esb_timeslot_callback_type_t type) {
-    switch (type) {
-    case APP_TS_STARTED:
-        app_esb_resume();
-
-        if (esb_ops->on_active) {
-            esb_ops->on_active();
-        }
-        break;
-    case APP_TS_STOPPED:
-#if IS_PERIPHERAL
-        k_work_cancel_delayable(&start_tx_work);
-        set_tx_delayed(false);
-#endif
-        if (esb_ops->on_suspend) {
-            esb_ops->on_suspend();
-        }
-        app_esb_suspend();
-        break;
-    }
 }
 
 static int on_activity_state(const zmk_event_t *eh) {
     struct zmk_activity_state_changed *state_ev = as_zmk_activity_state_changed(eh);
     if (!state_ev) {
-        return 0;
+        return ZMK_EV_EVENT_BUBBLE;
     }
 
     LOG_DBG("activity state changed: %s", ACTIVE_STATE_CHAR[state_ev->state]);
 
-    if (m_mode == APP_ESB_MODE_PTX) {
-        if (is_esb_enabled()) {
-            if (state_ev->state != ZMK_ACTIVITY_ACTIVE) {
-                zmk_split_esb_set_enable(false);
-            }
-        } else {
-            if (state_ev->state == ZMK_ACTIVITY_ACTIVE) {
-                zmk_split_esb_set_enable(true);
-            }
-        }
+    switch (state_ev->state) {
+    case ZMK_ACTIVITY_ACTIVE:
+        esb_tdma_start();
+        break;
+    case ZMK_ACTIVITY_IDLE:
+        break;
+    case ZMK_ACTIVITY_SLEEP:
+        esb_tdma_stop();
     }
 
-    return 0;
+    return ZMK_EV_EVENT_BUBBLE;
 }
 
 ZMK_LISTENER(zmk_split_esb_idle_sleeper, on_activity_state);
 ZMK_SUBSCRIPTION(zmk_split_esb_idle_sleeper, zmk_activity_state_changed);
+
+#if IS_CENTRAL
+static int my_endpoint_handler(const zmk_event_t *eh) {
+    struct zmk_endpoint_changed *ev = as_zmk_endpoint_changed(eh);
+    if (ev->endpoint.transport == ZMK_TRANSPORT_USB) {
+        esb_tdma_start();
+    }
+    return ZMK_EV_EVENT_BUBBLE;
+}
+
+ZMK_LISTENER(my_listener, my_endpoint_handler);
+ZMK_SUBSCRIPTION(my_listener, zmk_endpoint_changed);
+#endif

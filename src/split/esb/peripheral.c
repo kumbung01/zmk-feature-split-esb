@@ -20,123 +20,91 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_SPLIT_ESB_LOG_LEVEL);
 #include <zmk/split/transport/types.h>
 #include <zmk/event_manager.h>
 #include <zmk/events/position_state_changed.h>
+#include <zmk/events/activity_state_changed.h>
+#include <zmk/battery.h>
 #include <zmk/events/sensor_event.h>
 #include <zmk/pointing/input_split.h>
 #include <zmk/hid_indicators_types.h>
 #include <zmk/physical_layouts.h>
 
-#include "timeslot.h"
+// #include "timeslot.h"
 #include "app_esb.h"
 #include "common.h"
 
-#define RSSI_REQUEST_INTREVAL (5)
-static uint8_t position_state[POSITION_STATE_DATA_LEN] = {
-    0,
-};
-static void rx_work_handler(struct k_work *work);
-K_WORK_DELAYABLE_DEFINE(rx_work, rx_work_handler);
-static void tx_work_handler(struct k_work *work);
-K_WORK_DEFINE(tx_work, tx_work_handler);
-static int peripheral_handler(struct esb_data_envelope *env);
-static ssize_t packet_maker_peripheral(struct esb_data_envelope *env, struct payload_buffer *buf);
+static struct peripheral_slot_context slot;
 static int
 split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event);
-static void tx_op() { k_sem_give(&tx_sem); }
-static void rx_op() { k_work_submit(&rx_work.work); }
+static int peripheral_handler_rb(int source, uint8_t *data, uint8_t size);
 
-static void rssi_request_work_handler(struct k_work *work);
-K_WORK_DELAYABLE_DEFINE(rssi_request_work, rssi_request_work_handler);
-static void rssi_request_work_handler(struct k_work *work) {
-    if (!is_esb_enabled())
-        return;
+static void battery_report_work_handler(struct k_work *work);
+K_WORK_DELAYABLE_DEFINE(battery_report_work, battery_report_work_handler);
+static void battery_report_work_handler(struct k_work *work) {
+    struct zmk_split_transport_peripheral_event event = {
+        .type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT,
+        .data.battery_event.level = zmk_battery_state_of_charge(),
+    };
 
-    set_tx_flag(RSSI_REQ);
-    LOG_WRN("rssi request by flag");
-
-    k_work_reschedule(&rssi_request_work, K_SECONDS(RSSI_REQUEST_INTREVAL));
+    if (split_peripheral_esb_report_event(&event) == -ENOMEM) {
+        k_work_reschedule(&battery_report_work, K_SECONDS(1));
+    }
 }
 
-static void on_enabled();
-static void on_disabled();
-static void on_active();
-static void on_suspend();
+K_SEM_DEFINE(rx_sem, 0, 1);
+static void rx_op() { k_sem_give(&rx_sem); }
 
-static struct zmk_split_esb_ops peripheral_ops = {
-    .event_handler = peripheral_handler,
-    .get_data_size_rx = get_payload_data_size_cmd,
-    .get_data_size_tx = get_payload_data_size_evt,
-    .tx_op = tx_op,
-    .rx_op = rx_op,
-    .packet_make = packet_maker_peripheral,
-    .on_enabled = on_enabled,
-    .on_disabled = on_disabled,
-    .on_active = on_active,
-    .on_suspend = on_suspend,
+void central_connected(int pipe) { k_work_reschedule(&battery_report_work, K_NO_WAIT); }
+
+void central_disconnected(int pipe) {
+    if ((zmk_activity_get_state() != ZMK_ACTIVITY_ACTIVE)) {
+        esb_tdma_stop();
+    }
+}
+
+static struct esb_conn_cb conn_cb = {
+    .connected = central_connected,
+    .disconnected = central_disconnected,
 };
 
-static void rx_work_handler(struct k_work *work) { handle_packet(); }
-static void tx_work_handler(struct k_work *work) {
-    if (esb_tx_app() != -ENODATA) {
-        k_work_submit(&tx_work);
-    }
-}
+static struct esb_context ctx = {.rx_handler = peripheral_handler_rb,
+                                 .rx_op = rx_op,
+                                 .rx_size = get_payload_data_size_cmd,
+                                 .tx_size = get_payload_data_size_evt};
 
-static atomic_t is_kb_event_pending = ATOMIC_INIT(0);
-
-static ssize_t packet_maker_peripheral(struct esb_data_envelope *env, struct payload_buffer *buf) {
-    ssize_t data_size = 0;
-
-    switch (env->buf.type) {
-    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT:
-        unsigned int key = irq_lock();
-        memcpy(buf->body, position_state, sizeof(position_state));
-        data_size = sizeof(position_state);
-        atomic_clear(&is_kb_event_pending);
-        irq_unlock(key);
-        break;
-    default:
-        data_size = make_packet_default(env, buf);
-        break;
-    }
-
-    return data_size;
-}
-
-static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
 static bool is_enabled = false;
-
-static int zmk_split_bt_position_state(uint8_t position, bool is_pressed) {
-    unsigned int key = irq_lock();
-    WRITE_BIT(position_state[position / 8], position % 8, is_pressed);
-    irq_unlock(key);
-    return 0;
-}
 
 static int
 split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_event *event) {
-    if (event->type == ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT) {
-        zmk_split_bt_position_state(event->data.key_position_event.position,
-                                    event->data.key_position_event.pressed);
+    int ret = 0;
 
-        if (!atomic_cas(&is_kb_event_pending, 0, 1)) {
-            goto TX_OP;
+    switch (event->type) {
+    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT:
+        if (!change_position_state(event->data.key_position_event.position,
+                                   event->data.key_position_event.pressed, slot.position_state)) {
+            break;
         }
+
+        ret = send_data(PERIPHERAL_ID, event->type, slot.position_state);
+        break;
+    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT:
+    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT:
+    case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT:
+        ret = send_data(PERIPHERAL_ID, event->type, &event->data);
+        break;
+
+    default:
+        break;
     }
 
-    enqueue_event(PERIPHERAL_ID, event);
-
-TX_OP:
-    tx_op();
-
-    return 0;
+    return ret;
 }
 
 static int split_peripheral_esb_set_enabled(bool enabled) {
     is_enabled = enabled;
 
-    return zmk_split_esb_set_enable(enabled);
+    return 0;
 }
 
+static zmk_split_transport_peripheral_status_changed_cb_t transport_status_cb;
 static int
 split_peripheral_esb_set_status_callback(zmk_split_transport_peripheral_status_changed_cb_t cb) {
     transport_status_cb = cb;
@@ -168,14 +136,16 @@ static void notify_transport_status(void) {
 }
 
 static void notify_status_work_cb(struct k_work *_work) { notify_transport_status(); }
-
 static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
 static int zmk_split_esb_peripheral_init(void) {
-    esb_ops = &peripheral_ops;
+    esb_ctx = &ctx;
     print_reset_reason();
 
-    int ret = zmk_split_esb_init(APP_ESB_MODE_PTX);
+    init_slot(&slot);
+    esb_conn_cb_register(&conn_cb);
+
+    int ret = zmk_split_esb_init();
     if (ret < 0) {
         LOG_ERR("zmk_split_esb_init failed (ret %d)", ret);
         return ret;
@@ -187,61 +157,32 @@ static int zmk_split_esb_peripheral_init(void) {
 
 SYS_INIT(zmk_split_esb_peripheral_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 
-static int peripheral_handler(struct esb_data_envelope *env) {
-    if (env->buf.type == ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_RSSI) {
-        power_set_t cmd = check_rssi(env->buf.rssi);
-        LOG_WRN("rssi: %d, tx power: %s", env->buf.rssi, TX_POWER_CHAR[cmd]);
-        tx_power_change(cmd);
+static int peripheral_handler_rb(int source, uint8_t *data, uint8_t size) {
+    uint8_t type = data[0];
+    ssize_t data_size = get_payload_data_size_evt(type);
+    if (data_size < 0) {
+        return 1;
+    }
 
+    if (size < data_size + 1) {
         return 0;
     }
 
-    return zmk_split_transport_peripheral_command_handler(&esb_peripheral, env->command);
+    struct zmk_split_transport_central_command cmd = {.type = type};
+    memcpy(&cmd.data, &data[1], data_size);
+    return zmk_split_transport_peripheral_command_handler(&esb_peripheral, cmd);
+
+    return data_size + 1;
 }
 
-static K_SEM_DEFINE(thread_sem, 0, 1);
-void tx_thread() {
+void rx_thread(void) {
+
     while (true) {
-        k_sem_take(&thread_sem, K_FOREVER);
-        while (is_esb_active()) {
-            k_sem_take(&tx_sem, K_FOREVER);
-            if (!is_esb_active()) {
-                break;
-            }
-
-            LOG_DBG("tx thread awake");
-            while (get_tx_count() > 0) {
-                if (esb_tx_app() < 0) {
-                    break;
-                }
-
-                k_yield();
-            }
+        k_sem_take(&rx_sem, K_FOREVER);
+        while (handle_data() != -ENODATA) {
         }
-
-        // LOG_WRN("esb not active, tx thread going to sleep");
     }
 }
 
-K_THREAD_DEFINE(tx_thread_id, 1024, tx_thread, NULL, NULL, NULL, -1, 0, 0);
-
-static void on_enabled() {
-    // LOG_WRN("on_enabled called");
-    k_work_reschedule(&rssi_request_work, K_SECONDS(RSSI_REQUEST_INTREVAL));
-    memset(position_state, 0, sizeof(position_state));
-}
-
-static void on_disabled() {
-    // LOG_WRN("on_disabled called");
-    k_work_cancel_delayable(&rssi_request_work);
-}
-
-static void on_active() {
-    // LOG_WRN("on_active called");
-    k_sem_give(&thread_sem);
-}
-
-static void on_suspend() {
-    // LOG_WRN("on_suspend called");
-    k_sem_give(&tx_sem); // guarantee tx thread can exit tx loop
-}
+K_THREAD_DEFINE(rx_thread_id, CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_RX_THREAD_STACK_SIZE, rx_thread, NULL,
+                NULL, NULL, -1, 0, 0);
