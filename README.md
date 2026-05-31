@@ -37,11 +37,11 @@ projects:
     revision: main
   - name: sdk-nrf
     remote: kumbung01
-    revision: v2.9.0
+    revision: v3.1-tdma-fhss
     path: nrf
   - name: nrfxlib
     remote: nrfconnect
-    revision: v2.9.0
+    revision: v3.1-branch
     repo-path: sdk-nrfxlib
     path: nrfxlib
 ```
