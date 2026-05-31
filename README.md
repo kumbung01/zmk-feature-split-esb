@@ -37,7 +37,7 @@ projects:
     revision: main
   - name: sdk-nrf
     remote: kumbung01
-    revision: v3.1-branch+zmk-fixes
+    revision: v3.1-branch-tdma-fhss
     path: nrf
   - name: nrfxlib
     remote: nrfconnect
