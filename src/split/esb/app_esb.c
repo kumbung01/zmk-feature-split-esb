@@ -343,9 +343,13 @@ static int on_activity_state(const zmk_event_t *eh) {
         esb_tdma_start();
         break;
     case ZMK_ACTIVITY_IDLE:
+#if IS_PERIPEHRAL
+        esb_tdma_stop();
+#endif
         break;
     case ZMK_ACTIVITY_SLEEP:
         esb_tdma_stop();
+        break;
     }
 
     return ZMK_EV_EVENT_BUBBLE;
