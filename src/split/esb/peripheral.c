@@ -170,7 +170,7 @@ static int peripheral_handler_rb(int source, uint8_t *data, uint8_t size) {
 
     struct zmk_split_transport_central_command cmd = {.type = type};
     memcpy(&cmd.data, &data[1], data_size);
-    return zmk_split_transport_peripheral_command_handler(&esb_peripheral, cmd);
+    zmk_split_transport_peripheral_command_handler(&esb_peripheral, cmd);
 
     return data_size + 1;
 }

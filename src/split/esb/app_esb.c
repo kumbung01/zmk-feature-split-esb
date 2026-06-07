@@ -343,7 +343,7 @@ static int on_activity_state(const zmk_event_t *eh) {
         esb_tdma_start();
         break;
     case ZMK_ACTIVITY_IDLE:
-#if IS_PERIPEHRAL
+#if IS_PERIPHERAL
         esb_tdma_stop();
 #endif
         break;
