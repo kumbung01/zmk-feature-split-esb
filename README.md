@@ -86,12 +86,11 @@ CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_ID=0
 
 ### ESB Options
 
-| Config                                          | Default | Description                           |
-| ----------------------------------------------- | ------- | ------------------------------------- |
-| `CONFIG_ZMK_SPLIT_ESB_BITRATE_2MBPS`            | `y`     | Use 2Mbps bitrate                     |
-| `CONFIG_ZMK_SPLIT_ESB_USE_WORK_QUEUE_DEDICATED` | `y`     | Use dedicated workqueue for rx thread |
-| `CONFIG_ZMK_SPLIT_ESB_RX_THREAD_STACK_SIZE`     | `2560`  | dedicated RX workqueue stack size     |
-| `CONFIG_ZMK_SPLIT_ESB_RX_THREAD_PRIORITY`       | `-1`    | dedicated RX workqueue priority       |
+| Config                                                 | Default | Description                     |
+| ------------------------------------------------------ | ------- | ------------------------------- |
+| `CONFIG_ZMK_SPLIT_ESB_BITRATE_2MBPS`                   | `y`     | Use 2Mbps bitrate               |
+| `CONFIG_ZMK_SPLIT_ESB_CENTRAL_RX_THREAD_STACK_SIZE`    | `2560`  | Central RX thread stack size    |
+| `CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_RX_THREAD_STACK_SIZE` | `1024`  | Peripheral RX thread stack size |
 
 ### Battery Reporting
 
