@@ -219,13 +219,7 @@ static bool is_valid_source(const uint8_t source) {
     return BIT(SOURCE_TO_PIPE(source)) & ENABLED_PIPES;
 }
 
-int send_data(uint8_t source, uint8_t type, void *data) {
-    if (!is_valid_source(source)) {
-        LOG_WRN("invalid source(%d)", source);
-
-        return -EINVAL;
-    }
-
+int send_data_pl(uint8_t pipe, uint8_t type, void *data) {
     ssize_t data_size = esb_ctx->tx_size(type);
     if (data_size < 0) {
         LOG_WRN("invalid type(%d)", type);
@@ -233,15 +227,11 @@ int send_data(uint8_t source, uint8_t type, void *data) {
         return -EINVAL;
     }
 
-    struct esb_payload payload = {.pipe = SOURCE_TO_PIPE(source)};
+    struct esb_payload payload = {.pipe = pipe};
 
     int idx = 0;
-#if CONFIG_ESB_TX_RINGBUF
-    payload.length = data_size + 2;
-    payload.data[idx++] = HEADER;
-#else
     payload.length = data_size + 1;
-#endif
+
     payload.data[idx++] = type;
     memcpy(&payload.data[idx], data, data_size);
 
@@ -253,6 +243,42 @@ int send_data(uint8_t source, uint8_t type, void *data) {
     }
 
     return 0;
+}
+
+int send_data_rb(uint8_t pipe, uint8_t type, void *data) {
+    ssize_t data_size = esb_ctx->tx_size(type);
+    if (data_size < 0) {
+        LOG_WRN("invalid type(%d)", type);
+
+        return -EINVAL;
+    }
+
+    if (esb_tx_start(pipe, data_size + 2) == -ENOMEM) {
+        return -ENOMEM;
+    }
+
+    uint8_t header = HEADER;
+    esb_tx_put(&header, sizeof(header));
+    esb_tx_put(&type, sizeof(type));
+    esb_tx_put(data, data_size);
+
+    esb_tx_finish();
+
+    return 0;
+}
+
+int send_data(uint8_t source, uint8_t type, void *data) {
+    if (!is_valid_source(source)) {
+        LOG_WRN("invalid source(%d)", source);
+
+        return -EINVAL;
+    }
+
+#if CONFIG_ESB_TX_RINGBUF
+    return send_data_rb(SOURCE_TO_PIPE(source), type, data);
+#else
+    return send_data_pl(SOURCE_TO_PIPE(source), type, data);
+#endif
 }
 
 #define RXBUF_SIZE (CONFIG_ESB_MAX_PAYLOAD_LENGTH * 2)
