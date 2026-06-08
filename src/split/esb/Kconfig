@@ -20,17 +20,13 @@ config ZMK_SPLIT_ESB_BITRATE_2MBPS
     bool "Set ESB bitrate to 2Mbps"
     default y
 
-config ZMK_SPLIT_ESB_USE_WORK_QUEUE_DEDICATED
-    bool "use dedicated workqueue for esb thread"
-    default y
-
-config ZMK_SPLIT_ESB_RX_THREAD_STACK_SIZE
-    int "esb rx thread stack size"
+config ZMK_SPLIT_ESB_CENTRAL_RX_THREAD_STACK_SIZE
+    int "central rx thread stack size"
     default 2560
 
-config ZMK_SPLIT_ESB_RX_THREAD_PRIORITY
-    int "esb rx thread priority"
-    default -1
+config ZMK_SPLIT_ESB_PERIPHERAL_RX_THREAD_STACK_SIZE
+    int "peripheral rx thread stack size"
+    default 1024
 
 module = ZMK_SPLIT_ESB
 module-str = ZMK_SPLIT_ESB

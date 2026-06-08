@@ -60,6 +60,7 @@ static void rx_op() { k_sem_give(&rx_sem); }
 static struct esb_context ctx = {
     .rx_size = get_payload_data_size_evt,
     .tx_size = get_payload_data_size_cmd,
+    .rx_op = rx_op,
     .rx_handler = central_handler_rb,
 };
 
@@ -234,3 +235,14 @@ static int central_handler_rb(int source, uint8_t *data, uint8_t size) {
 
     return data_size + 1;
 }
+
+void rx_thread(void) {
+    while (true) {
+        k_sem_take(&rx_sem, K_FOREVER);
+        while (handle_data() != -ENODATA) {
+        }
+    }
+}
+
+K_THREAD_DEFINE(rx_thread_id, CONFIG_ZMK_SPLIT_ESB_CENTRAL_RX_THREAD_STACK_SIZE, rx_thread, NULL,
+                NULL, NULL, -1, 0, 0);
