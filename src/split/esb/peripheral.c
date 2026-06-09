@@ -56,7 +56,7 @@ void central_connected(int pipe) { k_work_reschedule(&battery_report_work, K_NO_
 
 void central_disconnected(int pipe) {
     if ((zmk_activity_get_state() != ZMK_ACTIVITY_ACTIVE)) {
-        esb_tdma_stop();
+        esb_tdma_stop(false);
     }
 }
 
