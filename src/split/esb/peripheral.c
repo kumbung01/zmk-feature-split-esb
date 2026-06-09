@@ -66,7 +66,6 @@ static struct esb_conn_cb conn_cb = {
 };
 
 static struct esb_context ctx = {.rx_handler = peripheral_handler_rb,
-                                 .rx_op = rx_op,
                                  .rx_size = get_payload_data_size_cmd,
                                  .tx_size = get_payload_data_size_evt};
 
@@ -174,15 +173,3 @@ static int peripheral_handler_rb(int source, uint8_t *data, uint8_t size) {
 
     return data_size + 1;
 }
-
-void rx_thread(void) {
-
-    while (true) {
-        k_sem_take(&rx_sem, K_FOREVER);
-        while (handle_data() != -ENODATA) {
-        }
-    }
-}
-
-K_THREAD_DEFINE(rx_thread_id, CONFIG_ZMK_SPLIT_ESB_PERIPHERAL_RX_THREAD_STACK_SIZE, rx_thread, NULL,
-                NULL, NULL, -1, 0, 0);

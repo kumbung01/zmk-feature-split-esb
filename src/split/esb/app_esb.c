@@ -73,6 +73,18 @@ uint8_t esb_addr_prefix[8] = DT_INST_PROP(0, addr_prefix);
 
 struct esb_context *esb_ctx;
 
+void rx_work_handler(struct k_work *work);
+K_WORK_DEFINE(rx_work, rx_work_handler);
+struct k_work_q rx_workqueue;
+
+void submit_rx_work(void) {
+#if CONFIG_ZMK_SPLIT_ESB_USE_WORK_QUEUE_DEDICATED
+    k_work_submit_to_queue(&rx_workqueue, &rx_work);
+#else
+    k_work_submit(&rx_work);
+#endif
+}
+
 static void event_handler(struct esb_evt const *event);
 static struct esb_config config = {
     .protocol = ESB_PROTOCOL_ESB_DPL,
@@ -101,8 +113,9 @@ static void event_handler(struct esb_evt const *event) {
         break;
     case ESB_EVENT_RX_RECEIVED:
         LOG_DBG("RX SUCCESS");
-        if (esb_ctx->rx_op)
-            esb_ctx->rx_op();
+        // if (esb_ctx->rx_op)
+        //     esb_ctx->rx_op();
+        submit_rx_work();
         break;
     }
 }
@@ -138,6 +151,13 @@ static int clocks_start(void) {
     LOG_DBG("HF clock started");
 
     return 0;
+}
+
+static void init_workqueue(struct k_work_q *workqueue) {
+    static K_THREAD_STACK_DEFINE(rx_thread_stack, CONFIG_ZMK_SPLIT_ESB_RX_THREAD_STACK_SIZE);
+
+    k_work_queue_start(workqueue, rx_thread_stack, K_THREAD_STACK_SIZEOF(rx_thread_stack),
+                       CONFIG_ZMK_SPLIT_ESB_RX_THREAD_PRIORITY, NULL);
 }
 
 static int esb_initialize(void) {
@@ -184,6 +204,11 @@ int zmk_split_esb_init(void) {
     }
 
     esb_initialize();
+
+#if CONFIG_ZMK_SPLIT_ESB_USE_WORK_QUEUE_DEDICATED
+    init_workqueue(&rx_workqueue);
+#endif
+
 #if IS_PERIPHERAL
     esb_tdma_start();
 #endif
@@ -354,6 +379,11 @@ int handle_data(void) {
 #else
     return handle_data_dr();
 #endif
+}
+
+void rx_work_handler(struct k_work *work) {
+    while (handle_data() != -ENODATA) {
+    }
 }
 
 static int on_activity_state(const zmk_event_t *eh) {
