@@ -81,9 +81,10 @@ split_peripheral_esb_report_event(const struct zmk_split_transport_peripheral_ev
                                    event->data.key_position_event.pressed, slot.position_state)) {
             break;
         }
-
+#if CONFIG_ZMK_SPLIT_ESB_SEND_WHOLE_KEY
         ret = send_data(PERIPHERAL_ID, event->type, slot.position_state);
         break;
+#endif
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT:
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_INPUT_EVENT:
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_BATTERY_EVENT:

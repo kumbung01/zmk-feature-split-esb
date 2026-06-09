@@ -180,13 +180,14 @@ SYS_INIT(zmk_split_esb_central_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DE
 static int handle_key_position_event(int source, uint8_t *data) {
     int ret = 0;
     uint8_t *position_state = slot[source].position_state;
-
+#if CONFIG_ZMK_SPLIT_ESB_SEND_WHOLE_KEY
     for (int i = 0; i < POSITION_STATE_DATA_LEN; ++i) {
         volatile uint32_t changed = (uint32_t)(data[i] ^ position_state[i]);
         while (changed) {
             int changed_bit = __builtin_ctz(changed);
 
             struct zmk_split_transport_peripheral_event evt = {
+                .type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT,
                 .data.key_position_event.position = (i * 8) + changed_bit,
                 .data.key_position_event.pressed = ((data[i] & BIT(changed_bit)) != 0),
             };
@@ -199,6 +200,21 @@ static int handle_key_position_event(int source, uint8_t *data) {
         }
         position_state[i] = data[i];
     }
+#else
+    struct zmk_split_transport_peripheral_event evt = {
+        .type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT,
+    };
+    memcpy(&evt.data, data, get_payload_data_size_evt(ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT));
+    if (!change_position_state(evt.data.key_position_event.position,
+                               evt.data.key_position_event.pressed, position_state)) {
+        return 0;
+    }
+
+    if (zmk_split_transport_central_peripheral_event_handler(&esb_central, source, evt) ==
+        -EINVAL) {
+        k_work_submit(&notify_status_work);
+    }
+#endif
 
     return 0;
 }

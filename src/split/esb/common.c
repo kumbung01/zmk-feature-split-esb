@@ -51,7 +51,7 @@ ssize_t get_payload_data_size_cmd(int _type) {
         break;
     }
 
-    LOG_DBG("cmd type (%d) size (%d)", _type, size);
+    // LOG_DBG("cmd type (%d) size (%d)", _type, size);
 
     return size;
 }
@@ -61,7 +61,11 @@ ssize_t get_payload_data_size_evt(int _type) {
 
     switch (_type) {
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT:
+#if CONFIG_ZMK_SPLIT_ESB_SEND_WHOLE_KEY
         size = POSITION_STATE_DATA_LEN;
+#else
+        size = sizeof(((struct zmk_split_transport_peripheral_event *)0)->data.key_position_event);
+#endif
         break;
     case ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_SENSOR_EVENT:
         size = sizeof(((struct zmk_split_transport_peripheral_event *)0)->data.sensor_event);
@@ -77,7 +81,7 @@ ssize_t get_payload_data_size_evt(int _type) {
         break;
     }
 
-    LOG_DBG("evt type (%d) size (%d)", _type, size);
+    // LOG_DBG("evt type (%d) size (%d)", _type, size);
 
     return size;
 }

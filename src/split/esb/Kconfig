@@ -22,15 +22,19 @@ config ZMK_SPLIT_ESB_BITRATE_2MBPS
 
 config ZMK_SPLIT_ESB_USE_WORK_QUEUE_DEDICATED
     bool "use dedicated workqueue for esb thread"
-    default y
+    default n
 
 config ZMK_SPLIT_ESB_RX_THREAD_STACK_SIZE
     int "esb rx thread stack size"
-    default 2560
+    default 2048
 
 config ZMK_SPLIT_ESB_RX_THREAD_PRIORITY
     int "esb rx thread priority"
     default -1
+
+config ZMK_SPLIT_ESB_SEND_WHOLE_KEY
+    bool "send whole key state"
+    default n
 
 module = ZMK_SPLIT_ESB
 module-str = ZMK_SPLIT_ESB
