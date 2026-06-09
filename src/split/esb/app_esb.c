@@ -404,7 +404,7 @@ static int on_activity_state(const zmk_event_t *eh) {
 #endif
         break;
     case ZMK_ACTIVITY_SLEEP:
-        esb_tdma_stop(true);
+        // esb_tdma_stop(true);
         break;
     }
 
