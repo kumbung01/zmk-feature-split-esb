@@ -49,12 +49,20 @@ static void battery_report_work_handler(struct k_work *work) {
     }
 }
 
-K_SEM_DEFINE(rx_sem, 0, 1);
-static void rx_op() { k_sem_give(&rx_sem); }
+static void notify_transport_status(void);
+static void notify_status_work_cb(struct k_work *_work) { notify_transport_status(); }
+static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
-void central_connected(int pipe) { k_work_reschedule(&battery_report_work, K_NO_WAIT); }
+bool is_central_connected = false;
+void central_connected(int pipe) {
+    is_central_connected = true;
+    k_work_submit(&notify_status_work);
+    k_work_reschedule(&battery_report_work, K_NO_WAIT);
+}
 
 void central_disconnected(int pipe) {
+    is_central_connected = false;
+    k_work_submit(&notify_status_work);
     if ((zmk_activity_get_state() != ZMK_ACTIVITY_ACTIVE)) {
         esb_tdma_stop(false);
     }
@@ -113,9 +121,10 @@ split_peripheral_esb_set_status_callback(zmk_split_transport_peripheral_status_c
 
 static struct zmk_split_transport_status split_peripheral_esb_get_status(void) {
     return (struct zmk_split_transport_status){
-        .available = true,
+        .available = !esb_is_idle(),
         .enabled = is_enabled,
-        .connections = ZMK_SPLIT_TRANSPORT_CONNECTIONS_STATUS_ALL_CONNECTED,
+        .connections = is_central_connected ? ZMK_SPLIT_TRANSPORT_CONNECTIONS_STATUS_ALL_CONNECTED
+                                            : ZMK_SPLIT_TRANSPORT_CONNECTIONS_STATUS_DISCONNECTED,
     };
 }
 
@@ -134,9 +143,6 @@ static void notify_transport_status(void) {
         transport_status_cb(&esb_peripheral, split_peripheral_esb_get_status());
     }
 }
-
-static void notify_status_work_cb(struct k_work *_work) { notify_transport_status(); }
-static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
 
 static int zmk_split_esb_peripheral_init(void) {
     esb_ctx = &ctx;

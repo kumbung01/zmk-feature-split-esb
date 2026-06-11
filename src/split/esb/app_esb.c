@@ -113,8 +113,6 @@ static void event_handler(struct esb_evt const *event) {
         break;
     case ESB_EVENT_RX_RECEIVED:
         LOG_DBG("RX SUCCESS");
-        // if (esb_ctx->rx_op)
-        //     esb_ctx->rx_op();
         submit_rx_work();
         break;
     }
@@ -209,9 +207,8 @@ int zmk_split_esb_init(void) {
     init_workqueue(&rx_workqueue);
 #endif
 
-#if IS_PERIPHERAL
     esb_tdma_start();
-#endif
+
     return 0;
 }
 
@@ -404,7 +401,7 @@ static int on_activity_state(const zmk_event_t *eh) {
 #endif
         break;
     case ZMK_ACTIVITY_SLEEP:
-        // esb_tdma_stop(true);
+        esb_tdma_stop(true);
         break;
     }
 
@@ -413,16 +410,3 @@ static int on_activity_state(const zmk_event_t *eh) {
 
 ZMK_LISTENER(zmk_split_esb_idle_sleeper, on_activity_state);
 ZMK_SUBSCRIPTION(zmk_split_esb_idle_sleeper, zmk_activity_state_changed);
-
-#if IS_CENTRAL
-static int my_endpoint_handler(const zmk_event_t *eh) {
-    struct zmk_endpoint_changed *ev = as_zmk_endpoint_changed(eh);
-    if (ev->endpoint.transport == ZMK_TRANSPORT_USB) {
-        esb_tdma_start();
-    }
-    return ZMK_EV_EVENT_BUBBLE;
-}
-
-ZMK_LISTENER(my_listener, my_endpoint_handler);
-ZMK_SUBSCRIPTION(my_listener, zmk_endpoint_changed);
-#endif

@@ -38,8 +38,12 @@ static int split_central_esb_send_command(uint8_t source,
                                           struct zmk_split_transport_central_command cmd);
 static int handle_key_position_event(int source, uint8_t *data);
 
-static void peripheral_connected(int pipe) {}
+static void notify_transport_status(void);
+static void notify_status_work_cb(struct k_work *_work) { notify_transport_status(); }
+static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
+static void peripheral_connected(int pipe) { k_work_submit(&notify_status_work); }
 static void peripheral_disconnected(int pipe) {
+    k_work_submit(&notify_status_work);
     uint8_t reset_state[POSITION_STATE_DATA_LEN] = {
         0,
     };
@@ -53,9 +57,6 @@ static struct esb_conn_cb conn_cb = {
     .connected = peripheral_connected,
     .disconnected = peripheral_disconnected,
 };
-
-K_SEM_DEFINE(rx_sem, 0, 1);
-static void rx_op() { k_sem_give(&rx_sem); }
 
 static struct esb_context ctx = {
     .rx_size = get_payload_data_size_evt,
@@ -130,7 +131,7 @@ static struct zmk_split_transport_status split_central_esb_get_status() {
     }
 
     return (struct zmk_split_transport_status){
-        .available = true,
+        .available = !esb_is_idle(),
         .enabled = is_enabled,
         .connections = conn,
     };
@@ -152,10 +153,6 @@ static void notify_transport_status(void) {
     }
 }
 
-static void notify_status_work_cb(struct k_work *_work) { notify_transport_status(); }
-
-static K_WORK_DEFINE(notify_status_work, notify_status_work_cb);
-
 static int zmk_split_esb_central_init(void) {
     esb_ctx = &ctx;
     print_reset_reason();
@@ -170,7 +167,6 @@ static int zmk_split_esb_central_init(void) {
     }
 
     k_work_submit(&notify_status_work);
-    // k_work_submit(&test_work.work);
 
     return 0;
 }
@@ -204,7 +200,8 @@ static int handle_key_position_event(int source, uint8_t *data) {
     struct zmk_split_transport_peripheral_event evt = {
         .type = ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT,
     };
-    memcpy(&evt.data, data, get_payload_data_size_evt(ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT));
+    memcpy(&evt.data, data,
+           get_payload_data_size_evt(ZMK_SPLIT_TRANSPORT_PERIPHERAL_EVENT_TYPE_KEY_POSITION_EVENT));
     if (!change_position_state(evt.data.key_position_event.position,
                                evt.data.key_position_event.pressed, position_state)) {
         return 0;
